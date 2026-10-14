@@ -35,7 +35,7 @@ export function Lobby({ portraits, onPlay }: { portraits: Portraits; onPlay: (o:
           animate={{ y: 0, rotate: -3, opacity: 1 }}
           transition={{ type: 'spring', stiffness: 380, damping: 16 }}
         >
-          Gun Game
+          Toybox Brawl
         </motion.h1>
         <p className="lobby__pitch">
           Free-for-all arena. Every hero has one trick, every gun drops when its owner goes down.

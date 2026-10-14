@@ -29,7 +29,7 @@ const MIME: Record<string, string> = {
 const http = createServer((req, res) => {
   if (!existsSync(DIST)) {
     res.writeHead(200, { 'content-type': 'text/plain' });
-    res.end('Gun Game server is running. Open the Vite dev server for the client.');
+    res.end('Toybox Brawl server is running. Open the Vite dev server for the client.');
     return;
   }
   const url = new URL(req.url ?? '/', 'http://x');
@@ -140,5 +140,5 @@ wss.on('connection', (ws: WebSocket) => {
 });
 
 http.listen(PORT, () => {
-  console.log(`Gun Game server on http://localhost:${PORT}`);
+  console.log(`Toybox Brawl server on http://localhost:${PORT}`);
 });
