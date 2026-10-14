@@ -1,10 +1,10 @@
 import {
-  ARENA_H, ARENA_W, DROP_LIFETIME, KILLS_TO_WIN, MAP_PICKUP_INTERVAL, MATCH_END_TIME, MAX_HP,
-  MAX_INPUT_DT, PICKUP_RADIUS, PLAYER_RADIUS, PLAYER_SPEED, RESPAWN_TIME, SPAWN_SHIELD,
+  DROP_LIFETIME, KILLS_TO_WIN, MATCH_END_TIME, MAX_HP,
+  MAX_INPUT_DT, PICKUP_RADIUS, PLAYER_RADIUS, PLAYER_SPEED, RESPAWN_TIME, SCOPE_SPEED, SCOPE_SPREAD, SPAWN_SHIELD,
 } from './constants';
 import { GUNS, type GunId } from './guns';
 import { ABILITY, HEROES, type HeroId } from './heroes';
-import { PICKUP_SPAWNS, SPAWN_POINTS, STATIC_WALLS, type Rect } from './map';
+import { DEFAULT_MAP, MAPS, type MapDef, type MapId, type Rect } from './map';
 import type { GameEvent, InputFrame, Loadout } from './protocol';
 
 // ---------- state ----------
@@ -33,6 +33,7 @@ export interface PlayerState {
   abilityReadyAt: number;
   lastSeq: number;
   fire: boolean;
+  scoped: boolean;
   wantAbility: boolean;
   wantPickup: boolean;
 }
@@ -54,8 +55,7 @@ export interface Pickup {
   gun: GunId;
   x: number;
   y: number;
-  expiresAt: number | null;
-  spawnIndex: number | null;
+  expiresAt: number;
 }
 
 export interface DynWall extends Rect {
@@ -100,7 +100,7 @@ export interface GameState {
   bubbles: Bubble[];
   decoys: Decoy[];
   events: GameEvent[];
-  mapPickupAt: number[];
+  map: MapDef;
   rng: () => number;
 }
 
@@ -115,7 +115,7 @@ export function mulberry32(seed: number): () => number {
   };
 }
 
-export function createGame(seed = Date.now()): GameState {
+export function createGame(seed = Date.now(), mapId: MapId = DEFAULT_MAP): GameState {
   return {
     time: 0,
     nextId: 1,
@@ -129,7 +129,7 @@ export function createGame(seed = Date.now()): GameState {
     bubbles: [],
     decoys: [],
     events: [],
-    mapPickupAt: PICKUP_SPAWNS.map(() => 10),
+    map: MAPS[mapId],
     rng: mulberry32(seed),
   };
 }
@@ -186,8 +186,6 @@ export function moveCircle(p: { x: number; y: number }, dx: number, dy: number, 
       for (const w of walls) pushOutOfRect(p, r, w);
     }
   }
-  p.x = clamp(p.x, r, ARENA_W - r);
-  p.y = clamp(p.y, r, ARENA_H - r);
 }
 
 export interface BubbleLike {
@@ -224,6 +222,7 @@ export function stepMovement(
   ownerId: string,
   walls: Rect[],
   bubbles: BubbleLike[],
+  scoped = false,
 ): void {
   const len = Math.hypot(mx, my);
   if (len > 1) {
@@ -231,12 +230,12 @@ export function stepMovement(
     my /= len;
   }
   if (len === 0) return;
-  const f = bubbleFactor(pos.x, pos.y, ownerId, bubbles, ABILITY.bubbleMoveFactor);
+  const f = bubbleFactor(pos.x, pos.y, ownerId, bubbles, ABILITY.bubbleMoveFactor) * (scoped ? SCOPE_SPEED : 1);
   moveCircle(pos, mx * PLAYER_SPEED * f * dt, my * PLAYER_SPEED * f * dt, walls);
 }
 
 export function allWalls(state: GameState): Rect[] {
-  return state.walls.length ? [...STATIC_WALLS, ...state.walls] : STATIC_WALLS;
+  return state.walls.length ? [...state.map.walls, ...state.walls] : state.map.walls;
 }
 
 // ---------- players ----------
@@ -268,6 +267,7 @@ export function addPlayer(
     abilityReadyAt: 0,
     lastSeq: 0,
     fire: false,
+    scoped: false,
     wantAbility: false,
     wantPickup: false,
   };
@@ -285,9 +285,9 @@ export function removePlayer(state: GameState, id: string): void {
 
 function spawn(state: GameState, p: PlayerState): void {
   const others = [...state.players.values()].filter((o) => o.id !== p.id && o.alive);
-  let best = SPAWN_POINTS[0];
+  let best = state.map.spawns[0];
   let bestScore = -1;
-  for (const s of SPAWN_POINTS) {
+  for (const s of state.map.spawns) {
     let nearest = Infinity;
     for (const o of others) nearest = Math.min(nearest, Math.hypot(o.x - s.x, o.y - s.y));
     // Small random term so empty rooms don't always use the same corner.
@@ -301,7 +301,7 @@ function spawn(state: GameState, p: PlayerState): void {
   p.y = best.y;
   p.vx = 0;
   p.vy = 0;
-  p.aim = Math.atan2(ARENA_H / 2 - p.y, ARENA_W / 2 - p.x);
+  p.aim = Math.atan2(state.map.h / 2 - p.y, state.map.w / 2 - p.x);
   p.hero = p.loadout.hero;
   p.gun = p.loadout.gun;
   p.hp = MAX_HP;
@@ -328,7 +328,8 @@ export function applyInput(state: GameState, p: PlayerState, frame: InputFrame):
   const dt = clamp(Number.isFinite(frame.dt) ? frame.dt : 0, 0, MAX_INPUT_DT);
   const mx = clamp(frame.mx || 0, -1, 1);
   const my = clamp(frame.my || 0, -1, 1);
-  stepMovement(p, mx, my, dt, p.id, allWalls(state), state.bubbles);
+  p.scoped = !!frame.scope;
+  stepMovement(p, mx, my, dt, p.id, allWalls(state), state.bubbles, p.scoped);
   p.fire = !!frame.fire;
   if (frame.ability) p.wantAbility = true;
   if (frame.pickup) p.wantPickup = true;
@@ -352,7 +353,7 @@ function killPlayer(state: GameState, victim: PlayerState, killerId: string, gun
   state.events.push({ t: 'kill', killer: killerId, victim: victim.id, gun });
   state.pickups.push({
     id: state.nextId++, gun: victim.gun, x: victim.x, y: victim.y,
-    expiresAt: state.time + DROP_LIFETIME, spawnIndex: null,
+    expiresAt: state.time + DROP_LIFETIME,
   });
   const killer = state.players.get(killerId);
   if (killer && killer.id !== victim.id) {
@@ -408,14 +409,15 @@ function explode(state: GameState, x: number, y: number, owner: string, gun: Gun
 
 function fireGun(state: GameState, p: PlayerState): void {
   const def = GUNS[p.gun];
+  const spread = def.spread * (p.scoped ? SCOPE_SPREAD : 1);
   p.fireReadyAt = state.time + def.cooldown;
   p.shieldUntil = Math.min(p.shieldUntil, state.time);
   for (let i = 0; i < def.pellets; i++) {
     let a = p.aim;
     if (def.pellets > 1) {
-      a += -def.spread / 2 + (def.spread * i) / (def.pellets - 1) + (state.rng() - 0.5) * 0.06;
+      a += -spread / 2 + (spread * i) / (def.pellets - 1) + (state.rng() - 0.5) * 0.06;
     } else {
-      a += (state.rng() - 0.5) * def.spread;
+      a += (state.rng() - 0.5) * spread;
     }
     const dx = Math.cos(a);
     const dy = Math.sin(a);
@@ -450,7 +452,7 @@ function useAbility(state: GameState, p: PlayerState): boolean {
       for (let d = 0.15; d <= maxD + 1e-6; d += 0.15) {
         const x = p.x + dx * d;
         const y = p.y + dy * d;
-        if (x < PLAYER_RADIUS || x > ARENA_W - PLAYER_RADIUS || y < PLAYER_RADIUS || y > ARENA_H - PLAYER_RADIUS) break;
+        if (x < PLAYER_RADIUS || x > state.map.w - PLAYER_RADIUS || y < PLAYER_RADIUS || y > state.map.h - PLAYER_RADIUS) break;
         if (walls.some((w) => circleOverlapsRect(x, y, PLAYER_RADIUS, w))) break;
         lastX = x;
         lastY = y;
@@ -551,11 +553,10 @@ function tryPickup(state: GameState, p: PlayerState): void {
   }
   if (!best) return;
   state.pickups = state.pickups.filter((k) => k !== best);
-  if (best.spawnIndex !== null) state.mapPickupAt[best.spawnIndex] = state.time + MAP_PICKUP_INTERVAL;
   if (best.gun !== p.gun) {
     state.pickups.push({
       id: state.nextId++, gun: p.gun, x: p.x, y: p.y,
-      expiresAt: state.time + DROP_LIFETIME, spawnIndex: null,
+      expiresAt: state.time + DROP_LIFETIME,
     });
   }
   p.gun = best.gun;
@@ -608,10 +609,9 @@ export function tick(state: GameState, dt: number): void {
   const t = state.time;
   state.walls = state.walls.filter((w) => w.expiresAt > t);
   state.bubbles = state.bubbles.filter((b) => b.expiresAt > t);
-  state.pickups = state.pickups.filter((k) => k.expiresAt === null || k.expiresAt > t);
+  state.pickups = state.pickups.filter((k) => k.expiresAt > t);
   for (const d of [...state.decoys]) if (d.expiresAt <= t) popDecoy(state, d);
 
-  spawnMapPickups(state);
 }
 
 function updateDecoys(state: GameState, dt: number, walls: Rect[]): void {
@@ -671,7 +671,7 @@ function updateBullets(state: GameState, dt: number): void {
       b.y += b.dy * stepLen;
       b.travelled += stepLen;
 
-      if (STATIC_WALLS.some((w) => pointInRect(b.x, b.y, w, BULLET_RADIUS))) {
+      if (state.map.walls.some((w) => pointInRect(b.x, b.y, w, BULLET_RADIUS))) {
         if (def.splashRadius && !b.fake) explode(state, b.x - b.dx * 0.3, b.y - b.dy * 0.3, b.owner, b.gun);
         continue outer;
       }
@@ -722,18 +722,6 @@ function updateBullets(state: GameState, dt: number): void {
   state.bullets = survivors;
 }
 
-const PREMIUM: GunId[] = ['shotgun', 'sniper', 'rocket', 'smg'];
-
-function spawnMapPickups(state: GameState): void {
-  PICKUP_SPAWNS.forEach((s, i) => {
-    if (state.time < state.mapPickupAt[i]) return;
-    if (state.pickups.some((k) => k.spawnIndex === i)) return;
-    const gun = PREMIUM[Math.floor(state.rng() * PREMIUM.length)];
-    state.pickups.push({ id: state.nextId++, gun, x: s.x, y: s.y, expiresAt: null, spawnIndex: i });
-    state.mapPickupAt[i] = Infinity;
-  });
-}
-
 export function resetMatch(state: GameState): void {
   state.phase = 'playing';
   state.winner = null;
@@ -742,7 +730,6 @@ export function resetMatch(state: GameState): void {
   state.walls = [];
   state.bubbles = [];
   state.decoys = [];
-  state.mapPickupAt = PICKUP_SPAWNS.map(() => state.time + 10);
   for (const p of state.players.values()) {
     p.kills = 0;
     p.deaths = 0;

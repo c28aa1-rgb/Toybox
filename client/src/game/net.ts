@@ -1,7 +1,8 @@
-import type { ClientMsg, ServerMsg, Snapshot } from '@gg/shared';
+import type { ClientMsg, MapId, ServerMsg, Snapshot } from '@gg/shared';
 
 export interface NetHandlers {
-  onWelcome(id: string, room: string, host: boolean): void;
+  onWelcome(id: string, room: string, host: boolean, map: MapId, isPublic: boolean): void;
+  onChat(id: string | null, name: string, text: string): void;
   onSnapshot(snap: Snapshot): void;
   onError(message: string): void;
   onClose(): void;
@@ -52,7 +53,10 @@ export class Net {
     }
     switch (msg.type) {
       case 'welcome':
-        this.handlers.onWelcome(msg.id, msg.room, msg.host);
+        this.handlers.onWelcome(msg.id, msg.room, msg.host, msg.map, msg.isPublic);
+        break;
+      case 'chat':
+        this.handlers.onChat(msg.id, msg.name, msg.text);
         break;
       case 'error':
         this.handlers.onError(msg.message);

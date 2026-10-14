@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { OutlineEffect } from 'three/examples/jsm/effects/OutlineEffect.js';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { CSS2DRenderer } from 'three/examples/jsm/renderers/CSS2DRenderer.js';
-import { ARENA_H, ARENA_W, PICKUP_SPAWNS, STATIC_WALLS } from '@gg/shared';
+import type { MapDef } from '@gg/shared';
 import { toon } from '../skins/toon';
 
 export const PALETTE = {
@@ -26,6 +26,9 @@ export interface SceneBundle {
   scene: THREE.Scene;
   camera: THREE.PerspectiveCamera;
   world: THREE.Group;
+  sun: THREE.DirectionalLight;
+  /** Builds (or rebuilds) the arena for a map. */
+  setMap(map: MapDef): void;
   resize(): void;
   dispose(): void;
 }
@@ -62,15 +65,15 @@ export function createScene(container: HTMLElement): SceneBundle {
   const hemi = new THREE.HemisphereLight('#FFF1E0', '#5B2A86', 1.6);
   scene.add(hemi);
   const sun = new THREE.DirectionalLight('#FFFFFF', 2.2);
-  sun.position.set(ARENA_W / 2 - 10, 30, ARENA_H / 2 + 14);
-  sun.target.position.set(ARENA_W / 2, 0, ARENA_H / 2);
+  // The sun follows the camera (see GameClient.updateCamera), so a modest shadow box keeps
+  // shadows crisp on every map size.
   sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048);
   const sc = sun.shadow.camera;
-  sc.left = -30;
-  sc.right = 30;
-  sc.top = 26;
-  sc.bottom = -26;
+  sc.left = -26;
+  sc.right = 26;
+  sc.top = 22;
+  sc.bottom = -22;
   sc.near = 1;
   sc.far = 80;
   sun.shadow.bias = -0.0008;
@@ -78,7 +81,13 @@ export function createScene(container: HTMLElement): SceneBundle {
 
   const world = new THREE.Group();
   scene.add(world);
-  buildArena(world);
+  let arena: THREE.Group | null = null;
+  const setMap = (map: MapDef) => {
+    if (arena) world.remove(arena);
+    arena = new THREE.Group();
+    buildArena(arena, map);
+    world.add(arena);
+  };
 
   const resize = () => {
     const w = container.clientWidth;
@@ -94,7 +103,7 @@ export function createScene(container: HTMLElement): SceneBundle {
   window.addEventListener('resize', resize);
 
   return {
-    renderer, labels, outline, scene, camera, world, resize,
+    renderer, labels, outline, scene, camera, world, sun, setMap, resize,
     dispose() {
       window.removeEventListener('resize', resize);
       renderer.dispose();
@@ -104,7 +113,9 @@ export function createScene(container: HTMLElement): SceneBundle {
   };
 }
 
-function playMatTexture(): THREE.CanvasTexture {
+function playMatTexture(map: MapDef): THREE.CanvasTexture {
+  const ARENA_W = map.w;
+  const ARENA_H = map.h;
   const px = 64; // pixels per meter
   const c = document.createElement('canvas');
   c.width = ARENA_W * px / 2;
@@ -149,10 +160,12 @@ function playMatTexture(): THREE.CanvasTexture {
   return tex;
 }
 
-function buildArena(world: THREE.Group): void {
+function buildArena(world: THREE.Group, map: MapDef): void {
+  const ARENA_W = map.w;
+  const ARENA_H = map.h;
   const floor = new THREE.Mesh(
     new THREE.PlaneGeometry(ARENA_W, ARENA_H),
-    new THREE.MeshToonMaterial({ map: playMatTexture() }),
+    new THREE.MeshToonMaterial({ map: playMatTexture(map) }),
   );
   floor.rotation.x = -Math.PI / 2;
   floor.position.set(ARENA_W / 2, 0, ARENA_H / 2);
@@ -167,8 +180,8 @@ function buildArena(world: THREE.Group): void {
   under.position.set(ARENA_W / 2, -0.62, ARENA_H / 2);
   world.add(under);
 
-  STATIC_WALLS.forEach((w, i) => {
-    const isBorder = w.w >= ARENA_W - 0.1 || w.h >= ARENA_H - 0.1;
+  map.walls.forEach((w, i) => {
+    const isBorder = i < 4; // map.walls lists the four borders first
     const height = isBorder ? 0.9 : WALL_HEIGHT;
     const color = isBorder ? PALETTE.grape : BLOCK_COLORS[i % BLOCK_COLORS.length];
     const geo = new RoundedBoxGeometry(w.w, height, w.h, 3, Math.min(0.18, w.w / 3, w.h / 3));
@@ -196,11 +209,4 @@ function buildArena(world: THREE.Group): void {
     }
   });
 
-  // Pads under the timed gun spawns.
-  for (const s of PICKUP_SPAWNS) {
-    const pad = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 1, 0.08, 24), toon(PALETTE.lemon));
-    pad.position.set(s.x, 0.04, s.y);
-    pad.receiveShadow = true;
-    world.add(pad);
-  }
 }

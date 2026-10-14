@@ -1,5 +1,6 @@
 import type { GunId } from './guns';
 import type { HeroId } from './heroes';
+import type { MapId } from './map';
 
 /** One frame of player intent. Movement is applied for `dt` seconds. */
 export interface InputFrame {
@@ -12,6 +13,8 @@ export interface InputFrame {
   /** Distance from the player to the cursor on the ground, in meters. */
   aimDist: number;
   fire: boolean;
+  /** Held: aiming down the scope. */
+  scope: boolean;
   /** Edge-triggered: true only on the frame the key went down. */
   ability: boolean;
   pickup: boolean;
@@ -25,7 +28,9 @@ export interface Loadout {
 // ---- client -> server ----
 
 export type ClientMsg =
-  | { type: 'join'; room: string; name: string; hero: HeroId; gun: GunId }
+  /** public: the always-on lobby. create: a new private room on `map`. join: a private room by code. */
+  | { type: 'join'; mode: 'public' | 'create' | 'join'; room?: string; map?: MapId; name: string; hero: HeroId; gun: GunId }
+  | { type: 'chat'; text: string }
   | { type: 'input'; frames: InputFrame[] }
   | { type: 'loadout'; hero: HeroId; gun: GunId }
   | { type: 'bots'; count: number }
@@ -48,6 +53,7 @@ export interface PlayerSnap {
   bot: boolean;
   /** Spawn shield is active. */
   shield: boolean;
+  scoped: boolean;
   respawnIn: number;
   abilityReadyIn: number;
 }
@@ -129,7 +135,8 @@ export interface Snapshot {
 }
 
 export type ServerMsg =
-  | { type: 'welcome'; id: string; room: string; host: boolean }
+  | { type: 'welcome'; id: string; room: string; host: boolean; map: MapId; isPublic: boolean }
+  | { type: 'chat'; id: string | null; name: string; text: string }
   | { type: 'error'; message: string }
   | { type: 'pong'; t: number }
   | Snapshot;

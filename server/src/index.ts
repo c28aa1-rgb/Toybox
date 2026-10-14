@@ -3,7 +3,7 @@ import { createServer } from 'node:http';
 import { extname, join, normalize, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { WebSocketServer, type WebSocket } from 'ws';
-import { isGunId, isHeroId, type ClientMsg } from '@gg/shared';
+import { DEFAULT_MAP, MAPS, PUBLIC_MAP, PUBLIC_ROOM, isGunId, isHeroId, isMapId, type ClientMsg } from '@gg/shared';
 import { Room } from './room';
 
 // GG_PORT wins in dev, where tools may set PORT for the Vite client.
@@ -30,10 +30,11 @@ const http = createServer((req, res) => {
 });
 
 const rooms = new Map<string, Room>();
+// The public lobby always exists; it just idles when nobody is in it.
+rooms.set(PUBLIC_ROOM, new Room(PUBLIC_ROOM, PUBLIC_MAP, true));
 
 function cleanCode(raw: unknown): string {
-  const code = String(raw ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
-  return code.length >= 3 ? code : randomCode();
+  return String(raw ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
 }
 
 function randomCode(): string {
@@ -69,17 +70,30 @@ wss.on('connection', (ws: WebSocket) => {
         ws.send(JSON.stringify({ type: 'error', message: 'Pick a hero and a gun first.' }));
         return;
       }
-      const code = cleanCode(msg.room);
-      let r = rooms.get(code);
-      if (!r) {
-        r = new Room(code);
-        r.onEmpty = () => rooms.delete(code);
-        rooms.set(code, r);
+      let r: Room | undefined;
+      if (msg.mode === 'public') {
+        r = rooms.get(PUBLIC_ROOM);
+      } else if (msg.mode === 'create') {
+        const code = randomCode();
+        const map = isMapId(msg.map) && !MAPS[msg.map].publicOnly ? msg.map : DEFAULT_MAP;
+        const created = new Room(code, map);
+        created.onEmpty = () => rooms.delete(code);
+        rooms.set(code, created);
+        r = created;
+      } else {
+        const code = cleanCode(msg.room);
+        r = code === PUBLIC_ROOM ? undefined : rooms.get(code);
+        if (!r) {
+          ws.send(JSON.stringify({ type: 'error', message: `No room called ${code || 'that'}. Check the code, or create a new room.` }));
+          return;
+        }
       }
+      if (!r) return;
+      const code = r.code;
       const id = r.join(ws, cleanName(msg.name), msg.hero, msg.gun);
       if (!id) {
-        ws.send(JSON.stringify({ type: 'error', message: `Room ${code} is full (8 players).` }));
-        if (r.humanCount === 0) rooms.delete(code);
+        ws.send(JSON.stringify({ type: 'error', message: `Room ${code} is full.` }));
+        if (r.humanCount === 0 && !r.isPublic) rooms.delete(code);
         return;
       }
       room = r;
@@ -96,6 +110,9 @@ wss.on('connection', (ws: WebSocket) => {
         break;
       case 'bots':
         room.setBots(playerId, Number(msg.count) || 0);
+        break;
+      case 'chat':
+        room.chat(playerId, msg.text);
         break;
       case 'ping':
         ws.send(JSON.stringify({ type: 'pong', t: msg.t }));

@@ -54,7 +54,7 @@ export function botInput(state: GameState, p: PlayerState): InputFrame {
   }
   m.seq++;
   const frame: InputFrame = {
-    seq: m.seq, dt: TICK_DT, mx: 0, my: 0, aim: p.aim, aimDist: 6, fire: false, ability: false, pickup: false,
+    seq: m.seq, dt: TICK_DT, mx: 0, my: 0, aim: p.aim, aimDist: 6, fire: false, scope: false, ability: false, pickup: false,
   };
   if (!p.alive || state.phase !== 'playing') return frame;
 
@@ -121,6 +121,8 @@ export function botInput(state: GameState, p: PlayerState): InputFrame {
       frame.aim = Math.atan2(dy, dx) + m.aimError * (0.5 + rng());
       frame.aimDist = d;
       frame.fire = d < range * 0.95;
+      // Snipers scope up for long shots, like players do.
+      frame.scope = p.gun === 'sniper' && d > 10;
       if (state.time >= p.abilityReadyAt && rng() < 0.025) {
         frame.ability = shouldUseAbility(p, d);
       }

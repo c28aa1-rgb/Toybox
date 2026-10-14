@@ -1,8 +1,8 @@
 import type { WebSocket } from 'ws';
 import {
-  ABILITY, MAX_PLAYERS, TICK_DT, TICK_RATE, addPlayer, applyInput, createGame, r2, removePlayer,
-  setLoadout, tick, type GameState, type GunId, type HeroId, type InputFrame, type ServerMsg,
-  type Snapshot,
+  ABILITY, CHAT_MAX, MAX_PLAYERS, PUBLIC_MIN_PLAYERS, TICK_DT, TICK_RATE, addPlayer, applyInput, createGame, r2,
+  removePlayer, setLoadout, tick, type GameState, type GunId, type HeroId, type InputFrame, type MapId,
+  type ServerMsg, type Snapshot,
 } from '@gg/shared';
 import { botHero, botInput, botName, forgetBot } from './bots';
 
@@ -10,13 +10,18 @@ interface Client {
   id: string;
   ws: WebSocket;
   queue: InputFrame[];
+  /** Recent chat send times, for rate limiting. */
+  chatTimes: number[];
 }
 
 const MAX_QUEUE = 30;
+const PUBLIC_MAX_PLAYERS = 16;
 
 export class Room {
   readonly code: string;
   readonly state: GameState;
+  readonly mapId: MapId;
+  readonly isPublic: boolean;
   private clients = new Map<string, Client>();
   private bots: string[] = [];
   private botCounter = 0;
@@ -25,9 +30,15 @@ export class Room {
   private nextClientId = 1;
   onEmpty: (() => void) | null = null;
 
-  constructor(code: string) {
+  constructor(code: string, mapId: MapId, isPublic = false) {
     this.code = code;
-    this.state = createGame();
+    this.mapId = mapId;
+    this.isPublic = isPublic;
+    this.state = createGame(Date.now(), mapId);
+  }
+
+  private get maxPlayers(): number {
+    return this.isPublic ? PUBLIC_MAX_PLAYERS : MAX_PLAYERS;
   }
 
   get humanCount(): number {
@@ -35,29 +46,38 @@ export class Room {
   }
 
   join(ws: WebSocket, name: string, hero: HeroId, gun: GunId): string | null {
-    if (this.clients.size + this.bots.length >= MAX_PLAYERS) {
+    if (this.clients.size + this.bots.length >= this.maxPlayers) {
       // Make room by dropping a bot before refusing a human.
       const bot = this.bots.pop();
       if (!bot) return null;
       this.removeBot(bot);
     }
     const id = `p${this.nextClientId++}`;
-    this.clients.set(id, { id, ws, queue: [] });
+    this.clients.set(id, { id, ws, queue: [], chatTimes: [] });
     addPlayer(this.state, { id, name, hero, gun });
-    if (!this.hostId) this.hostId = id;
-    this.send(ws, { type: 'welcome', id, room: this.code, host: this.hostId === id });
+    if (!this.hostId && !this.isPublic) this.hostId = id;
+    this.welcome(this.clients.get(id)!);
     if (!this.timer) this.timer = setInterval(() => this.step(), 1000 / TICK_RATE);
+    this.system(`${name} joined`);
+    this.balancePublicBots();
     return id;
   }
 
+  private welcome(c: Client): void {
+    this.send(c.ws, { type: 'welcome', id: c.id, room: this.code, host: this.hostId === c.id, map: this.mapId, isPublic: this.isPublic });
+  }
+
   leave(id: string): void {
+    const name = this.state.players.get(id)?.name;
     this.clients.delete(id);
     removePlayer(this.state, id);
+    if (name) this.system(`${name} left`);
     if (this.hostId === id) {
       this.hostId = this.clients.keys().next().value ?? null;
       const host = this.hostId ? this.clients.get(this.hostId) : null;
-      if (host) this.send(host.ws, { type: 'welcome', id: host.id, room: this.code, host: true });
+      if (host) this.welcome(host);
     }
+    this.balancePublicBots();
     if (this.clients.size === 0) this.stop();
   }
 
@@ -77,8 +97,18 @@ export class Room {
 
   /** Only the host can change the bot count. */
   setBots(id: string, count: number): void {
-    if (id !== this.hostId) return;
-    const target = Math.max(0, Math.min(MAX_PLAYERS - this.clients.size, Math.floor(count)));
+    if (this.isPublic || id !== this.hostId) return;
+    this.applyBotCount(count);
+  }
+
+  /** The public lobby tops itself up with bots so a lone player always has a fight. */
+  private balancePublicBots(): void {
+    if (!this.isPublic || this.clients.size === 0) return;
+    this.applyBotCount(Math.max(0, PUBLIC_MIN_PLAYERS - this.clients.size));
+  }
+
+  private applyBotCount(count: number): void {
+    const target = Math.max(0, Math.min(this.maxPlayers - this.clients.size, Math.floor(count)));
     while (this.bots.length > target) this.removeBot(this.bots[this.bots.length - 1]);
     while (this.bots.length < target) {
       const i = this.botCounter++;
@@ -125,6 +155,7 @@ export class Room {
         x: r2(p.x), y: r2(p.y), aim: r2(p.aim), hp: Math.max(0, Math.round(p.hp)),
         alive: p.alive, kills: p.kills, deaths: p.deaths, bot: p.bot,
         shield: p.alive && t < p.shieldUntil,
+        scoped: p.alive && p.scoped,
         respawnIn: p.alive ? 0 : r2(Math.max(0, p.respawnAt - t)),
         abilityReadyIn: r2(Math.max(0, p.abilityReadyAt - t)),
       })),
@@ -148,6 +179,29 @@ export class Room {
 
   send(ws: WebSocket, msg: ServerMsg): void {
     if (ws.readyState === ws.OPEN) ws.send(JSON.stringify(msg));
+  }
+
+  /** Relay a chat line. Max 120 chars, no control characters, 3 lines per 4 s per player. */
+  chat(id: string, raw: unknown): void {
+    const c = this.clients.get(id);
+    const p = this.state.players.get(id);
+    if (!c || !p || typeof raw !== 'string') return;
+    const text = raw.replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, CHAT_MAX);
+    if (!text) return;
+    const now = Date.now();
+    c.chatTimes = c.chatTimes.filter((t) => now - t < 4000);
+    if (c.chatTimes.length >= 3) return;
+    c.chatTimes.push(now);
+    this.broadcastMsg({ type: 'chat', id, name: p.name, text });
+  }
+
+  private system(text: string): void {
+    this.broadcastMsg({ type: 'chat', id: null, name: '', text });
+  }
+
+  private broadcastMsg(msg: ServerMsg): void {
+    const body = JSON.stringify(msg);
+    for (const c of this.clients.values()) if (c.ws.readyState === c.ws.OPEN) c.ws.send(body);
   }
 
   isHost(id: string): boolean {

@@ -2,14 +2,14 @@ import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { CSS2DObject } from 'three/examples/jsm/renderers/CSS2DRenderer.js';
 import {
-  GUNS, GUN_IDS, HEROES, INTERP_DELAY, MAX_HP, MAX_INPUT_DT, PICKUP_RADIUS, STATIC_WALLS, stepMovement,
-  type DecoySnap, type GameEvent, type GunId, type HeroId, type InputFrame, type PlayerSnap, type Rect,
-  type Snapshot,
+  CHAT_MAX, GUNS, GUN_IDS, HEROES, INTERP_DELAY, MAPS, MAX_HP, MAX_INPUT_DT, PICKUP_RADIUS, pointInRect, stepMovement,
+  type DecoySnap, type GameEvent, type GunId, type HeroId, type InputFrame, type MapDef, type MapId, type PlayerSnap,
+  type Rect, type Snapshot,
 } from '@gg/shared';
 import { createGunModel, createHeroSkin, type HeroSkin } from '../skins/registry';
 import { addKill, addWin, loadProfile, saveProfile } from '../unlocks';
 import { Sfx } from './audio';
-import { Particles, Rings, Shake } from './fx';
+import { Particles, Rings, Shake, Shatter } from './fx';
 import { Input } from './input';
 import { Net } from './net';
 import { createScene, PALETTE, WALL_HEIGHT, type SceneBundle } from './scene';
@@ -17,7 +17,10 @@ import { HudStore, type HudState } from './store';
 import { toon } from '../skins/toon';
 
 export interface JoinOptions {
-  room: string;
+  /** public: the always-on lobby. create: new private room on `map`. join: private room by `room` code. */
+  mode: 'public' | 'create' | 'join';
+  room?: string;
+  map?: MapId;
   name: string;
   hero: HeroId;
   gun: GunId;
@@ -32,6 +35,7 @@ interface PlayerView {
   lastX: number;
   lastY: number;
   lastHp: number;
+  laser: THREE.Mesh;
 }
 
 interface DamageNumber {
@@ -58,6 +62,12 @@ export class GameClient {
   private input: Input;
   private particles: Particles;
   private rings: Rings;
+  private shatter: Shatter;
+  private map: MapDef | null = null;
+  private chatKey = 0;
+  private bannerKey = 0;
+  private scopeZoom = 0;
+  private laserGeo = new THREE.BoxGeometry(0.05, 0.05, 1);
   private shake = new Shake();
   private sfx = new Sfx();
 
@@ -102,6 +112,7 @@ export class GameClient {
     this.input = new Input(this.s.renderer.domElement);
     this.particles = new Particles(this.s.scene);
     this.rings = new Rings(this.s.scene);
+    this.shatter = new Shatter(this.s.scene);
     this.overlay = document.createElement('div');
     this.overlay.className = 'damage-layer';
     container.appendChild(this.overlay);
@@ -121,25 +132,36 @@ export class GameClient {
     }
 
     this.hud = new HudStore({
-      connected: false, error: null, room: opts.room, host: false, myId: null, me: null, players: [],
+      connected: false, error: null, room: opts.room ?? '', host: false, myId: null, me: null, players: [],
       phase: 'playing', winner: null, endsIn: 0, feed: [], ping: 0, killedBy: null, nearPickup: null,
       loadout: { hero: opts.hero, gun: opts.gun }, scoreboard: false, hurtTick: 0, toast: null, bots: 0,
+      isPublic: opts.mode === 'public', map: null, chat: [], chatOpen: false, banner: null, scoped: false,
     });
 
     this.net = new Net({
-      onWelcome: (id, room, host) => {
+      onWelcome: (id, room, host, map, isPublic) => {
         this.myId = id;
-        this.hud.set({ connected: true, myId: id, room, host });
+        if (this.map?.id !== map) {
+          this.map = MAPS[map];
+          this.s.setMap(this.map);
+        }
+        this.hud.set({ connected: true, myId: id, room, host, map, isPublic });
+        // Private rooms keep their code in the URL so it can be shared; the public lobby doesn't.
         const url = new URL(location.href);
-        url.searchParams.set('room', room);
+        if (isPublic) url.searchParams.delete('room');
+        else url.searchParams.set('room', room);
         history.replaceState(null, '', url);
+      },
+      onChat: (id, name, text) => {
+        const line = { key: ++this.chatKey, name: id ? name : null, text, mine: id === this.myId, at: performance.now() };
+        this.hud.set({ chat: [...this.hud.get().chat, line].slice(-8) });
       },
       onSnapshot: (snap) => this.onSnapshot(snap),
       onError: (message) => this.hud.set({ error: message }),
       onClose: () => this.hud.set({ connected: false, error: this.hud.get().error ?? 'Disconnected from the server.' }),
     });
     this.net.whenOpen(() => {
-      this.net.send({ type: 'join', room: opts.room, name: opts.name, hero: opts.hero, gun: opts.gun });
+      this.net.send({ type: 'join', mode: opts.mode, room: opts.room, map: opts.map, name: opts.name, hero: opts.hero, gun: opts.gun });
     });
 
     this.raf = requestAnimationFrame(this.frame);
@@ -159,6 +181,17 @@ export class GameClient {
     this.hud.set({ loadout: { hero, gun } });
     const p = loadProfile();
     saveProfile({ ...p, hero, gun });
+  }
+
+  sendChat(text: string): void {
+    const t = text.trim().slice(0, CHAT_MAX);
+    if (t) this.net.send({ type: 'chat', text: t });
+  }
+
+  /** Opening chat releases held keys so the player doesn't keep running while typing. */
+  setChatOpen(open: boolean): void {
+    if (open) this.input.clear();
+    this.hud.set({ chatOpen: open });
   }
 
   setBots(count: number): void {
@@ -185,9 +218,13 @@ export class GameClient {
   private predictionWorld(): { walls: Rect[]; bubbles: Snapshot['bubbles'] } {
     const snap = this.latest;
     return {
-      walls: snap && snap.walls.length ? [...STATIC_WALLS, ...snap.walls] : STATIC_WALLS,
+      walls: snap && snap.walls.length ? [...this.mapWalls(), ...snap.walls] : this.mapWalls(),
       bubbles: snap?.bubbles ?? [],
     };
+  }
+
+  private mapWalls(): Rect[] {
+    return this.map?.walls ?? [];
   }
 
   private onSnapshot(snap: Snapshot): void {
@@ -208,7 +245,7 @@ export class GameClient {
     this.pending = this.pending.filter((f) => f.seq > snap.ack);
     this.pred = { x: me.x, y: me.y };
     const { walls, bubbles } = this.predictionWorld();
-    for (const f of this.pending) stepMovement(this.pred, f.mx, f.my, f.dt, me.id, walls, bubbles);
+    for (const f of this.pending) stepMovement(this.pred, f.mx, f.my, f.dt, me.id, walls, bubbles, f.scope);
     const ex = before.x - this.pred.x;
     const ey = before.y - this.pred.y;
     if (Math.hypot(ex, ey) > 2) this.predOffset.set(0, 0);
@@ -247,6 +284,7 @@ export class GameClient {
 
     this.particles.update(dt);
     this.rings.update(dt);
+    this.shatter.update(dt);
     this.updateCamera(rawDt, me);
     this.updateDamageNumbers(rawDt);
 
@@ -278,20 +316,22 @@ export class GameClient {
     const py = this.pred.y;
     this.aim = Math.atan2(this.aimPoint.z - py, this.aimPoint.x - px);
     const aimDist = Math.hypot(this.aimPoint.x - px, this.aimPoint.z - py);
-    const { mx, my } = this.input.move();
+    const typing = this.hud.get().chatOpen;
+    const { mx, my } = typing ? { mx: 0, my: 0 } : this.input.move();
     const frame: InputFrame = {
       seq: ++this.seq,
       dt: Math.min(dt, MAX_INPUT_DT),
       mx, my,
       aim: this.aim,
       aimDist,
-      fire: this.input.fireHeld,
-      ability: this.input.takeAbility(),
-      pickup: this.input.takePickup(),
+      fire: !typing && this.input.fireHeld,
+      scope: !typing && this.input.scopeHeld,
+      ability: !typing && this.input.takeAbility(),
+      pickup: !typing && this.input.takePickup(),
     };
     if (me.alive && snap.phase === 'playing') {
       const { walls, bubbles } = this.predictionWorld();
-      stepMovement(this.pred, mx, my, frame.dt, me.id, walls, bubbles);
+      stepMovement(this.pred, mx, my, frame.dt, me.id, walls, bubbles, frame.scope);
       this.pending.push(frame);
       if (this.pending.length > 120) this.pending.shift();
     }
@@ -331,7 +371,9 @@ export class GameClient {
       let aim: number;
       let alive: boolean;
       let shield = p.shield;
+      let scoped = p.scoped;
       if (p.id === this.myId && p.alive && snap.phase === 'playing') {
+        scoped = this.input.scopeHeld && !this.hud.get().chatOpen;
         x = this.pred.x + this.predOffset.x;
         y = this.pred.y + this.predOffset.y;
         aim = this.aim;
@@ -346,6 +388,7 @@ export class GameClient {
         aim = lerpAngle(pa.aim, pb.aim, k);
         alive = pb.alive;
         shield = pb.shield;
+        scoped = pb.scoped;
       } else {
         x = p.x;
         y = p.y;
@@ -353,6 +396,7 @@ export class GameClient {
         alive = p.alive;
       }
       this.placeView(view, x, y, aim, alive, dt, p.gun, shield);
+      this.updateLaser(view, x, y, aim, alive && scoped, p.gun, p.id === this.myId);
       this.updateLabel(view, p.hp, alive);
     }
     for (const [id, view] of this.views) {
@@ -414,17 +458,29 @@ export class GameClient {
     const top = new THREE.Box3().setFromObject(skin.root).max.y;
     label.position.set(0, Math.max(2.15, top + 0.35), 0);
     skin.root.add(label);
-    return { skin, hero, label, nameEl, hpEl, lastX: NaN, lastY: NaN, lastHp: MAX_HP };
+    // Laser sight shown while this player scopes in; enemies see it too.
+    const laser = new THREE.Mesh(
+      this.laserGeo,
+      new THREE.MeshBasicMaterial({ color: HEROES[hero].color, transparent: true, opacity: 0.75, depthWrite: false }),
+    );
+    (laser.material as THREE.Material).userData.outlineParameters = { visible: false };
+    laser.visible = false;
+    this.s.world.add(laser);
+    return { skin, hero, label, nameEl, hpEl, lastX: NaN, lastY: NaN, lastHp: MAX_HP, laser };
   }
 
   private removeView(view: PlayerView): void {
+    view.laser.removeFromParent();
+    (view.laser.material as THREE.Material).dispose();
     view.label.element.remove();
     view.skin.root.removeFromParent();
     view.skin.dispose();
   }
 
   private placeView(view: PlayerView, x: number, y: number, aim: number, alive: boolean, dt: number, gun: GunId, shield: boolean): void {
-    const moved = Number.isNaN(view.lastX) ? 0 : Math.hypot(x - view.lastX, y - view.lastY);
+    const dx = Number.isNaN(view.lastX) ? 0 : x - view.lastX;
+    const dy = Number.isNaN(view.lastY) ? 0 : y - view.lastY;
+    const moved = Math.hypot(dx, dy);
     view.lastX = x;
     view.lastY = y;
     const root = view.skin.root;
@@ -435,7 +491,31 @@ export class GameClient {
     view.skin.setGun(gun);
     view.skin.setGhost(shield && Math.floor(this.clock * 8) % 2 === 0);
     const speed = dt > 0 ? moved / dt : 0;
-    view.skin.animate(dt, Math.min(1, speed / 6));
+    // Movement direction in the model's own frame (+Z forward, +X the character's left).
+    const len = moved || 1;
+    const localX = (dx * Math.sin(aim) - dy * Math.cos(aim)) / len;
+    const localZ = (dx * Math.cos(aim) + dy * Math.sin(aim)) / len;
+    const stepped = view.skin.animate(dt, Math.min(1, speed / 6), localX, localZ);
+    if (stepped && alive && moved < 1) {
+      this.particles.burst({ x, y, z: 0.08, count: 3, color: ['#8F78B8', '#B9A6D9'], speed: 1.2, up: 0.8, life: 0.35, size: 0.12, gravity: 3 });
+    }
+  }
+
+  /** Laser from the gun along the aim, stopped by walls. */
+  private updateLaser(view: PlayerView, x: number, y: number, aim: number, on: boolean, gun: GunId, mine: boolean): void {
+    view.laser.visible = on;
+    if (!on) return;
+    const max = mine ? Math.min(GUNS[gun].range, Math.hypot(this.aimPoint.x - x, this.aimPoint.z - y)) : GUNS[gun].range;
+    const walls = this.mapWalls();
+    const dx = Math.cos(aim);
+    const dy = Math.sin(aim);
+    let len = 0.9;
+    while (len < max && !walls.some((w) => pointInRect(x + dx * len, y + dy * len, w))) len += 0.25;
+    const start = 0.9;
+    const mid = (start + len) / 2;
+    view.laser.position.set(x + dx * mid, 0.75, y + dy * mid);
+    view.laser.rotation.y = Math.PI / 2 - aim;
+    view.laser.scale.set(1, 1, Math.max(0.01, len - start));
   }
 
   private updateLabel(view: PlayerView, hp: number, alive: boolean): void {
@@ -605,7 +685,9 @@ export class GameClient {
       target.set(this.pred.x + this.predOffset.x, 0, this.pred.y + this.predOffset.y);
       // Lean toward the cursor so you can see where you're aiming.
       const lead = new THREE.Vector3(this.aimPoint.x - target.x, 0, this.aimPoint.z - target.z);
-      lead.clampLength(0, 10).multiplyScalar(0.18);
+      // Scoping pushes the view far out along the aim so long shots stay on screen.
+      const scoping = this.input.scopeHeld && !st.chatOpen;
+      lead.clampLength(0, scoping ? 18 : 10).multiplyScalar(scoping ? 0.5 : 0.18);
       target.add(lead);
     } else if (me) {
       const killer = st.killedBy ? this.views.get(st.killedBy) : null;
@@ -619,7 +701,13 @@ export class GameClient {
       this.camTarget.lerp(target, 1 - Math.exp(-7 * dt));
     }
     const shake = this.shake.offset(dt, reducedMotion());
-    this.s.camera.position.copy(this.camTarget).add(CAMERA_OFFSET).add(shake);
+    const wantZoom = me?.alive && this.input.scopeHeld && !st.chatOpen ? 1 : 0;
+    this.scopeZoom += (wantZoom - this.scopeZoom) * (1 - Math.exp(-6 * dt));
+    const offset = CAMERA_OFFSET.clone().multiplyScalar(1 + this.scopeZoom * 0.22);
+    this.s.camera.position.copy(this.camTarget).add(offset).add(shake);
+    // Keep the shadow-casting sun over the action so shadows stay sharp on big maps.
+    this.s.sun.position.set(this.camTarget.x - 10, 30, this.camTarget.z + 14);
+    this.s.sun.target.position.copy(this.camTarget);
     this.s.camera.lookAt(this.camTarget.x + shake.x * 0.3, 0, this.camTarget.z + shake.z * 0.3);
   }
 
@@ -674,6 +762,18 @@ export class GameClient {
       }
       case 'kill': {
         const pos = this.viewPos(ev.victim);
+        const victimView = this.views.get(ev.victim);
+        if (victimView && pos) {
+          const from = this.viewPos(ev.killer) ?? pos;
+          this.shatter.burst(victimView.skin.root, new THREE.Vector3(from.x, 0.7, from.y), ev.gun === 'rocket' || ev.gun === 'shotgun' ? 1.6 : 1);
+          victimView.skin.root.visible = false;
+          victimView.laser.visible = false;
+        }
+        if (ev.killer === me && ev.victim !== me) {
+          this.hud.set({ banner: { key: ++this.bannerKey, kind: 'eliminated', name: this.nameOf(ev.victim) } });
+        } else if (ev.victim === me && ev.killer !== me) {
+          this.hud.set({ banner: { key: ++this.bannerKey, kind: 'eliminatedBy', name: this.nameOf(ev.killer) } });
+        }
         if (pos) {
           this.particles.burst({
             x: pos.x, y: pos.y, count: 36, speed: 7, up: 6, life: 0.9, size: 0.2,
@@ -846,6 +946,7 @@ export class GameClient {
       nearPickup,
       scoreboard: this.input.scoreboardHeld,
       bots: snap.players.filter((p) => p.bot).length,
+      scoped: !!me?.alive && this.input.scopeHeld && !this.hud.get().chatOpen,
     };
     if (this.botsWanted) {
       if (patch.bots === this.botsWanted.count || performance.now() - this.botsWanted.at > 1500) this.botsWanted = null;

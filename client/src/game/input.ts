@@ -4,6 +4,7 @@ export class Input {
   mouseX = 0;
   mouseY = 0;
   fireHeld = false;
+  scopeHeld = false;
   private abilityQueued = false;
   private pickupQueued = false;
   scoreboardHeld = false;
@@ -20,6 +21,7 @@ export class Input {
       if (k === 'Space' || k === 'Tab') e.preventDefault();
       if (!e.repeat) {
         if (k === 'Space' || k === 'KeyQ' || k === 'ShiftLeft') this.abilityQueued = true;
+        if (k === 'KeyC') this.scopeHeld = !this.scopeHeld; // keyboard toggle for trackpads
         if (k === 'KeyE' || k === 'KeyF') this.pickupQueued = true;
       }
       if (k === 'Tab') this.scoreboardHeld = true;
@@ -30,8 +32,7 @@ export class Input {
       if (e.code === 'Tab') this.scoreboardHeld = false;
     });
     on('blur', () => {
-      this.keys.clear();
-      this.fireHeld = false;
+      this.clear();
     });
     on('mousemove', (e) => {
       const r = this.el.getBoundingClientRect();
@@ -41,14 +42,22 @@ export class Input {
     on('mousedown', (e) => {
       if (e.target !== this.el) return;
       if (e.button === 0) this.fireHeld = true;
-      if (e.button === 2) this.abilityQueued = true;
+      if (e.button === 2) this.scopeHeld = true;
     });
     on('mouseup', (e) => {
       if (e.button === 0) this.fireHeld = false;
+      if (e.button === 2) this.scopeHeld = false;
     });
     on('contextmenu', (e) => {
       if (e.target === this.el) e.preventDefault();
     });
+  }
+
+  /** Drop held keys and buttons, e.g. when the chat box opens. */
+  clear(): void {
+    this.keys.clear();
+    this.fireHeld = false;
+    this.scopeHeld = false;
   }
 
   move(): { mx: number; my: number } {

@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { GUNS, HEROES, KILLS_TO_WIN, MAX_PLAYERS, type PlayerSnap } from '@gg/shared';
+import { CHAT_MAX, GUNS, HEROES, KILLS_TO_WIN, MAPS, MAX_PLAYERS, type PlayerSnap } from '@gg/shared';
+import type { Banner, ChatLine } from '../game/store';
 import type { GameClient } from '../game/GameClient';
 import { useHud } from '../game/store';
 import { loadProfile } from '../unlocks';
@@ -36,7 +37,7 @@ export function Hud({ client, portraits, onLeave }: { client: GameClient; portra
       <HurtVignette tick={s.hurtTick} />
 
       <div className="hud__tl">
-        <RoomTag code={s.room} />
+        {s.isPublic ? <PublicTag name={s.map ? MAPS[s.map].name : ''} count={s.players.filter((p) => !p.bot).length} /> : <RoomTag code={s.room} />}
         {s.host && <BotStepper count={s.bots} humans={s.players.length - s.bots} onChange={(n) => client.setBots(n)} />}
         <button type="button" className="btn btn--ghost btn--small" onClick={onLeave}>Leave</button>
       </div>
@@ -91,6 +92,9 @@ export function Hud({ client, portraits, onLeave }: { client: GameClient; portra
       </AnimatePresence>
 
       <Toast toast={s.toast} />
+      <EliminationBanner banner={s.banner} />
+      <Chat lines={s.chat} open={s.chatOpen} client={client} />
+      {me.alive && s.scoped && <div className="scope-tag">SCOPED · SLOWER, STEADIER AIM</div>}
 
       <AnimatePresence>
         {!me.alive && s.phase === 'playing' && (
@@ -110,6 +114,125 @@ export function Hud({ client, portraits, onLeave }: { client: GameClient; portra
       </AnimatePresence>
 
       {s.scoreboard && s.phase === 'playing' && <Scoreboard players={s.players} myId={s.myId} />}
+    </div>
+  );
+}
+
+function PublicTag({ name, count }: { name: string; count: number }) {
+  return (
+    <div className="roomtag roomtag--public">
+      <span className="roomtag__hole" aria-hidden />
+      <span className="roomtag__label">Public</span>
+      <span className="roomtag__code">{name}</span>
+      <span className="roomtag__hint">{count} {count === 1 ? 'player' : 'players'} online here</span>
+    </div>
+  );
+}
+
+function EliminationBanner({ banner }: { banner: Banner | null }) {
+  const [shown, setShown] = useState<Banner | null>(null);
+  useEffect(() => {
+    if (!banner) return;
+    setShown(banner);
+    const t = setTimeout(() => setShown(null), 2200);
+    return () => clearTimeout(t);
+  }, [banner]);
+  return (
+    <AnimatePresence>
+      {shown && (
+        <motion.div
+          key={shown.key}
+          className={`banner banner--${shown.kind}`}
+          initial={{ y: -30, scale: 0.6, opacity: 0, x: '-50%' }}
+          animate={{ y: 0, scale: 1, opacity: 1, x: '-50%' }}
+          exit={{ y: -16, opacity: 0, x: '-50%' }}
+          transition={{ type: 'spring', stiffness: 520, damping: 16 }}
+        >
+          <small>{shown.kind === 'eliminated' ? 'You eliminated' : 'You were eliminated by'}</small>
+          {shown.name}
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+const CHAT_VISIBLE_MS = 9000;
+
+function Chat({ lines, open, client }: { lines: ChatLine[]; open: boolean; client: GameClient }) {
+  const [draft, setDraft] = useState('');
+  const [, force] = useState(0);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Enter opens chat from the game; Escape closes it.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const typing = (e.target as HTMLElement | null)?.tagName === 'INPUT';
+      if (e.key === 'Enter' && !open && !typing) {
+        e.preventDefault();
+        client.setChatOpen(true);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, client]);
+
+  useEffect(() => {
+    if (open) inputRef.current?.focus();
+  }, [open]);
+
+  // Re-render once a second so old lines fade out of view.
+  useEffect(() => {
+    const t = setInterval(() => force((n) => n + 1), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  const now = performance.now();
+  const visible = open ? lines : lines.filter((l) => now - l.at < CHAT_VISIBLE_MS);
+  return (
+    <div className="chat">
+      <AnimatePresence initial={false}>
+        {visible.map((l) => (
+          <motion.div
+            key={l.key}
+            className={`chat__line${l.name === null ? ' is-system' : ''}${l.mine ? ' is-mine' : ''}`}
+            initial={{ opacity: 0, x: -16 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+          >
+            {l.name !== null && <b>{l.name}</b>}
+            {l.text}
+          </motion.div>
+        ))}
+      </AnimatePresence>
+      {open ? (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            client.sendChat(draft);
+            setDraft('');
+            client.setChatOpen(false);
+          }}
+        >
+          <input
+            ref={inputRef}
+            className="chat__input"
+            value={draft}
+            maxLength={CHAT_MAX}
+            placeholder="Say something, Enter to send"
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') {
+                setDraft('');
+                client.setChatOpen(false);
+              }
+            }}
+            onBlur={() => client.setChatOpen(false)}
+          />
+        </form>
+      ) : (
+        <span className="chat__hint">Enter to chat</span>
+      )}
     </div>
   );
 }

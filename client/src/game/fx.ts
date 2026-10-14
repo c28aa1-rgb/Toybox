@@ -145,3 +145,79 @@ export class Shake {
     );
   }
 }
+
+interface Shard {
+  obj: THREE.Object3D;
+  vel: THREE.Vector3;
+  spin: THREE.Vector3;
+  life: number;
+  scale: number;
+}
+
+/**
+ * Kill animation: clones the victim's model, detaches every mesh into world space and throws
+ * the pieces outward like a toy popping apart. Pieces bounce on the floor, then shrink away.
+ */
+export class Shatter {
+  private shards: Shard[] = [];
+
+  constructor(private scene: THREE.Scene) {}
+
+  burst(source: THREE.Object3D, from: THREE.Vector3, power = 1): void {
+    const copy = source.clone(true);
+    copy.position.copy(source.getWorldPosition(new THREE.Vector3()));
+    copy.quaternion.copy(source.getWorldQuaternion(new THREE.Quaternion()));
+    copy.scale.copy(source.getWorldScale(new THREE.Vector3()));
+    this.scene.add(copy);
+    copy.updateMatrixWorld(true);
+    const meshes: THREE.Mesh[] = [];
+    copy.traverse((o) => {
+      if (o instanceof THREE.Mesh && o.visible) meshes.push(o);
+    });
+    const center = new THREE.Box3().setFromObject(copy).getCenter(new THREE.Vector3());
+    for (const m of meshes) {
+      this.scene.attach(m); // keep its world transform
+      const p = m.getWorldPosition(new THREE.Vector3());
+      const out = p.clone().sub(center);
+      out.y = Math.max(0.2, out.y);
+      out.normalize();
+      // Away from the body centre, plus a push away from the hit direction.
+      const push = center.clone().sub(from).setY(0).normalize().multiplyScalar(2.5 * power);
+      const vel = out.multiplyScalar(3 + Math.random() * 4).add(push);
+      vel.y += 4 + Math.random() * 3;
+      this.shards.push({
+        obj: m,
+        vel,
+        spin: new THREE.Vector3((Math.random() - 0.5) * 14, (Math.random() - 0.5) * 14, (Math.random() - 0.5) * 14),
+        life: 1.3 + Math.random() * 0.4,
+        scale: m.scale.x,
+      });
+    }
+    this.scene.remove(copy);
+  }
+
+  update(dt: number): void {
+    this.shards = this.shards.filter((s) => {
+      s.life -= dt;
+      s.vel.y -= 22 * dt;
+      s.obj.position.addScaledVector(s.vel, dt);
+      if (s.obj.position.y < 0.08) {
+        s.obj.position.y = 0.08;
+        s.vel.y *= -0.35;
+        s.vel.x *= 0.7;
+        s.vel.z *= 0.7;
+        s.spin.multiplyScalar(0.7);
+      }
+      s.obj.rotation.x += s.spin.x * dt;
+      s.obj.rotation.y += s.spin.y * dt;
+      s.obj.rotation.z += s.spin.z * dt;
+      const k = Math.min(1, s.life / 0.35);
+      s.obj.scale.setScalar(Math.max(0.001, s.scale * k));
+      if (s.life <= 0) {
+        s.obj.removeFromParent();
+        return false;
+      }
+      return true;
+    });
+  }
+}

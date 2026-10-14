@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react';
-import type { GunId, HeroId, PlayerSnap } from '@gg/shared';
+import type { GunId, HeroId, MapId, PlayerSnap } from '@gg/shared';
 
 export interface FeedEntry {
   key: number;
@@ -7,6 +7,21 @@ export interface FeedEntry {
   victim: string;
   gun: GunId;
   mine: boolean;
+}
+
+export interface ChatLine {
+  key: number;
+  /** null for system lines such as joins. */
+  name: string | null;
+  text: string;
+  mine: boolean;
+  at: number;
+}
+
+export interface Banner {
+  key: number;
+  kind: 'eliminated' | 'eliminatedBy';
+  name: string;
 }
 
 export interface HudState {
@@ -30,6 +45,12 @@ export interface HudState {
   hurtTick: number;
   toast: { key: number; text: string } | null;
   bots: number;
+  isPublic: boolean;
+  map: MapId | null;
+  chat: ChatLine[];
+  chatOpen: boolean;
+  banner: Banner | null;
+  scoped: boolean;
 }
 
 type Listener = () => void;

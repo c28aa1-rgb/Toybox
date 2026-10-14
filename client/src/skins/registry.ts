@@ -10,8 +10,11 @@ import { mesh, toon } from './toon';
 export interface HeroSkin {
   root: THREE.Group;
   setGun(gun: GunId): void;
-  /** moving: 0..1 movement amount this frame. */
-  animate(dt: number, moving: number): void;
+  /**
+   * moving: 0..1 movement amount this frame. moveX/moveZ: unit movement direction in the
+   * model's own frame (+Z forward). Returns true on a footfall, for dust puffs and sounds.
+   */
+  animate(dt: number, moving: number, moveX?: number, moveZ?: number): boolean;
   flash(): void;
   setGhost(on: boolean): void;
   dispose(): void;
@@ -147,10 +150,20 @@ export function createHeroSkin(hero: HeroId): HeroSkin {
   const make: HeroFactory = heroFactories[hero] ?? (() => placeholderHero(hero));
   const { body, gunSocket, parts = {} } = make();
   const rest = new Map<THREE.Object3D, THREE.Euler>();
-  for (const p of Object.values(parts)) if (p) rest.set(p, p.rotation.clone());
+  const restPos = new Map<THREE.Object3D, THREE.Vector3>();
+  for (const p of Object.values(parts)) {
+    if (p) {
+      rest.set(p, p.rotation.clone());
+      restPos.set(p, p.position.clone());
+    }
+  }
   const pose = (p: THREE.Object3D | null | undefined, x: number, z = 0) => {
     const r = p && rest.get(p);
     if (p && r) p.rotation.set(r.x + x, r.y, r.z + z);
+  };
+  const place = (p: THREE.Object3D | null | undefined, dx: number, dy: number, dz: number) => {
+    const r = p && restPos.get(p);
+    if (p && r) p.position.set(r.x + dx, r.y + dy, r.z + dz);
   };
   const root = new THREE.Group();
   const bob = new THREE.Group();
@@ -171,6 +184,9 @@ export function createHeroSkin(hero: HeroId): HeroSkin {
   let phase = 0;
   let flashT = 0;
   let squash = 0;
+  let leanX = 0;
+  let leanZ = 0;
+  let idle = 0;
 
   return {
     root,
@@ -182,21 +198,45 @@ export function createHeroSkin(hero: HeroId): HeroSkin {
       gunSocket.add(gunModel);
       squash = 1;
     },
-    animate(dt, moving) {
-      phase += dt * (6 + moving * 10);
-      const hop = moving > 0.05 ? Math.abs(Math.sin(phase)) * 0.12 * moving : Math.sin(phase * 0.5) * 0.02;
+    animate(dt, moving, moveX = 0, moveZ = 1) {
+      const prevSin = Math.sin(phase);
+      phase += dt * (5 + moving * 12);
+      idle += dt;
+      const sin = Math.sin(phase);
+      const lift = Math.abs(sin);
+
+      // Lean into the direction of travel, eased so starts and stops feel weighty.
+      const ease = 1 - Math.exp(-10 * dt);
+      leanX += (moveZ * 0.22 * moving - leanX) * ease;
+      leanZ += (-moveX * 0.18 * moving - leanZ) * ease;
+
+      // Bounce: stretch at the top of each hop, squash on landing.
+      const hop = moving > 0.05 ? lift * 0.16 * moving : Math.sin(idle * 2.2) * 0.015;
       bob.position.y = hop;
       squash = Math.max(0, squash - dt * 5);
-      const s = 1 + Math.sin(squash * Math.PI) * 0.15;
-      bob.scale.set(s, 2 - s, s);
-      bob.rotation.z = moving > 0.05 ? Math.sin(phase) * 0.08 * moving : 0;
-      // Waddle: feet kick alternately and the free mitt swings. The gun mitt stays still so the
-      // gun keeps pointing where the player aims.
-      const step = Math.sin(phase) * 0.45 * moving;
-      pose(parts.footL, step);
-      pose(parts.footR, -step);
-      pose(parts.handL, -step * 0.6);
-      pose(parts.antenna, Math.sin(phase * 0.7) * 0.12, Math.cos(phase * 0.5) * 0.1);
+      const hit = 1 + Math.sin(squash * Math.PI) * 0.15;
+      const land = moving > 0.05 ? (1 - lift) * 0.09 * moving : 0;
+      const stretch = moving > 0.05 ? lift * 0.05 * moving : 0;
+      const sy = (2 - hit) * (1 - land + stretch);
+      const sxz = hit * (1 + land * 0.6 - stretch * 0.5);
+      bob.scale.set(sxz, sy, sxz);
+      bob.rotation.x = leanX;
+      bob.rotation.z = leanZ + (moving > 0.05 ? sin * 0.07 * moving : 0);
+
+      // Feet stride along the movement direction and stay on the floor (they undo the hop).
+      const stride = Math.cos(phase) * 0.15 * moving;
+      const liftL = Math.max(0, sin) * 0.1 * moving;
+      const liftR = Math.max(0, -sin) * 0.1 * moving;
+      place(parts.footL, moveX * stride, liftL - hop, moveZ * stride);
+      place(parts.footR, -moveX * stride, liftR - hop, -moveZ * stride);
+      pose(parts.footL, -stride * 1.2);
+      pose(parts.footR, stride * 1.2);
+      // The free mitt swings against the feet; the gun mitt stays put so the gun keeps aiming.
+      pose(parts.handL, stride * 2.2, Math.abs(stride) * 0.6);
+      // Antennae, hats and bells trail behind the lean, then wobble.
+      pose(parts.antenna, -leanX * 1.6 + Math.sin(idle * 3.1) * 0.06, -leanZ * 1.6 + Math.cos(idle * 2.3) * 0.05);
+
+      const stepped = moving > 0.3 && Math.sign(sin) !== Math.sign(prevSin);
       if (flashT > 0) {
         flashT -= dt;
         const on = flashT > 0;
@@ -206,6 +246,7 @@ export function createHeroSkin(hero: HeroId): HeroSkin {
           mat.emissiveIntensity = on ? Math.min(1, flashT * 10) : 0;
         }
       }
+      return stepped;
     },
     flash() {
       flashT = 0.09;

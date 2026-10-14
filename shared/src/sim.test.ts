@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { GUNS } from './guns';
 import { ABILITY } from './heroes';
-import { STATIC_WALLS } from './map';
+import { MAPS, MAP_IDS, mapProblems } from './map';
+
+const STATIC_WALLS = MAPS.playmat.walls;
 import type { InputFrame } from './protocol';
 import {
   addPlayer, applyInput, circleOverlapsRect, createGame, moveCircle, tick, type GameState, type PlayerState,
@@ -13,19 +15,25 @@ function setup(): { s: GameState; a: PlayerState; b: PlayerState } {
   const a = addPlayer(s, { id: 'a', name: 'A', hero: 'blink', gun: 'pistol' });
   const b = addPlayer(s, { id: 'b', name: 'B', hero: 'swap', gun: 'pistol' });
   // Open floor, facing each other, shields off.
-  a.x = 18; a.y = 9; a.aim = 0;
-  b.x = 24; b.y = 9;
+  a.x = 19; a.y = 13.5; a.aim = 0;
+  b.x = 25; b.y = 13.5;
   a.shieldUntil = b.shieldUntil = -1;
   return { s, a, b };
 }
 
 function frame(seq: number, patch: Partial<InputFrame> = {}): InputFrame {
-  return { seq, dt: 0.033, mx: 0, my: 0, aim: 0, aimDist: 6, fire: false, ability: false, pickup: false, ...patch };
+  return { seq, dt: 0.033, mx: 0, my: 0, aim: 0, aimDist: 6, fire: false, scope: false, ability: false, pickup: false, ...patch };
 }
 
 function run(s: GameState, seconds: number): void {
   for (let t = 0; t < seconds; t += TICK_DT) tick(s, TICK_DT);
 }
+
+describe('map', () => {
+  it('has no overlapping walls or cramped spawns', () => {
+    expect(MAP_IDS.flatMap((id) => mapProblems(MAPS[id]))).toEqual([]);
+  });
+});
 
 describe('movement', () => {
   it('slides along walls instead of passing through', () => {
@@ -83,10 +91,19 @@ describe('shooting', () => {
   });
 });
 
+describe('scope', () => {
+  it('slows movement while scoped', () => {
+    const { s, a } = setup();
+    const x0 = a.x;
+    applyInput(s, a, frame(1, { mx: 1, scope: true }));
+    expect(a.x - x0).toBeLessThan(6.2 * 0.033 * 0.6);
+  });
+});
+
 describe('pickups', () => {
   it('swaps your gun and drops the old one', () => {
     const { s, a } = setup();
-    s.pickups.push({ id: 999, gun: 'rocket', x: a.x + 0.5, y: a.y, expiresAt: null, spawnIndex: null });
+    s.pickups.push({ id: 999, gun: 'rocket', x: a.x + 0.5, y: a.y, expiresAt: 99 });
     a.wantPickup = true;
     tick(s, TICK_DT);
     expect(a.gun).toBe('rocket');

@@ -1,9 +1,6 @@
 export const TICK_RATE = 30;
 export const TICK_DT = 1 / TICK_RATE;
 
-export const ARENA_W = 44;
-export const ARENA_H = 32;
-
 export const PLAYER_RADIUS = 0.6;
 export const PLAYER_SPEED = 6.2;
 export const MAX_HP = 100;
@@ -15,8 +12,16 @@ export const MATCH_END_TIME = 6;
 export const MAX_PLAYERS = 8;
 
 export const PICKUP_RADIUS = 1.4;
+
+/** Holding scope: slower movement, tighter spread. */
+export const SCOPE_SPEED = 0.55;
+export const SCOPE_SPREAD = 0.3;
+
+export const CHAT_MAX = 120;
+export const PUBLIC_ROOM = 'PUBLIC';
+/** The public lobby keeps at least this many players by topping up with bots. */
+export const PUBLIC_MIN_PLAYERS = 6;
 export const DROP_LIFETIME = 20;
-export const MAP_PICKUP_INTERVAL = 25;
 
 /** Seconds other entities are rendered behind the newest snapshot. */
 export const INTERP_DELAY = 0.1;
