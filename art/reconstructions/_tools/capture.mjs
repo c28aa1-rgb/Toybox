@@ -10,7 +10,7 @@ if (!model || !outDir) {
   console.error('usage: node capture.mjs <model> <outDir> [name=az,el[,mode][,hide=a|b] ...]');
   process.exit(2);
 }
-const shots = views.length ? views : ['ref=25,8', 'front=0,5', 'right=90,5', 'rear=180,5', 'left=270,5'];
+const shots = views.length ? views : process.env.SHOTS ? process.env.SHOTS.split(' ') : ['ref=25,8', 'front=0,5', 'right=90,5', 'rear=180,5', 'left=270,5'];
 const base = process.env.VIEWER_URL ?? 'http://localhost:5173/viewer.html';
 mkdirSync(outDir, { recursive: true });
 

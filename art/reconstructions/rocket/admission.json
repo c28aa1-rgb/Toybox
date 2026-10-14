@@ -1,0 +1,14 @@
+{
+  "admitted": true,
+  "reasons": [],
+  "provenance": {
+    "viewpoint": "reference",
+    "sourcePath": "/Users/c28aa1/Desktop/Gun Game/art/concepts/rocket.png",
+    "width": 1254,
+    "height": 1254,
+    "foregroundCoverage": 0.1895,
+    "largestComponentFraction": 1.0,
+    "pHash": 16573501530501845984,
+    "duplicateOfHash": null
+  }
+}

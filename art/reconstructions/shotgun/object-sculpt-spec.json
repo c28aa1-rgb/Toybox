@@ -1,0 +1,3847 @@
+{
+  "targetName": "Boomstick",
+  "targetId": "boomstick",
+  "schemaVersion": "2.1",
+  "terminologyProfile": {
+    "domain": "real-time procedural Three.js asset",
+    "geometryTerms": [
+      "silhouette",
+      "topology",
+      "primitive",
+      "bevel",
+      "chamfer",
+      "taper",
+      "bend",
+      "boolean cut",
+      "edge loop",
+      "surface normal",
+      "displacement"
+    ],
+    "materialTerms": [
+      "albedo",
+      "baseColor",
+      "roughness",
+      "metalness",
+      "normal map",
+      "bump map",
+      "ambient occlusion",
+      "cavity dirt",
+      "edge wear",
+      "clearcoat"
+    ],
+    "lightingTerms": [
+      "key light",
+      "fill light",
+      "rim light",
+      "HDRI/environment reflection",
+      "contact shadow"
+    ],
+    "descriptionRule": "Use measurable 3D graphics terms. Avoid vague words unless they are paired with concrete geometry/material/shader parameters."
+  },
+  "sourceImage": "/Users/c28aa1/Desktop/Gun Game/art/concepts/shotgun.png",
+  "referenceCamera": {
+    "solved": false,
+    "fovDegrees": 40.0,
+    "aspect": 1.0,
+    "orientation": {
+      "yaw": 0.0,
+      "pitch": 0.0,
+      "roll": 0.0
+    },
+    "positionHint": [
+      0.0,
+      0.0,
+      3.0
+    ],
+    "note": "For likeness work, solve the reference camera (forge/stage1_intake/solve_camera_pose.py) so the review render aligns with the photo and the reference can be projected. Confirm by overlay review."
+  },
+  "suitability": "conditional",
+  "scores": {
+    "object_isolation": 0,
+    "silhouette_readability": 0,
+    "depth_inference": 0,
+    "primitive_decomposition": 0,
+    "material_procedurality": 0,
+    "occlusion_risk": 0,
+    "interaction_fit": 0
+  },
+  "preSpecAssessment": {
+    "objectClass": {
+      "primaryType": "toy double-barrel shotgun",
+      "primaryDomain": "object",
+      "formLanguage": [
+        "rounded",
+        "chunky",
+        "moulded"
+      ],
+      "structureKind": [
+        "profile slabs",
+        "cylinders along the barrel axis"
+      ],
+      "motionPotential": [
+        "rigid prop held at the grip; recoil kick"
+      ],
+      "materialFamilies": [
+        "glossy dielectric plastic"
+      ],
+      "notes": "Straight side profile reference; thickness across the gun is inferred."
+    },
+    "complexity": {
+      "tier": "moderate",
+      "scores": {
+        "silhouetteComplexity": 3,
+        "componentCount": 3,
+        "hierarchyDepth": 2,
+        "repetitionDensity": 1,
+        "materialLayerCount": 3,
+        "localDetailDensity": 2,
+        "occlusionRisk": 1,
+        "actionReadinessNeed": 2
+      },
+      "estimatedCounts": {
+        "macroComponents": 3,
+        "mesoComponents": 4,
+        "microFeatureGroups": 2,
+        "materialLayers": 5,
+        "repetitionSystems": 1
+      },
+      "reasoning": [
+        "Profile slabs for body/stock/grip, cylinders along the barrel axis, rings and small details.",
+        "Two side panels form one mirror system."
+      ]
+    },
+    "specDepthDecision": {
+      "requiredDepth": "moderate",
+      "minimumComponentLevels": [
+        "macro",
+        "meso"
+      ],
+      "needsRepetitionSystems": false,
+      "needsMaterialLocalOverrides": false,
+      "needsMultipleReviewViews": true,
+      "needsActionReadyHierarchy": true,
+      "rationale": "Choose simple/moderate/complex/ultra-complex from observed structure, not from a hardcoded domain."
+    },
+    "unknownsToResolveBeforeImplementation": [],
+    "detailInventory": {
+      "scanMethod": "component-zones",
+      "targetMinDetails": 6,
+      "note": "Enumerate every identity-defining small detail before authoring the spec. Each detail must map to a component.localFeatures entry or material.localOverrides entry, never prose only. Use forge/stage1_intake/build_detail_inventory.py to scan zones.",
+      "details": [
+        {
+          "id": "double-barrel",
+          "kind": "contour",
+          "description": "two fat violet barrels stacked",
+          "scale": "macro",
+          "affects": "identity",
+          "mapsTo": {
+            "type": "component",
+            "ref": "barrel-top"
+          },
+          "evidenceRef": "detail-inventory/zone-r1c2.png",
+          "confidence": 0.9
+        },
+        {
+          "id": "orange-band",
+          "kind": "seam",
+          "description": "orange receiver band between stock and barrels",
+          "scale": "meso",
+          "affects": "identity",
+          "mapsTo": {
+            "type": "component",
+            "ref": "receiver"
+          },
+          "evidenceRef": "detail-inventory/zone-r1c1.png",
+          "confidence": 0.85
+        },
+        {
+          "id": "fore-grip",
+          "kind": "contour",
+          "description": "caramel fore-grip under the barrels",
+          "scale": "meso",
+          "affects": "silhouette",
+          "mapsTo": {
+            "type": "component",
+            "ref": "fore-grip"
+          },
+          "evidenceRef": "detail-inventory/zone-r1c2.png",
+          "confidence": 0.8
+        },
+        {
+          "id": "stock-panel",
+          "kind": "bevel",
+          "description": "raised panel on the stock side",
+          "scale": "micro",
+          "affects": "identity",
+          "mapsTo": {
+            "type": "component",
+            "ref": "side-panel"
+          },
+          "evidenceRef": "detail-inventory/zone-r1c0.png",
+          "confidence": 0.7
+        },
+        {
+          "id": "gloss",
+          "kind": "gloss",
+          "description": "glossy moulded plastic",
+          "scale": "micro",
+          "affects": "material",
+          "mapsTo": {
+            "type": "material",
+            "ref": "caramel"
+          },
+          "evidenceRef": "detail-inventory/zone-r1c1.png",
+          "confidence": 0.85
+        },
+        {
+          "id": "trigger",
+          "kind": "contour",
+          "description": "yellow trigger in an orange guard",
+          "scale": "micro",
+          "affects": "identity",
+          "mapsTo": {
+            "type": "component",
+            "ref": "trigger"
+          },
+          "evidenceRef": "detail-inventory/zone-r1c1.png",
+          "confidence": 0.75
+        },
+        {
+          "id": "dark-bores",
+          "kind": "hole",
+          "description": "dark bores at both barrel ends",
+          "scale": "micro",
+          "affects": "identity",
+          "mapsTo": {
+            "type": "component",
+            "ref": "bore-top"
+          },
+          "evidenceRef": "detail-inventory/zone-r1c2.png",
+          "confidence": 0.75
+        }
+      ]
+    },
+    "anatomy": {
+      "applies": false,
+      "styleHeads": 0.0,
+      "proportions": {
+        "headUnit": 0.0,
+        "torso": 0.0,
+        "legs": 0.0,
+        "shoulderWidth": 0.0,
+        "hipWidth": 0.0
+      },
+      "pose": {
+        "type": "unassessed",
+        "jointAngles": {}
+      },
+      "faceLandmarks": {
+        "eyeLine": 0.0,
+        "eyeSpacing": 0.0,
+        "noseBase": 0.0,
+        "mouthLine": 0.0,
+        "hairline": 0.0
+      },
+      "features": [],
+      "confidence": 0.0,
+      "note": "Only meaningful when objectClass.primaryDomain is character or hybrid. Set applies=true and fill from forge/stage1_intake/extract_landmarks.py. See grimoire/character/reconstruction.md and grimoire/character/likeness_maximization.md."
+    },
+    "sourceImage": "/Users/c28aa1/Desktop/Gun Game/art/concepts/shotgun.png"
+  },
+  "qualityContract": {
+    "qualityBar": "moderate",
+    "definitionOfDone": [
+      "The rendered model matches the reference silhouette, primary proportions, visible component hierarchy, material response, and most recognizable local features for the selected fidelity tier."
+    ],
+    "minimumSpecDepth": {
+      "macroComponents": 2,
+      "mesoComponents": 3,
+      "microFeatureGroups": 2,
+      "materialLayers": 2,
+      "repetitionSystems": 0,
+      "reviewViewpoints": 3
+    },
+    "featureGroups": [
+      {
+        "id": "overall-silhouette",
+        "name": "Overall silhouette and proportions",
+        "required": true,
+        "qualityCriteria": [
+          "Bounding shape, dominant curves, negative spaces, and scale relationships are explicitly described."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "model reads as a generic placeholder instead of the reference object",
+          "major proportions are guessed without evidence"
+        ]
+      },
+      {
+        "id": "primary-structure",
+        "name": "Primary structure and hierarchy",
+        "required": true,
+        "qualityCriteria": [
+          "Major parts, joints, seams, contact points, and parent-child relationships are named before code generation."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "large visible parts are merged into one mesh",
+          "component hierarchy is too shallow for the observed complexity"
+        ]
+      },
+      {
+        "id": "attachment-joint-correctness",
+        "name": "Attachment and joint correctness",
+        "required": true,
+        "qualityCriteria": [
+          "Every visible child appendage, branch, limb, handle, connector, tube, cable, horn, wing, leg, or hinged part has an attachment contract with parent socket, localStart/localEnd, contact type, embed/overlap, and gap tolerance."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "child part root floats away from the parent",
+          "branch/limb/tube is centered in space instead of pivoting from its root",
+          "parent-child transform mixes world and local coordinates"
+        ]
+      },
+      {
+        "id": "surface-material-response",
+        "name": "Surface material response",
+        "required": true,
+        "qualityCriteria": [
+          "Albedo zones, roughness, normal/bump/displacement intent, cavity dirt, edge wear, and local overrides are specified where visible.",
+          "Important materials define independent albedo, roughness, height/normal, and AO responses instead of reusing one texture for unrelated PBR channels.",
+          "Surface response is decomposed into macro, meso, and micro frequency bands with scale and amplitude tied to object scale."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "surface looks like flat plastic",
+          "local material variation is missing or not tied to image evidence"
+        ]
+      },
+      {
+        "id": "reference-lookdev",
+        "name": "Reference color, material, and lighting response",
+        "required": true,
+        "qualityCriteria": [
+          "Material-pass names the reference-derived albedo palette, roughness variation, tactile normal/bump/displacement response, and local masks.",
+          "When a source image is available, run reference PBR extraction and require confidence >= 0.7 before treating maps as implementation-ready.",
+          "Lighting-pass names key/fill/rim or environment light, exposure, tone mapping, background, and contact shadow behavior.",
+          "Neutral, grazing-angle, and reference-matched renders prove that surface relief survives relighting and is not painted into albedo."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "model has acceptable shape but reads as flat shaded or plastic",
+          "colors are a generic average instead of reference-observed local color zones",
+          "lighting is evenly ambient and cannot reproduce the source value range"
+        ]
+      }
+    ],
+    "visualDeltaChecks": [
+      "silhouette and negative-space delta",
+      "component hierarchy depth delta",
+      "repetition density and distribution delta",
+      "material albedo/roughness/normal response delta",
+      "local feature placement and scale delta"
+    ],
+    "antiShallowSpecRules": [
+      "Do not proceed to code if qualityContract.qualityBar is unassessed.",
+      "Do not proceed to code if the spec only contains a root component for a moderate or complex object.",
+      "Do not proceed to code if required featureGroups are not represented by componentTree, materials, or repetitionSystems.",
+      "Do not proceed to code if visible local features are described only in prose and not attached to components/materials/evidenceRefs.",
+      "Do not proceed past structural-pass if attached child parts lack attachment.parentSocket, localStart, localEnd, embedDepth/overlap, and gapTolerance.",
+      "Do not pass material look-dev when albedo is reused as roughness, height, normal, or AO.",
+      "Do not pass material look-dev without macro, meso, and micro surface frequency bands for close-up materials.",
+      "Do not pass reference-fidelity material look-dev from a source image without usable referencePbr maps or an explicit documented limitation.",
+      "Do not patch a spec with extracted PBR maps when extraction confidence is below the target threshold unless the user explicitly accepts lower fidelity.",
+      "Do not place adjacent separate-geometry parts below 0.02 world-unit seam overlap (source: grimoire/build/geometry_patterns.md).",
+      "Do not satisfy raised or recessed relief, fasteners, or grip structure with a map alone when the feature affects form; use geometry or displacement (source: grimoire/build/geometry_patterns.md).",
+      "Adjacent components must overlap by at least 0.02 world units at shared seams (source: grimoire/build/geometry_patterns.md).",
+      "Raised or recessed relief and fasteners must be geometry, instanced micro-parts, or displacement; a map alone is an approximation (source: grimoire/build/geometry_patterns.md)."
+    ],
+    "mustNotDo": [
+      "Do not proceed to code if qualityContract.qualityBar is unassessed.",
+      "Do not proceed to code if the spec only contains a root component for a moderate or complex object.",
+      "Do not proceed to code if required featureGroups are not represented by componentTree, materials, or repetitionSystems.",
+      "Do not proceed to code if visible local features are described only in prose and not attached to components/materials/evidenceRefs.",
+      "Do not proceed past structural-pass if attached child parts lack attachment.parentSocket, localStart, localEnd, embedDepth/overlap, and gapTolerance.",
+      "Do not pass material look-dev when albedo is reused as roughness, height, normal, or AO.",
+      "Do not pass material look-dev without macro, meso, and micro surface frequency bands for close-up materials.",
+      "Do not pass reference-fidelity material look-dev from a source image without usable referencePbr maps or an explicit documented limitation.",
+      "Do not patch a spec with extracted PBR maps when extraction confidence is below the target threshold unless the user explicitly accepts lower fidelity.",
+      "Do not place adjacent separate-geometry parts below 0.02 world-unit seam overlap (source: grimoire/build/geometry_patterns.md).",
+      "Do not satisfy raised or recessed relief, fasteners, or grip structure with a map alone when the feature affects form; use geometry or displacement (source: grimoire/build/geometry_patterns.md).",
+      "Adjacent components must overlap by at least 0.02 world units at shared seams (source: grimoire/build/geometry_patterns.md).",
+      "Raised or recessed relief and fasteners must be geometry, instanced micro-parts, or displacement; a map alone is an approximation (source: grimoire/build/geometry_patterns.md)."
+    ]
+  },
+  "qualityTargets": {
+    "targetFidelity": 0.7,
+    "mustMatch": [
+      "macro silhouette and proportions",
+      "primary material albedo/roughness response",
+      "reference-derived PBR material response at or above 0.7 confidence when source pixels are usable",
+      "most recognizable local features"
+    ],
+    "niceToHave": [
+      "micro scratches, stains, chips, and dirt masks",
+      "secondary lighting match"
+    ],
+    "fpsTarget": 60,
+    "reviewViewpoints": [
+      "front",
+      "three-quarter",
+      "side",
+      "thickness-axis",
+      "long-axis"
+    ]
+  },
+  "selfCorrectLoop": {
+    "enabled": true,
+    "visualAcceptance": {
+      "reviewer": "ai-vision",
+      "threshold": 0.7,
+      "comparisonArtifactRequired": true,
+      "layerScoresRequired": true,
+      "codePixelDiffIsAcceptanceAuthority": false,
+      "scoringRule": "AI vision must inspect a side-by-side reference/render sheet and score the current pass from 0 to 1. Pixel-diff code may assist diagnostics but cannot approve a pass.",
+      "requiredLayerScores": [
+        "silhouetteProportion",
+        "componentStructure",
+        "formDetail",
+        "materialSurface",
+        "lightingCamera"
+      ],
+      "featureReviewPolicy": {
+        "enabled": true,
+        "reviewUnit": "semantic-subsystem",
+        "maxCriticalFeaturesPerPass": 5,
+        "maxImportantFeaturesPerPass": 3,
+        "criticalDefaultThreshold": 0.8,
+        "importantAverageThreshold": 0.65,
+        "adaptiveEscalation": true,
+        "singleImagePairOnly": true,
+        "selectionRule": "Choose only the most visually salient, identity-defining, user-prioritized, or high-risk semantic systems. Group repeated parts instead of reviewing every mesh. AI vision scores every selected feature from the same full reference/render pair."
+      }
+    },
+    "reviewAfterPasses": [
+      "blockout",
+      "structural-pass",
+      "form-refinement",
+      "material-pass",
+      "surface-pass",
+      "lighting-pass",
+      "interaction-pass",
+      "optimization-pass"
+    ],
+    "allowedActions": [
+      "continue",
+      "refine-spec",
+      "refine-code",
+      "request-input",
+      "stop"
+    ],
+    "specRefineTriggers": [
+      "missing component",
+      "wrong primitive family",
+      "wrong proportions",
+      "material layer under-specified",
+      "local feature not traceable to viewEvidence",
+      "reference ambiguity discovered during implementation"
+    ],
+    "codeRefineTriggers": [
+      "spec is adequate but generated geometry/material does not match",
+      "browser render differs from reference",
+      "performance budget exceeded",
+      "lighting hides geometry or material response"
+    ],
+    "stopCriteria": [
+      "target fidelity reached or user accepts current approximation",
+      "remaining gaps require new reference images or manual art"
+    ],
+    "screenshotPolicy": {
+      "requiredForPasses": [
+        "blockout",
+        "structural-pass",
+        "form-refinement",
+        "material-pass",
+        "surface-pass",
+        "lighting-pass",
+        "interaction-pass"
+      ],
+      "preferredCapture": "in-app-browser-screenshot",
+      "fallbackCapture": "user-supplied-screenshot-path",
+      "minimumEvidence": "Each visual pass needs a reference image, rendered screenshot, side-by-side comparison sheet, AI vision score, layer scores, and critique before choosing continue.",
+      "reviewPairRule": "Compare the same camera/viewpoint whenever possible; do not judge a front reference against a random render angle.",
+      "acceptanceAuthority": "AI vision review of the comparison sheet. Code-generated pixel similarity is not sufficient evidence."
+    }
+  },
+  "featureReviewTargets": [
+    {
+      "id": "profile-silhouette",
+      "name": "Side-profile silhouette and proportions",
+      "tier": "critical",
+      "passIds": [
+        "blockout",
+        "structural-pass"
+      ],
+      "minimumScore": 0.78,
+      "mustPass": true,
+      "componentRefs": [
+        "stock",
+        "receiver",
+        "barrel-top",
+        "barrel-bottom"
+      ],
+      "evidenceRefs": [
+        "full-object"
+      ]
+    },
+    {
+      "id": "double-barrel-signature",
+      "name": "Stacked double barrel with orange band",
+      "tier": "critical",
+      "passIds": [
+        "blockout",
+        "form-refinement"
+      ],
+      "minimumScore": 0.75,
+      "mustPass": true,
+      "componentRefs": [
+        "barrel-top",
+        "barrel-bottom",
+        "receiver"
+      ],
+      "evidenceRefs": [
+        "full-object"
+      ]
+    },
+    {
+      "id": "palette",
+      "name": "Caramel stock and fore-grip, orange band, grape barrels, yellow trigger",
+      "tier": "important",
+      "passIds": [
+        "material-pass"
+      ],
+      "minimumScore": 0.7,
+      "mustPass": false,
+      "componentRefs": [
+        "stock",
+        "receiver"
+      ],
+      "evidenceRefs": [
+        "full-object"
+      ]
+    }
+  ],
+  "sculptPipeline": {
+    "passGateMode": "locked-sequential",
+    "passOrder": [
+      "blockout",
+      "structural-pass",
+      "form-refinement",
+      "material-pass",
+      "lighting-pass",
+      "interaction-pass",
+      "optimization-pass"
+    ],
+    "currentPass": "material-pass",
+    "completedPasses": [
+      "blockout",
+      "structural-pass",
+      "form-refinement"
+    ],
+    "lastCompletedPass": "form-refinement",
+    "blockedReason": "",
+    "nextRequiredEvidence": [
+      "Reference-derived albedo palette records dominant, secondary, and accent colors per visible material.",
+      "Each important material defines roughness variation and at least one normal/bump/displacement response.",
+      "Local material overrides, dirt/wear/stains/moss/chips/scratches or equivalent masks are tied to evidenceRefs.",
+      "Thin, transparent, reflective, wet, or fibrous materials document alpha/transmission/clearcoat/metalness/fiber response when relevant.",
+      "Generated preview uses procedural albedo/roughness/bump texture or vertex color variation instead of one flat color.",
+      "Generated preview uses independent PBR maps at 1024px or higher for the quality-first tier.",
+      "If source pixels are available, referencePbr extraction passed at confidence >= 0.7 or the pass is stopped/requesting better references.",
+      "Macro, meso, and micro surface frequency bands are visible at the intended review distance without obvious tiling.",
+      "AI vision comparison score meets selfCorrectLoop.visualAcceptance.threshold.",
+      "reference-derived albedo palette with dominant, secondary, and accent colors",
+      "independent albedo, roughness, height/normal, and AO maps",
+      "macro, meso, and micro surface-frequency response at 1024px or higher",
+      "local material masks: AO, dirt, wear, stains, moss, chips, scratches, wetness, or equivalent",
+      "neutral, grazing-light close-up, and reference-matched browser screenshots",
+      "AI vision comparison sheet score meeting the visual acceptance threshold",
+      "browser render screenshot from your agent's browser/screenshot tool",
+      "side-by-side reference/render comparison sheet for AI vision review",
+      "banded interior difference vs the reference baseline (forge/stage4_review/interior_difference.py --from/--to per region)",
+      "AI vision score at or above the visual acceptance threshold",
+      "all critical semantic feature scores from the shared image pair at or above their thresholds",
+      "self-correction review appended with action=continue before the next pass"
+    ]
+  },
+  "lookDevTargets": {
+    "qualityPriority": "reference-fidelity",
+    "materialPass": {
+      "albedoPaletteRequired": true,
+      "roughnessVariationRequired": true,
+      "normalOrBumpRequired": true,
+      "localOverridesRequired": true,
+      "minimumTextureResolution": 1024,
+      "preferredTextureResolution": 2048,
+      "independentMapChannels": [
+        "albedo",
+        "roughness",
+        "height",
+        "normal",
+        "ambient-occlusion"
+      ],
+      "requiredSurfaceFrequencyBands": [
+        "macro",
+        "meso",
+        "micro"
+      ],
+      "geometryReliefRequiredWhenSilhouetteAffected": true,
+      "referencePbrExtraction": {
+        "requiredWhenSourceImagePresent": true,
+        "targetThreshold": 0.7,
+        "stopOnLowConfidence": true,
+        "script": "forge/stage1_intake/extract_pbr_evidence.py",
+        "acceptedLimitation": "single-image extraction is reference-derived inference, not exact photogrammetry"
+      },
+      "mustAvoid": [
+        "single flat albedo per material",
+        "uniform roughness",
+        "albedo texture reused as roughness/height/normal/AO",
+        "single-frequency random noise",
+        "plastic-looking smooth bark, stone, cloth, foliage, or aged material",
+        "local color/detail described only in prose without material masks",
+        "claiming exact PBR recovery when confidence is below the target threshold"
+      ]
+    },
+    "lightingPass": {
+      "requiredTerms": [
+        "key light",
+        "fill light",
+        "rim or environment light",
+        "exposure",
+        "tone mapping",
+        "background",
+        "contact shadow"
+      ],
+      "mustAvoid": [
+        "ambient-only lighting",
+        "flat value range",
+        "missing contact shadow",
+        "reference lighting copied without separating material readability"
+      ]
+    },
+    "screenshotReview": [
+      "Compare albedo palette and local color zones.",
+      "Compare roughness/normal/bump response under light.",
+      "Compare cavity dirt, edge wear, stains, moss, scratches, or other local masks.",
+      "Compare key/fill/rim structure, exposure, tone mapping, background, and contact shadows.",
+      "Capture a neutral-light render to verify material readability without reference lighting.",
+      "Capture a grazing-light close-up to expose flat normals, uniform roughness, tiling, and plastic highlights.",
+      "Capture a reference-matched render from the same camera framing as the source."
+    ]
+  },
+  "actionReadiness": {
+    "contract": "Every macro/meso component should be generated as a stable named Object3D pivot node with a mesh child, action metadata, optional sockets, collider proxy, and destruction metadata.",
+    "defaultRigType": "action-ready-static-rig",
+    "rootMotionNode": "root",
+    "requiredComponentFields": [
+      "id",
+      "parent",
+      "transform",
+      "attachment for child appendages, connectors, limbs, tubes, handles, legs, horns, wings, branches, or cables",
+      "actionProfile.animationRole",
+      "actionProfile.pivot",
+      "actionProfile.collider",
+      "actionProfile.destruction"
+    ],
+    "transformChannels": [
+      "translate",
+      "rotate",
+      "scale",
+      "bend",
+      "twist",
+      "detach",
+      "visibility",
+      "material-state"
+    ],
+    "authoringRules": [
+      "Do not collapse independently movable parts into one mesh.",
+      "Put transforms on component pivot groups, not only on raw meshes.",
+      "For attached child parts, put the pivot at the semantic root/socket and build visible geometry from localStart to localEnd.",
+      "Represent hinge, socket, detachable, and breakable intent even when no animation is implemented yet.",
+      "Use simplified collider proxies for runtime physics instead of visual mesh colliders by default."
+    ],
+    "destructionPolicy": {
+      "defaultBreakable": false,
+      "fractureGroupNaming": "Use stable semantic names such as body-shell, left-hinge, glass-panel, branch-segment.",
+      "debrisStrategy": "Prefer detachable component groups and a small number of procedural fragments over random mesh explosion."
+    }
+  },
+  "assumptions": [
+    "Resolved unknowns (single side view): see risks.",
+    "Both sides of the gun are mirror images.",
+    "Barrels side by side vertically as in the side view."
+  ],
+  "coordinateFrame": {
+    "front": "+Z (muzzle)",
+    "up": "+Y",
+    "units": "meters",
+    "scaleReference": "overall length 0.51 m"
+  },
+  "silhouette": {
+    "boundingShape": "wedge stock, short receiver, two stacked barrels",
+    "aspectRatios": [],
+    "symmetry": "bilateral across the barrel plane",
+    "dominantCurves": [
+      "grip rake",
+      "rounded body corners"
+    ],
+    "negativeSpaces": [
+      "trigger guard opening"
+    ],
+    "landmarks": [
+      "grip top (origin)",
+      "muzzle"
+    ]
+  },
+  "viewEvidence": [
+    {
+      "id": "full-object",
+      "view": "primary",
+      "imageRegion": {
+        "x": 0.0,
+        "y": 0.0,
+        "width": 1.0,
+        "height": 1.0,
+        "units": "normalized"
+      },
+      "observations": [],
+      "confidence": 0.5
+    }
+  ],
+  "componentTree": [
+    {
+      "id": "root",
+      "name": "Root",
+      "level": "macro",
+      "role": "root",
+      "importance": 0.1,
+      "confidence": 0.8,
+      "primitive": "box",
+      "topologyClass": "assembled-solid",
+      "topologyRationale": "Invisible pivot at the grip top; the hero mitt socket holds this point.",
+      "geometryDescriptor": {
+        "topologyIntent": "stylized toy part",
+        "edgeTreatment": {
+          "type": "none",
+          "bevelRadius": 0.0,
+          "segments": 1
+        },
+        "deformationStack": [],
+        "uvStrategy": "generated procedural coordinates",
+        "normalStrategy": "smooth vertex normals"
+      },
+      "parent": null,
+      "attachment": null,
+      "dimensions": {
+        "width": 0.01,
+        "height": 0.01,
+        "depth": 0.01,
+        "units": "meters",
+        "confidence": 0.8
+      },
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.01,
+          0.01,
+          0.01
+        ]
+      },
+      "actionProfile": {
+        "animationRole": "root-motion",
+        "pivot": {
+          "mode": "center",
+          "localPosition": [
+            0,
+            0,
+            0
+          ],
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "confidence": 0.7
+        },
+        "transformChannels": {
+          "translate": true,
+          "rotate": true,
+          "scale": true,
+          "bend": false,
+          "twist": false,
+          "detach": false,
+          "visibility": true,
+          "materialState": true
+        },
+        "sockets": [
+          {
+            "id": "muzzle",
+            "localPosition": [
+              0,
+              0,
+              0.51
+            ],
+            "localRotation": [
+              0,
+              0,
+              0
+            ],
+            "purpose": "muzzle flash and bullet origin"
+          }
+        ],
+        "collider": {
+          "type": "box",
+          "offset": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ],
+          "isTrigger": false,
+          "notes": "simplified proxy"
+        },
+        "constraints": [],
+        "destruction": {
+          "breakable": false,
+          "fractureGroup": "root",
+          "seamRefs": [],
+          "detachableFragments": [],
+          "breakImpulse": 0.0,
+          "debrisMaterial": "hidden"
+        }
+      },
+      "material": "hidden",
+      "materialLayers": [
+        "hidden"
+      ],
+      "deformations": [],
+      "joints": [],
+      "seams": [],
+      "localFeatures": [],
+      "surfaceDetail": {
+        "macroRoughness": 0.0,
+        "microRoughness": 0.0,
+        "bumpAmplitude": 0.0,
+        "normalPattern": "",
+        "displacementPattern": "",
+        "occlusionPattern": "",
+        "edgeWearPattern": "",
+        "notes": "Smooth moulded plastic; no relief."
+      },
+      "evidenceRefs": [
+        "full-object"
+      ],
+      "details": [],
+      "fidelityTier": "blockout",
+      "colorMaterialRecipe": {
+        "dominantAlbedo": "rgba(0, 0, 0, 1.0)",
+        "secondaryAlbedo": "rgba(0, 0, 0, 1.0)",
+        "materialClass": "unknown",
+        "materialClassConfidence": 0.9,
+        "evidenceRefs": [
+          "full-object"
+        ]
+      }
+    },
+    {
+      "id": "stock",
+      "name": "Stock",
+      "level": "macro",
+      "role": "body",
+      "importance": 1.0,
+      "confidence": 0.8,
+      "primitive": "extrude",
+      "topologyClass": "assembled-solid",
+      "topologyRationale": "Moulded toy part traced from the side profile and extruded across its thickness.",
+      "geometryDescriptor": {
+        "topologyIntent": "stylized toy part",
+        "edgeTreatment": {
+          "type": "none",
+          "bevelRadius": 0.0,
+          "segments": 1
+        },
+        "deformationStack": [],
+        "uvStrategy": "generated procedural coordinates",
+        "normalStrategy": "smooth vertex normals",
+        "profile2D": {
+          "points": [
+            [
+              -0.329,
+              0.0366
+            ],
+            [
+              -0.0914,
+              0.064
+            ],
+            [
+              0.0183,
+              0.1152
+            ],
+            [
+              0.1133,
+              0.1408
+            ],
+            [
+              0.1133,
+              -0.0311
+            ],
+            [
+              0.0585,
+              -0.0749
+            ],
+            [
+              -0.0512,
+              -0.0603
+            ],
+            [
+              -0.106,
+              -0.0603
+            ],
+            [
+              -0.2523,
+              -0.1846
+            ],
+            [
+              -0.3108,
+              -0.1846
+            ],
+            [
+              -0.3382,
+              -0.1188
+            ]
+          ],
+          "depth": 0.13
+        }
+      },
+      "parent": "root",
+      "attachment": null,
+      "dimensions": {
+        "width": 0.13,
+        "height": 0.3254,
+        "depth": 0.4515,
+        "units": "meters",
+        "confidence": 0.8
+      },
+      "transform": {
+        "position": [
+          0.065,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          -1.5707963267948966,
+          0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "actionProfile": {
+        "animationRole": "static",
+        "pivot": {
+          "mode": "center",
+          "localPosition": [
+            0,
+            0,
+            0
+          ],
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "confidence": 0.7
+        },
+        "transformChannels": {
+          "translate": true,
+          "rotate": true,
+          "scale": true,
+          "bend": false,
+          "twist": false,
+          "detach": false,
+          "visibility": true,
+          "materialState": true
+        },
+        "sockets": [],
+        "collider": {
+          "type": "box",
+          "offset": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ],
+          "isTrigger": false,
+          "notes": "simplified proxy"
+        },
+        "constraints": [],
+        "destruction": {
+          "breakable": false,
+          "fractureGroup": "stock",
+          "seamRefs": [],
+          "detachableFragments": [],
+          "breakImpulse": 0.0,
+          "debrisMaterial": "caramel"
+        }
+      },
+      "material": "caramel",
+      "materialLayers": [
+        "caramel"
+      ],
+      "deformations": [],
+      "joints": [],
+      "seams": [],
+      "localFeatures": [
+        {
+          "id": "edge-roundover",
+          "kind": "bevel",
+          "description": "rolled moulded edges that catch a soft highlight along the outline",
+          "evidenceRef": "detail-inventory/zone-r1c1.png"
+        }
+      ],
+      "surfaceDetail": {
+        "macroRoughness": 0.0,
+        "microRoughness": 0.0,
+        "bumpAmplitude": 0.0,
+        "normalPattern": "",
+        "displacementPattern": "",
+        "occlusionPattern": "",
+        "edgeWearPattern": "",
+        "notes": "Smooth moulded plastic; no relief."
+      },
+      "evidenceRefs": [
+        "full-object"
+      ],
+      "details": [],
+      "fidelityTier": "blockout",
+      "colorMaterialRecipe": {
+        "dominantAlbedo": "rgba(181, 101, 43, 1.0)",
+        "secondaryAlbedo": "rgba(154, 86, 37, 1.0)",
+        "materialClass": "plastic",
+        "materialClassConfidence": 0.9,
+        "evidenceRefs": [
+          "full-object"
+        ]
+      }
+    },
+    {
+      "id": "receiver",
+      "name": "Receiver",
+      "level": "macro",
+      "role": "body",
+      "importance": 0.85,
+      "confidence": 0.8,
+      "primitive": "extrude",
+      "topologyClass": "assembled-solid",
+      "topologyRationale": "Moulded toy part traced from the side profile and extruded across its thickness.",
+      "geometryDescriptor": {
+        "topologyIntent": "stylized toy part",
+        "edgeTreatment": {
+          "type": "none",
+          "bevelRadius": 0.0,
+          "segments": 1
+        },
+        "deformationStack": [],
+        "uvStrategy": "generated procedural coordinates",
+        "normalStrategy": "smooth vertex normals",
+        "profile2D": {
+          "points": [
+            [
+              0.1426,
+              -0.0786
+            ],
+            [
+              0.1395,
+              -0.094
+            ],
+            [
+              0.1308,
+              -0.107
+            ],
+            [
+              0.1178,
+              -0.1158
+            ],
+            [
+              0.1024,
+              -0.1188
+            ],
+            [
+              0.0494,
+              -0.1188
+            ],
+            [
+              0.034,
+              -0.1158
+            ],
+            [
+              0.0209,
+              -0.107
+            ],
+            [
+              0.0122,
+              -0.094
+            ],
+            [
+              0.0091,
+              -0.0786
+            ],
+            [
+              0.0091,
+              0.1152
+            ],
+            [
+              0.0122,
+              0.1306
+            ],
+            [
+              0.0209,
+              0.1436
+            ],
+            [
+              0.034,
+              0.1523
+            ],
+            [
+              0.0494,
+              0.1554
+            ],
+            [
+              0.1024,
+              0.1554
+            ],
+            [
+              0.1178,
+              0.1523
+            ],
+            [
+              0.1308,
+              0.1436
+            ],
+            [
+              0.1395,
+              0.1306
+            ],
+            [
+              0.1426,
+              0.1152
+            ]
+          ],
+          "depth": 0.15
+        }
+      },
+      "parent": "root",
+      "attachment": null,
+      "dimensions": {
+        "width": 0.15,
+        "height": 0.2742,
+        "depth": 0.1335,
+        "units": "meters",
+        "confidence": 0.8
+      },
+      "transform": {
+        "position": [
+          0.075,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          -1.5707963267948966,
+          0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "actionProfile": {
+        "animationRole": "static",
+        "pivot": {
+          "mode": "center",
+          "localPosition": [
+            0,
+            0,
+            0
+          ],
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "confidence": 0.7
+        },
+        "transformChannels": {
+          "translate": true,
+          "rotate": true,
+          "scale": true,
+          "bend": false,
+          "twist": false,
+          "detach": false,
+          "visibility": true,
+          "materialState": true
+        },
+        "sockets": [],
+        "collider": {
+          "type": "box",
+          "offset": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ],
+          "isTrigger": false,
+          "notes": "simplified proxy"
+        },
+        "constraints": [],
+        "destruction": {
+          "breakable": false,
+          "fractureGroup": "receiver",
+          "seamRefs": [],
+          "detachableFragments": [],
+          "breakImpulse": 0.0,
+          "debrisMaterial": "orange"
+        }
+      },
+      "material": "orange",
+      "materialLayers": [
+        "orange"
+      ],
+      "deformations": [],
+      "joints": [],
+      "seams": [],
+      "localFeatures": [],
+      "surfaceDetail": {
+        "macroRoughness": 0.0,
+        "microRoughness": 0.0,
+        "bumpAmplitude": 0.0,
+        "normalPattern": "",
+        "displacementPattern": "",
+        "occlusionPattern": "",
+        "edgeWearPattern": "",
+        "notes": "Smooth moulded plastic; no relief."
+      },
+      "evidenceRefs": [
+        "full-object"
+      ],
+      "details": [],
+      "fidelityTier": "blockout",
+      "colorMaterialRecipe": {
+        "dominantAlbedo": "rgba(255, 138, 31, 1.0)",
+        "secondaryAlbedo": "rgba(217, 117, 26, 1.0)",
+        "materialClass": "plastic",
+        "materialClassConfidence": 0.9,
+        "evidenceRefs": [
+          "full-object"
+        ]
+      }
+    },
+    {
+      "id": "barrel-top",
+      "name": "Barrel Top",
+      "level": "meso",
+      "role": "tube",
+      "importance": 0.9,
+      "confidence": 0.8,
+      "primitive": "cylinder",
+      "topologyClass": "assembled-solid",
+      "topologyRationale": "Round barrel/tube along the gun axis, built as an attachment cylinder from its rear to its front.",
+      "geometryDescriptor": {
+        "topologyIntent": "stylized toy part",
+        "edgeTreatment": {
+          "type": "none",
+          "bevelRadius": 0.0,
+          "segments": 1
+        },
+        "deformationStack": [],
+        "uvStrategy": "generated procedural coordinates",
+        "normalStrategy": "smooth vertex normals"
+      },
+      "parent": "root",
+      "attachment": {
+        "parentId": "root",
+        "parentSocket": "barrel-top-mount",
+        "localStart": [
+          0.0,
+          0.1078,
+          0.1005
+        ],
+        "localEnd": [
+          0.0,
+          0.1078,
+          0.5118
+        ],
+        "contactType": "embed",
+        "overlap": 0.01,
+        "gapTolerance": 0.01,
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "baseRadius": 0.0494,
+        "endRadius": 0.0494
+      },
+      "dimensions": {
+        "width": 0.0988,
+        "height": 0.0988,
+        "depth": 0.4113,
+        "units": "meters",
+        "confidence": 0.8
+      },
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.0988,
+          0.0988,
+          0.4113
+        ]
+      },
+      "actionProfile": {
+        "animationRole": "static",
+        "pivot": {
+          "mode": "center",
+          "localPosition": [
+            0,
+            0,
+            0
+          ],
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "confidence": 0.7
+        },
+        "transformChannels": {
+          "translate": true,
+          "rotate": true,
+          "scale": true,
+          "bend": false,
+          "twist": false,
+          "detach": false,
+          "visibility": true,
+          "materialState": true
+        },
+        "sockets": [],
+        "collider": {
+          "type": "box",
+          "offset": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ],
+          "isTrigger": false,
+          "notes": "simplified proxy"
+        },
+        "constraints": [],
+        "destruction": {
+          "breakable": false,
+          "fractureGroup": "barrel-top",
+          "seamRefs": [],
+          "detachableFragments": [],
+          "breakImpulse": 0.0,
+          "debrisMaterial": "grape"
+        }
+      },
+      "material": "grape",
+      "materialLayers": [
+        "grape"
+      ],
+      "deformations": [],
+      "joints": [],
+      "seams": [],
+      "localFeatures": [],
+      "surfaceDetail": {
+        "macroRoughness": 0.0,
+        "microRoughness": 0.0,
+        "bumpAmplitude": 0.0,
+        "normalPattern": "",
+        "displacementPattern": "",
+        "occlusionPattern": "",
+        "edgeWearPattern": "",
+        "notes": "Smooth moulded plastic; no relief."
+      },
+      "evidenceRefs": [
+        "full-object"
+      ],
+      "details": [],
+      "fidelityTier": "blockout",
+      "colorMaterialRecipe": {
+        "dominantAlbedo": "rgba(91, 42, 134, 1.0)",
+        "secondaryAlbedo": "rgba(77, 36, 114, 1.0)",
+        "materialClass": "plastic",
+        "materialClassConfidence": 0.9,
+        "evidenceRefs": [
+          "full-object"
+        ]
+      }
+    },
+    {
+      "id": "barrel-bottom",
+      "name": "Barrel Bottom",
+      "level": "meso",
+      "role": "tube",
+      "importance": 0.9,
+      "confidence": 0.8,
+      "primitive": "cylinder",
+      "topologyClass": "assembled-solid",
+      "topologyRationale": "Round barrel/tube along the gun axis, built as an attachment cylinder from its rear to its front.",
+      "geometryDescriptor": {
+        "topologyIntent": "stylized toy part",
+        "edgeTreatment": {
+          "type": "none",
+          "bevelRadius": 0.0,
+          "segments": 1
+        },
+        "deformationStack": [],
+        "uvStrategy": "generated procedural coordinates",
+        "normalStrategy": "smooth vertex normals"
+      },
+      "parent": "root",
+      "attachment": {
+        "parentId": "root",
+        "parentSocket": "barrel-bottom-mount",
+        "localStart": [
+          0.0,
+          0.0165,
+          0.1005
+        ],
+        "localEnd": [
+          0.0,
+          0.0165,
+          0.5118
+        ],
+        "contactType": "embed",
+        "overlap": 0.01,
+        "gapTolerance": 0.01,
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "baseRadius": 0.0494,
+        "endRadius": 0.0494
+      },
+      "dimensions": {
+        "width": 0.0988,
+        "height": 0.0988,
+        "depth": 0.4113,
+        "units": "meters",
+        "confidence": 0.8
+      },
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.0988,
+          0.0988,
+          0.4113
+        ]
+      },
+      "actionProfile": {
+        "animationRole": "static",
+        "pivot": {
+          "mode": "center",
+          "localPosition": [
+            0,
+            0,
+            0
+          ],
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "confidence": 0.7
+        },
+        "transformChannels": {
+          "translate": true,
+          "rotate": true,
+          "scale": true,
+          "bend": false,
+          "twist": false,
+          "detach": false,
+          "visibility": true,
+          "materialState": true
+        },
+        "sockets": [],
+        "collider": {
+          "type": "box",
+          "offset": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ],
+          "isTrigger": false,
+          "notes": "simplified proxy"
+        },
+        "constraints": [],
+        "destruction": {
+          "breakable": false,
+          "fractureGroup": "barrel-bottom",
+          "seamRefs": [],
+          "detachableFragments": [],
+          "breakImpulse": 0.0,
+          "debrisMaterial": "grape"
+        }
+      },
+      "material": "grape",
+      "materialLayers": [
+        "grape"
+      ],
+      "deformations": [],
+      "joints": [],
+      "seams": [],
+      "localFeatures": [],
+      "surfaceDetail": {
+        "macroRoughness": 0.0,
+        "microRoughness": 0.0,
+        "bumpAmplitude": 0.0,
+        "normalPattern": "",
+        "displacementPattern": "",
+        "occlusionPattern": "",
+        "edgeWearPattern": "",
+        "notes": "Smooth moulded plastic; no relief."
+      },
+      "evidenceRefs": [
+        "full-object"
+      ],
+      "details": [],
+      "fidelityTier": "blockout",
+      "colorMaterialRecipe": {
+        "dominantAlbedo": "rgba(91, 42, 134, 1.0)",
+        "secondaryAlbedo": "rgba(77, 36, 114, 1.0)",
+        "materialClass": "plastic",
+        "materialClassConfidence": 0.9,
+        "evidenceRefs": [
+          "full-object"
+        ]
+      }
+    },
+    {
+      "id": "bore-top",
+      "name": "Bore Top",
+      "level": "micro",
+      "role": "pipe",
+      "importance": 0.4,
+      "confidence": 0.8,
+      "primitive": "cylinder",
+      "topologyClass": "assembled-solid",
+      "topologyRationale": "Round barrel/tube along the gun axis, built as an attachment cylinder from its rear to its front.",
+      "geometryDescriptor": {
+        "topologyIntent": "stylized toy part",
+        "edgeTreatment": {
+          "type": "none",
+          "bevelRadius": 0.0,
+          "segments": 1
+        },
+        "deformationStack": [],
+        "uvStrategy": "generated procedural coordinates",
+        "normalStrategy": "smooth vertex normals"
+      },
+      "parent": "root",
+      "attachment": {
+        "parentId": "root",
+        "parentSocket": "bore-top-mount",
+        "localStart": [
+          0.0,
+          0.1078,
+          0.5009
+        ],
+        "localEnd": [
+          0.0,
+          0.1078,
+          0.5191
+        ],
+        "contactType": "embed",
+        "overlap": 0.01,
+        "gapTolerance": 0.01,
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "baseRadius": 0.0274,
+        "endRadius": 0.0274
+      },
+      "dimensions": {
+        "width": 0.0548,
+        "height": 0.0548,
+        "depth": 0.0183,
+        "units": "meters",
+        "confidence": 0.8
+      },
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.0548,
+          0.0548,
+          0.0183
+        ]
+      },
+      "actionProfile": {
+        "animationRole": "static",
+        "pivot": {
+          "mode": "center",
+          "localPosition": [
+            0,
+            0,
+            0
+          ],
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "confidence": 0.7
+        },
+        "transformChannels": {
+          "translate": true,
+          "rotate": true,
+          "scale": true,
+          "bend": false,
+          "twist": false,
+          "detach": false,
+          "visibility": true,
+          "materialState": true
+        },
+        "sockets": [],
+        "collider": {
+          "type": "box",
+          "offset": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ],
+          "isTrigger": false,
+          "notes": "simplified proxy"
+        },
+        "constraints": [],
+        "destruction": {
+          "breakable": false,
+          "fractureGroup": "bore-top",
+          "seamRefs": [],
+          "detachableFragments": [],
+          "breakImpulse": 0.0,
+          "debrisMaterial": "ink"
+        }
+      },
+      "material": "ink",
+      "materialLayers": [
+        "ink"
+      ],
+      "deformations": [],
+      "joints": [],
+      "seams": [],
+      "localFeatures": [],
+      "surfaceDetail": {
+        "macroRoughness": 0.0,
+        "microRoughness": 0.0,
+        "bumpAmplitude": 0.0,
+        "normalPattern": "",
+        "displacementPattern": "",
+        "occlusionPattern": "",
+        "edgeWearPattern": "",
+        "notes": "Smooth moulded plastic; no relief."
+      },
+      "evidenceRefs": [
+        "full-object"
+      ],
+      "details": [],
+      "fidelityTier": "blockout",
+      "colorMaterialRecipe": {
+        "dominantAlbedo": "rgba(43, 31, 69, 1.0)",
+        "secondaryAlbedo": "rgba(37, 26, 59, 1.0)",
+        "materialClass": "plastic",
+        "materialClassConfidence": 0.9,
+        "evidenceRefs": [
+          "full-object"
+        ]
+      }
+    },
+    {
+      "id": "bore-bottom",
+      "name": "Bore Bottom",
+      "level": "micro",
+      "role": "pipe",
+      "importance": 0.4,
+      "confidence": 0.8,
+      "primitive": "cylinder",
+      "topologyClass": "assembled-solid",
+      "topologyRationale": "Round barrel/tube along the gun axis, built as an attachment cylinder from its rear to its front.",
+      "geometryDescriptor": {
+        "topologyIntent": "stylized toy part",
+        "edgeTreatment": {
+          "type": "none",
+          "bevelRadius": 0.0,
+          "segments": 1
+        },
+        "deformationStack": [],
+        "uvStrategy": "generated procedural coordinates",
+        "normalStrategy": "smooth vertex normals"
+      },
+      "parent": "root",
+      "attachment": {
+        "parentId": "root",
+        "parentSocket": "bore-bottom-mount",
+        "localStart": [
+          0.0,
+          0.0165,
+          0.5009
+        ],
+        "localEnd": [
+          0.0,
+          0.0165,
+          0.5191
+        ],
+        "contactType": "embed",
+        "overlap": 0.01,
+        "gapTolerance": 0.01,
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "baseRadius": 0.0274,
+        "endRadius": 0.0274
+      },
+      "dimensions": {
+        "width": 0.0548,
+        "height": 0.0548,
+        "depth": 0.0183,
+        "units": "meters",
+        "confidence": 0.8
+      },
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.0548,
+          0.0548,
+          0.0183
+        ]
+      },
+      "actionProfile": {
+        "animationRole": "static",
+        "pivot": {
+          "mode": "center",
+          "localPosition": [
+            0,
+            0,
+            0
+          ],
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "confidence": 0.7
+        },
+        "transformChannels": {
+          "translate": true,
+          "rotate": true,
+          "scale": true,
+          "bend": false,
+          "twist": false,
+          "detach": false,
+          "visibility": true,
+          "materialState": true
+        },
+        "sockets": [],
+        "collider": {
+          "type": "box",
+          "offset": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ],
+          "isTrigger": false,
+          "notes": "simplified proxy"
+        },
+        "constraints": [],
+        "destruction": {
+          "breakable": false,
+          "fractureGroup": "bore-bottom",
+          "seamRefs": [],
+          "detachableFragments": [],
+          "breakImpulse": 0.0,
+          "debrisMaterial": "ink"
+        }
+      },
+      "material": "ink",
+      "materialLayers": [
+        "ink"
+      ],
+      "deformations": [],
+      "joints": [],
+      "seams": [],
+      "localFeatures": [],
+      "surfaceDetail": {
+        "macroRoughness": 0.0,
+        "microRoughness": 0.0,
+        "bumpAmplitude": 0.0,
+        "normalPattern": "",
+        "displacementPattern": "",
+        "occlusionPattern": "",
+        "edgeWearPattern": "",
+        "notes": "Smooth moulded plastic; no relief."
+      },
+      "evidenceRefs": [
+        "full-object"
+      ],
+      "details": [],
+      "fidelityTier": "blockout",
+      "colorMaterialRecipe": {
+        "dominantAlbedo": "rgba(43, 31, 69, 1.0)",
+        "secondaryAlbedo": "rgba(37, 26, 59, 1.0)",
+        "materialClass": "plastic",
+        "materialClassConfidence": 0.9,
+        "evidenceRefs": [
+          "full-object"
+        ]
+      }
+    },
+    {
+      "id": "fore-grip",
+      "name": "Fore Grip",
+      "level": "macro",
+      "role": "body",
+      "importance": 0.8,
+      "confidence": 0.8,
+      "primitive": "extrude",
+      "topologyClass": "assembled-solid",
+      "topologyRationale": "Moulded toy part traced from the side profile and extruded across its thickness.",
+      "geometryDescriptor": {
+        "topologyIntent": "stylized toy part",
+        "edgeTreatment": {
+          "type": "none",
+          "bevelRadius": 0.0,
+          "segments": 1
+        },
+        "deformationStack": [],
+        "uvStrategy": "generated procedural coordinates",
+        "normalStrategy": "smooth vertex normals",
+        "profile2D": {
+          "points": [
+            [
+              0.4478,
+              -0.0713
+            ],
+            [
+              0.4445,
+              -0.0881
+            ],
+            [
+              0.435,
+              -0.1023
+            ],
+            [
+              0.4208,
+              -0.1118
+            ],
+            [
+              0.404,
+              -0.1152
+            ],
+            [
+              0.1718,
+              -0.1152
+            ],
+            [
+              0.155,
+              -0.1118
+            ],
+            [
+              0.1408,
+              -0.1023
+            ],
+            [
+              0.1313,
+              -0.0881
+            ],
+            [
+              0.128,
+              -0.0713
+            ],
+            [
+              0.128,
+              -0.0622
+            ],
+            [
+              0.1313,
+              -0.0454
+            ],
+            [
+              0.1408,
+              -0.0311
+            ],
+            [
+              0.155,
+              -0.0216
+            ],
+            [
+              0.1718,
+              -0.0183
+            ],
+            [
+              0.404,
+              -0.0183
+            ],
+            [
+              0.4208,
+              -0.0216
+            ],
+            [
+              0.435,
+              -0.0311
+            ],
+            [
+              0.4445,
+              -0.0454
+            ],
+            [
+              0.4478,
+              -0.0622
+            ]
+          ],
+          "depth": 0.12
+        }
+      },
+      "parent": "root",
+      "attachment": null,
+      "dimensions": {
+        "width": 0.12,
+        "height": 0.0969,
+        "depth": 0.3198,
+        "units": "meters",
+        "confidence": 0.8
+      },
+      "transform": {
+        "position": [
+          0.06,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          -1.5707963267948966,
+          0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "actionProfile": {
+        "animationRole": "static",
+        "pivot": {
+          "mode": "center",
+          "localPosition": [
+            0,
+            0,
+            0
+          ],
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "confidence": 0.7
+        },
+        "transformChannels": {
+          "translate": true,
+          "rotate": true,
+          "scale": true,
+          "bend": false,
+          "twist": false,
+          "detach": false,
+          "visibility": true,
+          "materialState": true
+        },
+        "sockets": [],
+        "collider": {
+          "type": "box",
+          "offset": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ],
+          "isTrigger": false,
+          "notes": "simplified proxy"
+        },
+        "constraints": [],
+        "destruction": {
+          "breakable": false,
+          "fractureGroup": "fore-grip",
+          "seamRefs": [],
+          "detachableFragments": [],
+          "breakImpulse": 0.0,
+          "debrisMaterial": "caramel"
+        }
+      },
+      "material": "caramel",
+      "materialLayers": [
+        "caramel"
+      ],
+      "deformations": [],
+      "joints": [],
+      "seams": [],
+      "localFeatures": [
+        {
+          "id": "fore-grip-taper",
+          "kind": "contour",
+          "description": "narrows toward its lower end",
+          "evidenceRef": "detail-inventory/zone-r2c0.png"
+        }
+      ],
+      "surfaceDetail": {
+        "macroRoughness": 0.0,
+        "microRoughness": 0.0,
+        "bumpAmplitude": 0.0,
+        "normalPattern": "",
+        "displacementPattern": "",
+        "occlusionPattern": "",
+        "edgeWearPattern": "",
+        "notes": "Smooth moulded plastic; no relief."
+      },
+      "evidenceRefs": [
+        "full-object"
+      ],
+      "details": [],
+      "fidelityTier": "blockout",
+      "colorMaterialRecipe": {
+        "dominantAlbedo": "rgba(181, 101, 43, 1.0)",
+        "secondaryAlbedo": "rgba(154, 86, 37, 1.0)",
+        "materialClass": "plastic",
+        "materialClassConfidence": 0.9,
+        "evidenceRefs": [
+          "full-object"
+        ]
+      }
+    },
+    {
+      "id": "trigger-guard",
+      "name": "Trigger Guard",
+      "level": "meso",
+      "role": "detail",
+      "importance": 0.6,
+      "confidence": 0.8,
+      "primitive": "torus",
+      "topologyClass": "assembled-solid",
+      "topologyRationale": "Moulded ring: torus sized from its traced inner and outer radius.",
+      "geometryDescriptor": {
+        "topologyIntent": "stylized toy part",
+        "edgeTreatment": {
+          "type": "none",
+          "bevelRadius": 0.0,
+          "segments": 1
+        },
+        "deformationStack": [],
+        "uvStrategy": "generated procedural coordinates",
+        "normalStrategy": "smooth vertex normals",
+        "torusTubeRatio": 0.1996
+      },
+      "parent": "root",
+      "attachment": null,
+      "dimensions": {
+        "width": 0.1219,
+        "height": 0.1219,
+        "depth": 0.1948,
+        "units": "meters",
+        "confidence": 0.8
+      },
+      "transform": {
+        "position": [
+          0,
+          -0.0859,
+          0.0329
+        ],
+        "rotation": [
+          0,
+          1.5707963267948966,
+          0
+        ],
+        "scale": [
+          0.1219,
+          0.1219,
+          0.1948
+        ]
+      },
+      "actionProfile": {
+        "animationRole": "static",
+        "pivot": {
+          "mode": "center",
+          "localPosition": [
+            0,
+            0,
+            0
+          ],
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "confidence": 0.7
+        },
+        "transformChannels": {
+          "translate": true,
+          "rotate": true,
+          "scale": true,
+          "bend": false,
+          "twist": false,
+          "detach": false,
+          "visibility": true,
+          "materialState": true
+        },
+        "sockets": [],
+        "collider": {
+          "type": "box",
+          "offset": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ],
+          "isTrigger": false,
+          "notes": "simplified proxy"
+        },
+        "constraints": [],
+        "destruction": {
+          "breakable": false,
+          "fractureGroup": "trigger-guard",
+          "seamRefs": [],
+          "detachableFragments": [],
+          "breakImpulse": 0.0,
+          "debrisMaterial": "orange"
+        }
+      },
+      "material": "orange",
+      "materialLayers": [
+        "orange"
+      ],
+      "deformations": [],
+      "joints": [],
+      "seams": [],
+      "localFeatures": [],
+      "surfaceDetail": {
+        "macroRoughness": 0.0,
+        "microRoughness": 0.0,
+        "bumpAmplitude": 0.0,
+        "normalPattern": "",
+        "displacementPattern": "",
+        "occlusionPattern": "",
+        "edgeWearPattern": "",
+        "notes": "Smooth moulded plastic; no relief."
+      },
+      "evidenceRefs": [
+        "full-object"
+      ],
+      "details": [],
+      "fidelityTier": "blockout",
+      "colorMaterialRecipe": {
+        "dominantAlbedo": "rgba(255, 138, 31, 1.0)",
+        "secondaryAlbedo": "rgba(217, 117, 26, 1.0)",
+        "materialClass": "plastic",
+        "materialClassConfidence": 0.9,
+        "evidenceRefs": [
+          "full-object"
+        ]
+      }
+    },
+    {
+      "id": "trigger",
+      "name": "Trigger",
+      "level": "micro",
+      "role": "body",
+      "importance": 0.6,
+      "confidence": 0.8,
+      "primitive": "extrude",
+      "topologyClass": "assembled-solid",
+      "topologyRationale": "Moulded toy part traced from the side profile and extruded across its thickness.",
+      "geometryDescriptor": {
+        "topologyIntent": "stylized toy part",
+        "edgeTreatment": {
+          "type": "none",
+          "bevelRadius": 0.0,
+          "segments": 1
+        },
+        "deformationStack": [],
+        "uvStrategy": "generated procedural coordinates",
+        "normalStrategy": "smooth vertex normals",
+        "profile2D": {
+          "points": [
+            [
+              0.0,
+              -0.0494
+            ],
+            [
+              0.0512,
+              -0.0567
+            ],
+            [
+              0.0585,
+              -0.1042
+            ],
+            [
+              0.0366,
+              -0.1261
+            ],
+            [
+              0.0091,
+              -0.1115
+            ]
+          ],
+          "depth": 0.04
+        }
+      },
+      "parent": "root",
+      "attachment": null,
+      "dimensions": {
+        "width": 0.04,
+        "height": 0.0767,
+        "depth": 0.0585,
+        "units": "meters",
+        "confidence": 0.8
+      },
+      "transform": {
+        "position": [
+          0.02,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          -1.5707963267948966,
+          0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "actionProfile": {
+        "animationRole": "static",
+        "pivot": {
+          "mode": "center",
+          "localPosition": [
+            0,
+            0,
+            0
+          ],
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "confidence": 0.7
+        },
+        "transformChannels": {
+          "translate": true,
+          "rotate": true,
+          "scale": true,
+          "bend": false,
+          "twist": false,
+          "detach": false,
+          "visibility": true,
+          "materialState": true
+        },
+        "sockets": [],
+        "collider": {
+          "type": "box",
+          "offset": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ],
+          "isTrigger": false,
+          "notes": "simplified proxy"
+        },
+        "constraints": [],
+        "destruction": {
+          "breakable": false,
+          "fractureGroup": "trigger",
+          "seamRefs": [],
+          "detachableFragments": [],
+          "breakImpulse": 0.0,
+          "debrisMaterial": "yellow"
+        }
+      },
+      "material": "yellow",
+      "materialLayers": [
+        "yellow"
+      ],
+      "deformations": [],
+      "joints": [],
+      "seams": [],
+      "localFeatures": [],
+      "surfaceDetail": {
+        "macroRoughness": 0.0,
+        "microRoughness": 0.0,
+        "bumpAmplitude": 0.0,
+        "normalPattern": "",
+        "displacementPattern": "",
+        "occlusionPattern": "",
+        "edgeWearPattern": "",
+        "notes": "Smooth moulded plastic; no relief."
+      },
+      "evidenceRefs": [
+        "full-object"
+      ],
+      "details": [],
+      "fidelityTier": "blockout",
+      "colorMaterialRecipe": {
+        "dominantAlbedo": "rgba(255, 228, 92, 1.0)",
+        "secondaryAlbedo": "rgba(217, 194, 78, 1.0)",
+        "materialClass": "plastic",
+        "materialClassConfidence": 0.9,
+        "evidenceRefs": [
+          "full-object"
+        ]
+      }
+    },
+    {
+      "id": "side-panel",
+      "name": "Side Panel",
+      "level": "micro",
+      "role": "body",
+      "importance": 0.4,
+      "confidence": 0.8,
+      "primitive": "extrude",
+      "topologyClass": "assembled-solid",
+      "topologyRationale": "Moulded toy part traced from the side profile and extruded across its thickness.",
+      "geometryDescriptor": {
+        "topologyIntent": "stylized toy part",
+        "edgeTreatment": {
+          "type": "none",
+          "bevelRadius": 0.0,
+          "segments": 1
+        },
+        "deformationStack": [],
+        "uvStrategy": "generated procedural coordinates",
+        "normalStrategy": "smooth vertex normals",
+        "profile2D": {
+          "points": [
+            [
+              -0.0731,
+              -0.064
+            ],
+            [
+              -0.0773,
+              -0.085
+            ],
+            [
+              -0.0892,
+              -0.1028
+            ],
+            [
+              -0.107,
+              -0.1146
+            ],
+            [
+              -0.128,
+              -0.1188
+            ],
+            [
+              -0.2285,
+              -0.1188
+            ],
+            [
+              -0.2495,
+              -0.1146
+            ],
+            [
+              -0.2673,
+              -0.1028
+            ],
+            [
+              -0.2792,
+              -0.085
+            ],
+            [
+              -0.2833,
+              -0.064
+            ],
+            [
+              -0.2833,
+              -0.0311
+            ],
+            [
+              -0.2792,
+              -0.0101
+            ],
+            [
+              -0.2673,
+              0.0077
+            ],
+            [
+              -0.2495,
+              0.0196
+            ],
+            [
+              -0.2285,
+              0.0238
+            ],
+            [
+              -0.128,
+              0.0238
+            ],
+            [
+              -0.107,
+              0.0196
+            ],
+            [
+              -0.0892,
+              0.0077
+            ],
+            [
+              -0.0773,
+              -0.0101
+            ],
+            [
+              -0.0731,
+              -0.0311
+            ]
+          ],
+          "depth": 0.154
+        }
+      },
+      "parent": "root",
+      "attachment": null,
+      "dimensions": {
+        "width": 0.154,
+        "height": 0.1426,
+        "depth": 0.2102,
+        "units": "meters",
+        "confidence": 0.8
+      },
+      "transform": {
+        "position": [
+          0.077,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          -1.5707963267948966,
+          0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "actionProfile": {
+        "animationRole": "static",
+        "pivot": {
+          "mode": "center",
+          "localPosition": [
+            0,
+            0,
+            0
+          ],
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "confidence": 0.7
+        },
+        "transformChannels": {
+          "translate": true,
+          "rotate": true,
+          "scale": true,
+          "bend": false,
+          "twist": false,
+          "detach": false,
+          "visibility": true,
+          "materialState": true
+        },
+        "sockets": [],
+        "collider": {
+          "type": "box",
+          "offset": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ],
+          "isTrigger": false,
+          "notes": "simplified proxy"
+        },
+        "constraints": [],
+        "destruction": {
+          "breakable": false,
+          "fractureGroup": "side-panel",
+          "seamRefs": [],
+          "detachableFragments": [],
+          "breakImpulse": 0.0,
+          "debrisMaterial": "caramel-light"
+        }
+      },
+      "material": "caramel-light",
+      "materialLayers": [
+        "caramel-light"
+      ],
+      "deformations": [],
+      "joints": [],
+      "seams": [],
+      "localFeatures": [],
+      "surfaceDetail": {
+        "macroRoughness": 0.0,
+        "microRoughness": 0.0,
+        "bumpAmplitude": 0.0,
+        "normalPattern": "",
+        "displacementPattern": "",
+        "occlusionPattern": "",
+        "edgeWearPattern": "",
+        "notes": "Smooth moulded plastic; no relief."
+      },
+      "evidenceRefs": [
+        "full-object"
+      ],
+      "details": [],
+      "fidelityTier": "blockout",
+      "colorMaterialRecipe": {
+        "dominantAlbedo": "rgba(201, 122, 62, 1.0)",
+        "secondaryAlbedo": "rgba(171, 104, 53, 1.0)",
+        "materialClass": "plastic",
+        "materialClassConfidence": 0.9,
+        "evidenceRefs": [
+          "full-object"
+        ]
+      }
+    }
+  ],
+  "materials": [
+    {
+      "id": "hidden",
+      "name": "hidden",
+      "type": "standard",
+      "shaderModel": "MeshStandardMaterial / PBR approximation",
+      "baseColor": "#000000",
+      "color": "#000000",
+      "albedo": {
+        "dominant": "#000000",
+        "secondary": [
+          "#000000",
+          "#000000"
+        ],
+        "samplingNotes": "Solid albedo sampled from the de-lit reference region; value changes in the image are shading, not paint."
+      },
+      "colorVariation": {
+        "palette": [
+          "#000000"
+        ],
+        "pattern": "none",
+        "amplitude": 0.0,
+        "heightCorrelation": 0.0
+      },
+      "roughness": {
+        "base": 1.0,
+        "variation": 0.03,
+        "map": "uniform-scalar",
+        "localResponse": "uniform gloss; moulded toy plastic has no wear"
+      },
+      "metalness": {
+        "base": 0.0,
+        "variation": 0.0
+      },
+      "ambientOcclusion": {
+        "cavityStrength": 0.15,
+        "contactShadowBias": 0.3,
+        "notes": "Soft contact darkening where parts meet."
+      },
+      "wear": {
+        "edgeWear": 0.0,
+        "scratches": [],
+        "chips": []
+      },
+      "dirt": {
+        "amount": 0.0,
+        "cavityBias": 0.0,
+        "color": "#2F2A22"
+      },
+      "localOverrides": [],
+      "shaderNotes": [
+        "Prefer MeshPhysicalMaterial when clearcoat, sheen, transmission, or thin-surface response is observed; otherwise use MeshStandardMaterial-compatible PBR channels.",
+        "Generate albedo, roughness, height/normal, and AO independently; never alias albedo into roughness.",
+        "Use normal/bump/displacement only when they map to observed surface relief.",
+        "Use displacement geometry when the observed relief changes the close-up silhouette; texture-only relief is insufficient there."
+      ],
+      "notes": "Replace with image-derived color, roughness, noise, and edge-wear notes.",
+      "textureless": {
+        "declared": true,
+        "evidence": [
+          "albedo-samples.json: region medians are flat; value change across the part follows the light falloff, not a pattern",
+          "detail-inventory zones show no grain, print, seam texture or pores at 1254 px"
+        ]
+      },
+      "materialClass": "unknown",
+      "finishStyle": "none"
+    },
+    {
+      "id": "caramel",
+      "name": "caramel",
+      "type": "standard",
+      "shaderModel": "MeshStandardMaterial / PBR approximation",
+      "baseColor": "#B5652B",
+      "color": "#B5652B",
+      "albedo": {
+        "dominant": "#B5652B",
+        "secondary": [
+          "#9A5625",
+          "#C76F2F"
+        ],
+        "samplingNotes": "zone-r1c0 stock"
+      },
+      "colorVariation": {
+        "palette": [
+          "#B5652B"
+        ],
+        "pattern": "none",
+        "amplitude": 0.0,
+        "heightCorrelation": 0.0
+      },
+      "roughness": {
+        "base": 0.25,
+        "variation": 0.03,
+        "map": "uniform-scalar",
+        "localResponse": "uniform gloss; moulded toy plastic has no wear"
+      },
+      "metalness": {
+        "base": 0.0,
+        "variation": 0.0
+      },
+      "ambientOcclusion": {
+        "cavityStrength": 0.15,
+        "contactShadowBias": 0.3,
+        "notes": "Soft contact darkening where parts meet."
+      },
+      "wear": {
+        "edgeWear": 0.0,
+        "scratches": [],
+        "chips": []
+      },
+      "dirt": {
+        "amount": 0.0,
+        "cavityBias": 0.0,
+        "color": "#2F2A22"
+      },
+      "localOverrides": [
+        {
+          "id": "seam-contact-ao",
+          "region": "where parts meet (grip root, barrel mount)",
+          "albedoMultiplier": 0.85,
+          "evidenceRef": "detail-inventory/zone-r1c1.png",
+          "notes": "soft contact darkening at moulded seams"
+        }
+      ],
+      "shaderNotes": [
+        "Prefer MeshPhysicalMaterial when clearcoat, sheen, transmission, or thin-surface response is observed; otherwise use MeshStandardMaterial-compatible PBR channels.",
+        "Generate albedo, roughness, height/normal, and AO independently; never alias albedo into roughness.",
+        "Use normal/bump/displacement only when they map to observed surface relief.",
+        "Use displacement geometry when the observed relief changes the close-up silhouette; texture-only relief is insufficient there."
+      ],
+      "notes": "Replace with image-derived color, roughness, noise, and edge-wear notes.",
+      "textureless": {
+        "declared": true,
+        "evidence": [
+          "albedo-samples.json: region medians are flat; value change across the part follows the light falloff, not a pattern",
+          "detail-inventory zones show no grain, print, seam texture or pores at 1254 px"
+        ]
+      },
+      "materialClass": "plastic",
+      "finishStyle": "gloss"
+    },
+    {
+      "id": "orange",
+      "name": "orange",
+      "type": "standard",
+      "shaderModel": "MeshStandardMaterial / PBR approximation",
+      "baseColor": "#FF8A1F",
+      "color": "#FF8A1F",
+      "albedo": {
+        "dominant": "#FF8A1F",
+        "secondary": [
+          "#D9751A",
+          "#FF9822"
+        ],
+        "samplingNotes": "zone-r1c1 receiver band"
+      },
+      "colorVariation": {
+        "palette": [
+          "#FF8A1F"
+        ],
+        "pattern": "none",
+        "amplitude": 0.0,
+        "heightCorrelation": 0.0
+      },
+      "roughness": {
+        "base": 0.25,
+        "variation": 0.03,
+        "map": "uniform-scalar",
+        "localResponse": "uniform gloss; moulded toy plastic has no wear"
+      },
+      "metalness": {
+        "base": 0.0,
+        "variation": 0.0
+      },
+      "ambientOcclusion": {
+        "cavityStrength": 0.15,
+        "contactShadowBias": 0.3,
+        "notes": "Soft contact darkening where parts meet."
+      },
+      "wear": {
+        "edgeWear": 0.0,
+        "scratches": [],
+        "chips": []
+      },
+      "dirt": {
+        "amount": 0.0,
+        "cavityBias": 0.0,
+        "color": "#2F2A22"
+      },
+      "localOverrides": [],
+      "shaderNotes": [
+        "Prefer MeshPhysicalMaterial when clearcoat, sheen, transmission, or thin-surface response is observed; otherwise use MeshStandardMaterial-compatible PBR channels.",
+        "Generate albedo, roughness, height/normal, and AO independently; never alias albedo into roughness.",
+        "Use normal/bump/displacement only when they map to observed surface relief.",
+        "Use displacement geometry when the observed relief changes the close-up silhouette; texture-only relief is insufficient there."
+      ],
+      "notes": "Replace with image-derived color, roughness, noise, and edge-wear notes.",
+      "textureless": {
+        "declared": true,
+        "evidence": [
+          "albedo-samples.json: region medians are flat; value change across the part follows the light falloff, not a pattern",
+          "detail-inventory zones show no grain, print, seam texture or pores at 1254 px"
+        ]
+      },
+      "materialClass": "plastic",
+      "finishStyle": "gloss"
+    },
+    {
+      "id": "grape",
+      "name": "grape",
+      "type": "standard",
+      "shaderModel": "MeshStandardMaterial / PBR approximation",
+      "baseColor": "#5B2A86",
+      "color": "#5B2A86",
+      "albedo": {
+        "dominant": "#5B2A86",
+        "secondary": [
+          "#4D2472",
+          "#642E93"
+        ],
+        "samplingNotes": "zone-r1c2 barrels"
+      },
+      "colorVariation": {
+        "palette": [
+          "#5B2A86"
+        ],
+        "pattern": "none",
+        "amplitude": 0.0,
+        "heightCorrelation": 0.0
+      },
+      "roughness": {
+        "base": 0.25,
+        "variation": 0.03,
+        "map": "uniform-scalar",
+        "localResponse": "uniform gloss; moulded toy plastic has no wear"
+      },
+      "metalness": {
+        "base": 0.0,
+        "variation": 0.0
+      },
+      "ambientOcclusion": {
+        "cavityStrength": 0.15,
+        "contactShadowBias": 0.3,
+        "notes": "Soft contact darkening where parts meet."
+      },
+      "wear": {
+        "edgeWear": 0.0,
+        "scratches": [],
+        "chips": []
+      },
+      "dirt": {
+        "amount": 0.0,
+        "cavityBias": 0.0,
+        "color": "#2F2A22"
+      },
+      "localOverrides": [],
+      "shaderNotes": [
+        "Prefer MeshPhysicalMaterial when clearcoat, sheen, transmission, or thin-surface response is observed; otherwise use MeshStandardMaterial-compatible PBR channels.",
+        "Generate albedo, roughness, height/normal, and AO independently; never alias albedo into roughness.",
+        "Use normal/bump/displacement only when they map to observed surface relief.",
+        "Use displacement geometry when the observed relief changes the close-up silhouette; texture-only relief is insufficient there."
+      ],
+      "notes": "Replace with image-derived color, roughness, noise, and edge-wear notes.",
+      "textureless": {
+        "declared": true,
+        "evidence": [
+          "albedo-samples.json: region medians are flat; value change across the part follows the light falloff, not a pattern",
+          "detail-inventory zones show no grain, print, seam texture or pores at 1254 px"
+        ]
+      },
+      "materialClass": "plastic",
+      "finishStyle": "gloss"
+    },
+    {
+      "id": "yellow",
+      "name": "yellow",
+      "type": "standard",
+      "shaderModel": "MeshStandardMaterial / PBR approximation",
+      "baseColor": "#FFE45C",
+      "color": "#FFE45C",
+      "albedo": {
+        "dominant": "#FFE45C",
+        "secondary": [
+          "#D9C24E",
+          "#FFFB65"
+        ],
+        "samplingNotes": "zone-r1c1 trigger"
+      },
+      "colorVariation": {
+        "palette": [
+          "#FFE45C"
+        ],
+        "pattern": "none",
+        "amplitude": 0.0,
+        "heightCorrelation": 0.0
+      },
+      "roughness": {
+        "base": 0.25,
+        "variation": 0.03,
+        "map": "uniform-scalar",
+        "localResponse": "uniform gloss; moulded toy plastic has no wear"
+      },
+      "metalness": {
+        "base": 0.0,
+        "variation": 0.0
+      },
+      "ambientOcclusion": {
+        "cavityStrength": 0.15,
+        "contactShadowBias": 0.3,
+        "notes": "Soft contact darkening where parts meet."
+      },
+      "wear": {
+        "edgeWear": 0.0,
+        "scratches": [],
+        "chips": []
+      },
+      "dirt": {
+        "amount": 0.0,
+        "cavityBias": 0.0,
+        "color": "#2F2A22"
+      },
+      "localOverrides": [],
+      "shaderNotes": [
+        "Prefer MeshPhysicalMaterial when clearcoat, sheen, transmission, or thin-surface response is observed; otherwise use MeshStandardMaterial-compatible PBR channels.",
+        "Generate albedo, roughness, height/normal, and AO independently; never alias albedo into roughness.",
+        "Use normal/bump/displacement only when they map to observed surface relief.",
+        "Use displacement geometry when the observed relief changes the close-up silhouette; texture-only relief is insufficient there."
+      ],
+      "notes": "Replace with image-derived color, roughness, noise, and edge-wear notes.",
+      "textureless": {
+        "declared": true,
+        "evidence": [
+          "albedo-samples.json: region medians are flat; value change across the part follows the light falloff, not a pattern",
+          "detail-inventory zones show no grain, print, seam texture or pores at 1254 px"
+        ]
+      },
+      "materialClass": "plastic",
+      "finishStyle": "gloss"
+    },
+    {
+      "id": "caramel-light",
+      "name": "caramel-light",
+      "type": "standard",
+      "shaderModel": "MeshStandardMaterial / PBR approximation",
+      "baseColor": "#C97A3E",
+      "color": "#C97A3E",
+      "albedo": {
+        "dominant": "#C97A3E",
+        "secondary": [
+          "#AB6835",
+          "#DD8644"
+        ],
+        "samplingNotes": "zone-r1c0 stock panel"
+      },
+      "colorVariation": {
+        "palette": [
+          "#C97A3E"
+        ],
+        "pattern": "none",
+        "amplitude": 0.0,
+        "heightCorrelation": 0.0
+      },
+      "roughness": {
+        "base": 0.25,
+        "variation": 0.03,
+        "map": "uniform-scalar",
+        "localResponse": "uniform gloss; moulded toy plastic has no wear"
+      },
+      "metalness": {
+        "base": 0.0,
+        "variation": 0.0
+      },
+      "ambientOcclusion": {
+        "cavityStrength": 0.15,
+        "contactShadowBias": 0.3,
+        "notes": "Soft contact darkening where parts meet."
+      },
+      "wear": {
+        "edgeWear": 0.0,
+        "scratches": [],
+        "chips": []
+      },
+      "dirt": {
+        "amount": 0.0,
+        "cavityBias": 0.0,
+        "color": "#2F2A22"
+      },
+      "localOverrides": [],
+      "shaderNotes": [
+        "Prefer MeshPhysicalMaterial when clearcoat, sheen, transmission, or thin-surface response is observed; otherwise use MeshStandardMaterial-compatible PBR channels.",
+        "Generate albedo, roughness, height/normal, and AO independently; never alias albedo into roughness.",
+        "Use normal/bump/displacement only when they map to observed surface relief.",
+        "Use displacement geometry when the observed relief changes the close-up silhouette; texture-only relief is insufficient there."
+      ],
+      "notes": "Replace with image-derived color, roughness, noise, and edge-wear notes.",
+      "textureless": {
+        "declared": true,
+        "evidence": [
+          "albedo-samples.json: region medians are flat; value change across the part follows the light falloff, not a pattern",
+          "detail-inventory zones show no grain, print, seam texture or pores at 1254 px"
+        ]
+      },
+      "materialClass": "plastic",
+      "finishStyle": "gloss"
+    },
+    {
+      "id": "ink",
+      "name": "ink",
+      "type": "standard",
+      "shaderModel": "MeshStandardMaterial / PBR approximation",
+      "baseColor": "#2B1F45",
+      "color": "#2B1F45",
+      "albedo": {
+        "dominant": "#2B1F45",
+        "secondary": [
+          "#251A3B",
+          "#2F224C"
+        ],
+        "samplingNotes": "zone-r1c2 bores"
+      },
+      "colorVariation": {
+        "palette": [
+          "#2B1F45"
+        ],
+        "pattern": "none",
+        "amplitude": 0.0,
+        "heightCorrelation": 0.0
+      },
+      "roughness": {
+        "base": 0.25,
+        "variation": 0.03,
+        "map": "uniform-scalar",
+        "localResponse": "uniform gloss; moulded toy plastic has no wear"
+      },
+      "metalness": {
+        "base": 0.0,
+        "variation": 0.0
+      },
+      "ambientOcclusion": {
+        "cavityStrength": 0.15,
+        "contactShadowBias": 0.3,
+        "notes": "Soft contact darkening where parts meet."
+      },
+      "wear": {
+        "edgeWear": 0.0,
+        "scratches": [],
+        "chips": []
+      },
+      "dirt": {
+        "amount": 0.0,
+        "cavityBias": 0.0,
+        "color": "#2F2A22"
+      },
+      "localOverrides": [],
+      "shaderNotes": [
+        "Prefer MeshPhysicalMaterial when clearcoat, sheen, transmission, or thin-surface response is observed; otherwise use MeshStandardMaterial-compatible PBR channels.",
+        "Generate albedo, roughness, height/normal, and AO independently; never alias albedo into roughness.",
+        "Use normal/bump/displacement only when they map to observed surface relief.",
+        "Use displacement geometry when the observed relief changes the close-up silhouette; texture-only relief is insufficient there."
+      ],
+      "notes": "Replace with image-derived color, roughness, noise, and edge-wear notes.",
+      "textureless": {
+        "declared": true,
+        "evidence": [
+          "albedo-samples.json: region medians are flat; value change across the part follows the light falloff, not a pattern",
+          "detail-inventory zones show no grain, print, seam texture or pores at 1254 px"
+        ]
+      },
+      "materialClass": "plastic",
+      "finishStyle": "gloss"
+    }
+  ],
+  "repetitionSystems": [
+    {
+      "id": "side-mirror",
+      "type": "mirror",
+      "axis": "x",
+      "members": [
+        "side-panel (one slab, proud of both faces)"
+      ],
+      "notes": "Side panel repeats on both faces."
+    }
+  ],
+  "buildPasses": [
+    {
+      "id": "blockout",
+      "goal": "Match the side-profile silhouette and the main masses.",
+      "componentRefs": [
+        "root",
+        "stock",
+        "receiver",
+        "barrel-top",
+        "barrel-bottom",
+        "fore-grip"
+      ],
+      "acceptance": [
+        "Boomstick profile and proportions match the reference side view"
+      ]
+    },
+    {
+      "id": "structural-pass",
+      "goal": "Lock the part hierarchy and the muzzle socket.",
+      "componentRefs": [
+        "root",
+        "stock",
+        "receiver",
+        "barrel-top",
+        "barrel-bottom",
+        "fore-grip"
+      ],
+      "acceptance": [
+        "Every part is a named pivot; grip-top origin; muzzle socket on the barrel axis"
+      ]
+    },
+    {
+      "id": "form-refinement",
+      "goal": "Add rings, triggers, panels and small details.",
+      "componentRefs": [
+        "root",
+        "stock",
+        "receiver",
+        "barrel-top",
+        "barrel-bottom",
+        "bore-top",
+        "bore-bottom",
+        "fore-grip",
+        "trigger-guard",
+        "trigger",
+        "side-panel"
+      ],
+      "acceptance": [
+        "Small details sit where the reference shows them"
+      ]
+    },
+    {
+      "id": "material-pass",
+      "goal": "Match material color, roughness, bump, and local variation.",
+      "componentRefs": [
+        "root",
+        "stock",
+        "receiver",
+        "barrel-top",
+        "barrel-bottom",
+        "bore-top",
+        "bore-bottom",
+        "fore-grip",
+        "trigger-guard",
+        "trigger",
+        "side-panel"
+      ],
+      "acceptance": [
+        "Reference-derived albedo palette records dominant, secondary, and accent colors per visible material.",
+        "Each important material defines roughness variation and at least one normal/bump/displacement response.",
+        "Local material overrides, dirt/wear/stains/moss/chips/scratches or equivalent masks are tied to evidenceRefs.",
+        "Thin, transparent, reflective, wet, or fibrous materials document alpha/transmission/clearcoat/metalness/fiber response when relevant.",
+        "Generated preview uses procedural albedo/roughness/bump texture or vertex color variation instead of one flat color.",
+        "Generated preview uses independent PBR maps at 1024px or higher for the quality-first tier.",
+        "If source pixels are available, referencePbr extraction passed at confidence >= 0.7 or the pass is stopped/requesting better references.",
+        "Macro, meso, and micro surface frequency bands are visible at the intended review distance without obvious tiling.",
+        "AI vision comparison score meets selfCorrectLoop.visualAcceptance.threshold."
+      ]
+    },
+    {
+      "id": "lighting-pass",
+      "goal": "Make material and form readable under neutral turntable lighting plus optional reference lighting.",
+      "componentRefs": [
+        "root",
+        "stock",
+        "receiver",
+        "barrel-top",
+        "barrel-bottom",
+        "bore-top",
+        "bore-bottom",
+        "fore-grip",
+        "trigger-guard",
+        "trigger",
+        "side-panel"
+      ],
+      "acceptance": [
+        "lightingFromPhoto identifies key light direction/color/intensity, fill light, rim or environment light, and ambient color.",
+        "Exposure, tone mapping, background color/gradient, shadow softness, and contact shadow behavior are specified.",
+        "Lighting does not hide geometry/material gaps and screenshots can be compared fairly to the reference.",
+        "Neutral, grazing, and reference-matched lighting checks distinguish material errors from lighting errors.",
+        "AI vision comparison score meets selfCorrectLoop.visualAcceptance.threshold."
+      ]
+    },
+    {
+      "id": "interaction-pass",
+      "goal": "Make the model ready for future animation, transformation, physics, or destruction.",
+      "componentRefs": [
+        "root",
+        "stock",
+        "receiver",
+        "barrel-top",
+        "barrel-bottom",
+        "bore-top",
+        "bore-bottom",
+        "fore-grip",
+        "trigger-guard",
+        "trigger",
+        "side-panel"
+      ],
+      "acceptance": [
+        "Macro and movable meso components have stable pivot nodes.",
+        "Sockets, collider proxies, and destruction metadata are present for future runtime actions.",
+        "AI vision comparison score meets selfCorrectLoop.visualAcceptance.threshold."
+      ]
+    },
+    {
+      "id": "optimization-pass",
+      "goal": "Protect runtime performance after visual fidelity is accepted.",
+      "componentRefs": [
+        "root",
+        "stock",
+        "receiver",
+        "barrel-top",
+        "barrel-bottom",
+        "bore-top",
+        "bore-bottom",
+        "fore-grip",
+        "trigger-guard",
+        "trigger",
+        "side-panel"
+      ],
+      "acceptance": [
+        "Triangle count, draw calls, instancing, LOD strategy, and FPS target are documented or verified.",
+        "Repeated detail is instanced or simplified where possible without breaking silhouette/material believability."
+      ]
+    }
+  ],
+  "visualEvidence": [
+    {
+      "timestamp": "2026-10-14T19:11:27.400189+00:00",
+      "passId": "blockout",
+      "estimatedFidelity": 0.45,
+      "aiVisionScore": 0.45,
+      "visualAcceptanceThreshold": 0.7,
+      "layerScores": {
+        "silhouetteProportion": 0.45,
+        "componentStructure": 0.7,
+        "formDetail": 0.4,
+        "materialSurface": 0.6,
+        "lightingCamera": 0.78
+      },
+      "featureReviews": [
+        {
+          "id": "profile-silhouette",
+          "score": 0.4,
+          "visible": true,
+          "notes": "Every rounded-rectangle slab renders hollow (only side walls): spec_builder's rounded_rect lists its corners out of order, so the outline self-intersects and the extrusion cap fails to triangulate."
+        }
+      ],
+      "referenceScreenshot": "/Users/c28aa1/Desktop/Gun Game/art/concepts/shotgun.png",
+      "renderScreenshot": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/shotgun/renders/blockout/ref-12.png",
+      "comparisonImage": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/shotgun/renders/blockout/cmp-12.png",
+      "cameraView": "az25 el8",
+      "notes": "",
+      "aiVisionNotes": ""
+    },
+    {
+      "timestamp": "2026-10-14T19:13:30.215769+00:00",
+      "passId": "blockout",
+      "estimatedFidelity": 0.78,
+      "aiVisionScore": 0.78,
+      "visualAcceptanceThreshold": 0.7,
+      "layerScores": {
+        "silhouetteProportion": 0.8,
+        "componentStructure": 0.82,
+        "formDetail": 0.72,
+        "materialSurface": 0.72,
+        "lightingCamera": 0.78
+      },
+      "featureReviews": [
+        {
+          "id": "profile-silhouette",
+          "score": 0.8,
+          "visible": true,
+          "notes": "Wedge stock, orange band, stacked barrels and fore-grip match the side profile."
+        },
+        {
+          "id": "double-barrel-signature",
+          "score": 0.8,
+          "visible": true,
+          "notes": "Two stacked violet barrels with dark bores behind the orange band."
+        }
+      ],
+      "referenceScreenshot": "/Users/c28aa1/Desktop/Gun Game/art/concepts/shotgun.png",
+      "renderScreenshot": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/shotgun/renders/blockout/ref-2.png",
+      "comparisonImage": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/shotgun/renders/blockout/cmp-2.png",
+      "cameraView": "az25 el8",
+      "notes": "",
+      "aiVisionNotes": ""
+    },
+    {
+      "timestamp": "2026-10-14T19:17:49.915922+00:00",
+      "passId": "structural-pass",
+      "estimatedFidelity": 0.77,
+      "aiVisionScore": 0.77,
+      "visualAcceptanceThreshold": 0.7,
+      "layerScores": {
+        "silhouetteProportion": 0.8,
+        "componentStructure": 0.86,
+        "formDetail": 0.7,
+        "materialSurface": 0.72,
+        "lightingCamera": 0.78
+      },
+      "featureReviews": [
+        {
+          "id": "profile-silhouette",
+          "score": 0.8,
+          "visible": true,
+          "notes": "Unchanged from blockout; hierarchy changes moved no part."
+        }
+      ],
+      "referenceScreenshot": "/Users/c28aa1/Desktop/Gun Game/art/concepts/shotgun.png",
+      "renderScreenshot": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/shotgun/renders/structural-pass/ref-12.png",
+      "comparisonImage": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/shotgun/renders/structural-pass/cmp-12.png",
+      "cameraView": "az25 el8",
+      "notes": "",
+      "aiVisionNotes": ""
+    },
+    {
+      "timestamp": "2026-10-14T19:20:31.543566+00:00",
+      "passId": "form-refinement",
+      "estimatedFidelity": 0.76,
+      "aiVisionScore": 0.76,
+      "visualAcceptanceThreshold": 0.7,
+      "layerScores": {
+        "silhouetteProportion": 0.8,
+        "componentStructure": 0.84,
+        "formDetail": 0.72,
+        "materialSurface": 0.7,
+        "lightingCamera": 0.78
+      },
+      "featureReviews": [
+        {
+          "id": "profile-silhouette",
+          "score": 0.8,
+          "visible": true,
+          "notes": "Profile unchanged and matching."
+        },
+        {
+          "id": "double-barrel-signature",
+          "score": 0.78,
+          "visible": true,
+          "notes": "Signature parts plus triggers, guards, panels, bores and caps in place."
+        }
+      ],
+      "referenceScreenshot": "/Users/c28aa1/Desktop/Gun Game/art/concepts/shotgun.png",
+      "renderScreenshot": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/shotgun/renders/form-refinement/ref-12.png",
+      "comparisonImage": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/shotgun/renders/form-refinement/cmp-12.png",
+      "cameraView": "az25 el8",
+      "notes": "",
+      "aiVisionNotes": ""
+    }
+  ],
+  "reviewHistory": [
+    {
+      "timestamp": "2026-10-14T19:11:27.400189+00:00",
+      "passId": "blockout",
+      "estimatedFidelity": 0.45,
+      "aiVisionScore": 0.45,
+      "visualAcceptanceThreshold": 0.7,
+      "layerScores": {
+        "silhouetteProportion": 0.45,
+        "componentStructure": 0.7,
+        "formDetail": 0.4,
+        "materialSurface": 0.6,
+        "lightingCamera": 0.78
+      },
+      "featureReviews": [
+        {
+          "id": "profile-silhouette",
+          "score": 0.4,
+          "visible": true,
+          "notes": "Every rounded-rectangle slab renders hollow (only side walls): spec_builder's rounded_rect lists its corners out of order, so the outline self-intersects and the extrusion cap fails to triangulate."
+        }
+      ],
+      "action": "refine-spec",
+      "summary": "Blockout: rounded-rectangle slabs render hollow (self-intersecting outline).",
+      "matched": [
+        "cylinders, rings and polygon slabs"
+      ],
+      "mismatches": [
+        "rounded-rect slabs hollow"
+      ],
+      "specFixes": [
+        "walk rounded-rect corners in order (bottom-right, bottom-left, top-left, top-right)"
+      ],
+      "codeFixes": [],
+      "evidence": [
+        "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/shotgun/renders/blockout/divine-eye-12.json",
+        "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/shotgun/renders/blockout/tier1.json",
+        "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/shotgun/renders/blockout/turntable.png"
+      ],
+      "mapStrippedRender": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/shotgun/renders/blockout/ref-12.png",
+      "visualEvidence": {
+        "referenceScreenshot": "/Users/c28aa1/Desktop/Gun Game/art/concepts/shotgun.png",
+        "renderScreenshot": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/shotgun/renders/blockout/ref-12.png",
+        "comparisonImage": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/shotgun/renders/blockout/cmp-12.png",
+        "cameraView": "az25 el8",
+        "notes": "",
+        "aiVisionNotes": ""
+      }
+    },
+    {
+      "timestamp": "2026-10-14T19:13:30.215769+00:00",
+      "passId": "blockout",
+      "estimatedFidelity": 0.78,
+      "aiVisionScore": 0.78,
+      "visualAcceptanceThreshold": 0.7,
+      "layerScores": {
+        "silhouetteProportion": 0.8,
+        "componentStructure": 0.82,
+        "formDetail": 0.72,
+        "materialSurface": 0.72,
+        "lightingCamera": 0.78
+      },
+      "featureReviews": [
+        {
+          "id": "profile-silhouette",
+          "score": 0.8,
+          "visible": true,
+          "notes": "Wedge stock, orange band, stacked barrels and fore-grip match the side profile."
+        },
+        {
+          "id": "double-barrel-signature",
+          "score": 0.8,
+          "visible": true,
+          "notes": "Two stacked violet barrels with dark bores behind the orange band."
+        }
+      ],
+      "action": "continue",
+      "summary": "Boomstick blockout accepted: profile and masses match; tier-1 clean.",
+      "matched": [
+        "stock",
+        "band",
+        "barrels",
+        "fore-grip",
+        "panel"
+      ],
+      "mismatches": [
+        "slab edges are square (reference edges rolled)"
+      ],
+      "specFixes": [],
+      "codeFixes": [],
+      "evidence": [
+        "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/shotgun/renders/blockout/divine-eye-2.json",
+        "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/shotgun/renders/blockout/tier1.json",
+        "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/shotgun/renders/blockout/turntable.png"
+      ],
+      "mapStrippedRender": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/shotgun/renders/blockout/ref-2.png",
+      "visualEvidence": {
+        "referenceScreenshot": "/Users/c28aa1/Desktop/Gun Game/art/concepts/shotgun.png",
+        "renderScreenshot": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/shotgun/renders/blockout/ref-2.png",
+        "comparisonImage": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/shotgun/renders/blockout/cmp-2.png",
+        "cameraView": "az25 el8",
+        "notes": "",
+        "aiVisionNotes": ""
+      }
+    },
+    {
+      "timestamp": "2026-10-14T19:17:49.915922+00:00",
+      "passId": "structural-pass",
+      "estimatedFidelity": 0.77,
+      "aiVisionScore": 0.77,
+      "visualAcceptanceThreshold": 0.7,
+      "layerScores": {
+        "silhouetteProportion": 0.8,
+        "componentStructure": 0.86,
+        "formDetail": 0.7,
+        "materialSurface": 0.72,
+        "lightingCamera": 0.78
+      },
+      "featureReviews": [
+        {
+          "id": "profile-silhouette",
+          "score": 0.8,
+          "visible": true,
+          "notes": "Unchanged from blockout; hierarchy changes moved no part."
+        }
+      ],
+      "action": "continue",
+      "summary": "Structural pass accepted: named pivot per part, origin at the grip top, root:muzzle socket on the barrel axis; small details deferred to form-refinement by the pass filter.",
+      "matched": [
+        "pivots",
+        "grip-top origin",
+        "muzzle socket"
+      ],
+      "mismatches": [
+        "small details not built in this pass by design"
+      ],
+      "specFixes": [],
+      "codeFixes": [],
+      "evidence": [
+        "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/shotgun/renders/structural-pass/divine-eye-12.json",
+        "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/shotgun/renders/structural-pass/tier1.json",
+        "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/shotgun/renders/structural-pass/turntable.png"
+      ],
+      "mapStrippedRender": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/shotgun/renders/structural-pass/ref-12.png",
+      "visualEvidence": {
+        "referenceScreenshot": "/Users/c28aa1/Desktop/Gun Game/art/concepts/shotgun.png",
+        "renderScreenshot": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/shotgun/renders/structural-pass/ref-12.png",
+        "comparisonImage": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/shotgun/renders/structural-pass/cmp-12.png",
+        "cameraView": "az25 el8",
+        "notes": "",
+        "aiVisionNotes": ""
+      }
+    },
+    {
+      "timestamp": "2026-10-14T19:20:31.543566+00:00",
+      "passId": "form-refinement",
+      "estimatedFidelity": 0.76,
+      "aiVisionScore": 0.76,
+      "visualAcceptanceThreshold": 0.7,
+      "layerScores": {
+        "silhouetteProportion": 0.8,
+        "componentStructure": 0.84,
+        "formDetail": 0.72,
+        "materialSurface": 0.7,
+        "lightingCamera": 0.78
+      },
+      "featureReviews": [
+        {
+          "id": "profile-silhouette",
+          "score": 0.8,
+          "visible": true,
+          "notes": "Profile unchanged and matching."
+        },
+        {
+          "id": "double-barrel-signature",
+          "score": 0.78,
+          "visible": true,
+          "notes": "Signature parts plus triggers, guards, panels, bores and caps in place."
+        }
+      ],
+      "action": "continue",
+      "summary": "Form-refinement accepted: small details placed. Ship path (blockout..form-refinement) complete; later passes deferred per user decision.",
+      "matched": [
+        "triggers",
+        "guards",
+        "panels",
+        "bores",
+        "caps"
+      ],
+      "mismatches": [
+        "slab edges are square where the toy has rolled edges",
+        "yellows read pale under review tone mapping"
+      ],
+      "specFixes": [],
+      "codeFixes": [],
+      "evidence": [
+        "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/shotgun/renders/form-refinement/divine-eye-12.json",
+        "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/shotgun/renders/form-refinement/tier1.json",
+        "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/shotgun/renders/form-refinement/turntable.png"
+      ],
+      "mapStrippedRender": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/shotgun/renders/form-refinement/ref-12.png",
+      "visualEvidence": {
+        "referenceScreenshot": "/Users/c28aa1/Desktop/Gun Game/art/concepts/shotgun.png",
+        "renderScreenshot": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/shotgun/renders/form-refinement/ref-12.png",
+        "comparisonImage": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/shotgun/renders/form-refinement/cmp-12.png",
+        "cameraView": "az25 el8",
+        "notes": "",
+        "aiVisionNotes": ""
+      }
+    }
+  ],
+  "lodPlan": [
+    {
+      "tier": "near",
+      "distance": 0,
+      "strategy": "full component tree and material layers"
+    },
+    {
+      "tier": "far",
+      "distance": 30,
+      "strategy": "merge static components and reduce local feature geometry"
+    }
+  ],
+  "performanceBudget": {
+    "qualityPriority": "runtime",
+    "targetTriangles": 3000,
+    "maxDrawCalls": 16,
+    "textureSize": 0,
+    "fpsTarget": 60,
+    "optimizationPolicy": "Up to 9 held guns plus pickups on screen."
+  },
+  "lightingFromPhoto": [
+    {
+      "id": "key",
+      "type": "area/soft box",
+      "direction": "upper front-left",
+      "evidence": "broad speculars along the top edges",
+      "intensity": "high"
+    },
+    {
+      "id": "fill",
+      "type": "soft fill",
+      "direction": "front-right",
+      "evidence": "undersides stay mid-value",
+      "intensity": "medium"
+    },
+    {
+      "id": "rim",
+      "type": "faint rim",
+      "direction": "behind",
+      "evidence": "slight lift on the lower silhouette",
+      "intensity": "low"
+    },
+    {
+      "id": "environment",
+      "type": "neutral grey studio sweep",
+      "evidence": "background ~#C9CDD3",
+      "notes": "Review renders use ACES filmic tone mapping at exposure 1.0; the game uses a toon ramp."
+    },
+    {
+      "id": "ground",
+      "type": "contact shadow",
+      "evidence": "no ground plane in the reference",
+      "notes": "Game uses a directional shadow map and ambient occlusion contact darkening."
+    }
+  ],
+  "proceduralStrategy": [
+    "Block out macro silhouette first.",
+    "Add component hierarchy and joints.",
+    "Create stable pivot groups, sockets, collider proxies, and destruction metadata before visual polish.",
+    "Refine forms with bevels, tapers, bends, and procedural noise.",
+    "Run reference PBR extraction for important source-image materials and stop when confidence is below the target threshold.",
+    "Add material variation before adding expensive micro-geometry."
+  ],
+  "animationAnchors": [
+    "root pivot node supports whole-object translation, rotation, scale, and visibility changes",
+    "component pivot groups support later local transforms without rebuilding geometry"
+  ],
+  "destructionAnchors": [
+    "actionProfile.destruction.fractureGroup marks detachable or breakable component sets",
+    "component seams and sockets define plausible break points instead of random explosions"
+  ],
+  "risks": [
+    "Single side view: thickness across the gun is inferred (confidence 0.6)."
+  ],
+  "localSpecSearch": {
+    "collection": "core_3d",
+    "query": "Boomstick glossy plastic toy gun extruded side profile cylinder barrel",
+    "index": {
+      "status": "hit",
+      "reason": "current",
+      "fingerprint": "62f2831e1d52eeb6dbb94a87c44fa25b1f4926626a7b1f8c2bcadc63e04e9471"
+    },
+    "matches": [
+      {
+        "record_id": "core.shader-mapping-lathegeometry-turnedradially-symmetric-parts",
+        "file_path": "docs/raw/img2threejs-skill-dataset.json",
+        "heading": null,
+        "key_path": "categories.rendering_shader_mapping[9]",
+        "score": 5.013493373581,
+        "snippets": [
+          "Maps to parts generated by revolving a 2D profile around an axis. Ánh xạ tới các bộ phận tạo ra bằng cách xoay một biên dạng 2D quanh một trục. Recognition cues: Contoured, fully radially-symmetric part — turned wood/metal handle, some muzzle ..."
+        ],
+        "source_refs": [
+          {
+            "path": "docs/raw/img2threejs-skill-dataset.json",
+            "heading": null,
+            "key_path": "categories.rendering_shader_mapping[9]"
+          }
+        ],
+        "evidence_refs": [
+          {
+            "kind": "source",
+            "ref": "docs/raw/img2threejs-skill-dataset.json",
+            "note": "img2threejs NotebookLM research distillation"
+          }
+        ]
+      },
+      {
+        "record_id": "core.pbr-roughness",
+        "file_path": "grimoire/glossary/3d_vocabulary.md",
+        "heading": "Material And PBR",
+        "key_path": null,
+        "score": 4.283141571387,
+        "snippets": [
+          "Roughness is microfacet scatter: high roughness reads matte and low roughness reads glossy. Recognition cues: low roughness reads as a sharp, mirror-like, tight specular highlight; high roughness reads as a blurry, wide, dim highlight and matte ..."
+        ],
+        "source_refs": [
+          {
+            "path": "grimoire/glossary/3d_vocabulary.md",
+            "heading": "Material And PBR",
+            "key_path": null
+          },
+          {
+            "path": "grimoire/intake/image_analysis.md",
+            "heading": "Layer 5 — Materials & surface (PBR)",
+            "key_path": null
+          },
+          {
+            "path": "docs/raw/img2threejs-skill-dataset.json",
+            "heading": null,
+            "key_path": "categories.material_pbr[1]"
+          }
+        ],
+        "evidence_refs": [
+          {
+            "kind": "source",
+            "ref": "grimoire/glossary/3d_vocabulary.md"
+          },
+          {
+            "kind": "notebooklm-research",
+            "ref": "notebooklm:4b03c2f9-8393-411f-b5b4-039ab9532843",
+            "note": "Validated generic schema vocabulary; numeric claims remain backed by local source_refs."
+          },
+          {
+            "kind": "source",
+            "ref": "docs/raw/img2threejs-skill-dataset.json",
+            "note": "img2threejs NotebookLM research distillation — merged recognition cues + Three.js target instead of duplicating this entity."
+          }
+        ]
+      },
+      {
+        "record_id": "core.shader-mapping-cylindergeometry-barrels-round-components",
+        "file_path": "docs/raw/img2threejs-skill-dataset.json",
+        "heading": null,
+        "key_path": "categories.rendering_shader_mapping[4]",
+        "score": 3.752966399396,
+        "snippets": [
+          "... part. Ánh xạ tới mọi bộ phận có tiết diện tròn dạng nòng. Recognition cues: Long uniform-cross-section round part (barrel, suppressor, muzzle brake body, cleaning rod, magazine tube) Dấu hiệu nhận diện: Bộ phận tròn có tiết diện đều ..."
+        ],
+        "source_refs": [
+          {
+            "path": "docs/raw/img2threejs-skill-dataset.json",
+            "heading": null,
+            "key_path": "categories.rendering_shader_mapping[4]"
+          }
+        ],
+        "evidence_refs": [
+          {
+            "kind": "source",
+            "ref": "docs/raw/img2threejs-skill-dataset.json",
+            "note": "img2threejs NotebookLM research distillation"
+          }
+        ]
+      }
+    ]
+  },
+  "rig": {
+    "version": "1.0",
+    "bindPose": "rest",
+    "forward": "+Z",
+    "bones": [],
+    "posedJoints": {},
+    "notes": "Rigid prop."
+  },
+  "tier1Results": [
+    {
+      "passed": true,
+      "checks": {
+        "silhouetteIoU": 0.8954,
+        "aspectRatioDelta": 0.0023,
+        "scaleDelta": 0.0216,
+        "bilateralSymmetryError": 0.1278,
+        "colorDelta": {
+          "checked": 11,
+          "maxDeltaE": 58.49,
+          "perComponent": [
+            {
+              "componentId": null,
+              "deltaE": 10.27
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.17
+            },
+            {
+              "componentId": null,
+              "deltaE": 23.4
+            },
+            {
+              "componentId": null,
+              "deltaE": 13.82
+            },
+            {
+              "componentId": null,
+              "deltaE": 13.82
+            },
+            {
+              "componentId": null,
+              "deltaE": 21.6
+            },
+            {
+              "componentId": null,
+              "deltaE": 21.6
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.17
+            },
+            {
+              "componentId": null,
+              "deltaE": 23.4
+            },
+            {
+              "componentId": null,
+              "deltaE": 58.49
+            },
+            {
+              "componentId": null,
+              "deltaE": 16.71
+            }
+          ],
+          "gated": false
+        }
+      },
+      "failures": [],
+      "maskWarnings": [],
+      "renderHash": "76e5c5428b00ee48",
+      "passId": "form-refinement"
+    }
+  ]
+}

@@ -492,7 +492,7 @@ export class GameClient {
       if (!g) {
         g = new THREE.Group();
         const model = createGunModel(k.gun);
-        model.scale.setScalar(1.5);
+        model.scale.setScalar(1.15);
         model.name = 'model';
         const glow = new THREE.Mesh(
           new THREE.CircleGeometry(0.75, 28),

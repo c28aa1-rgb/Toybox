@@ -1,11 +1,16 @@
 import * as THREE from 'three';
-import type { HeroId } from '@gg/shared';
+import type { GunId, HeroId } from '@gg/shared';
 import { createFlickerModel } from '../../../art/reconstructions/blink/src/createFlickerModel';
 import { createSwitchModel } from '../../../art/reconstructions/swap/src/createSwitchModel';
 import { createTockModel } from '../../../art/reconstructions/chrono/src/createTockModel';
 import { createMirageModel } from '../../../art/reconstructions/decoy/src/createMirageModel';
 import { createBrickModel } from '../../../art/reconstructions/builder/src/createBrickModel';
-import { registerHeroModel } from '../skins/registry';
+import { createPeaShooterModel } from '../../../art/reconstructions/pistol/src/createPeaShooterModel';
+import { createBuzzboxModel } from '../../../art/reconstructions/smg/src/createBuzzboxModel';
+import { createBoomstickModel } from '../../../art/reconstructions/shotgun/src/createBoomstickModel';
+import { createLongshotModel } from '../../../art/reconstructions/sniper/src/createLongshotModel';
+import { createPartyPopperModel } from '../../../art/reconstructions/rocket/src/createPartyPopperModel';
+import { registerGunModel, registerHeroModel } from '../skins/registry';
 import { toonify } from './toonify';
 
 /**
@@ -49,6 +54,35 @@ export function registerHeroModels(): void {
           antenna: byName(FACTORIES[hero].wobble),
         },
       };
+    });
+  }
+}
+
+/** Guns are modelled at toy scale in metres with the origin at the grip top, muzzle along +Z. */
+const GUN_FACTORIES: Record<GunId, () => THREE.Group> = {
+  pistol: () => createPeaShooterModel({ textureSize: 8 }),
+  smg: () => createBuzzboxModel({ textureSize: 8 }),
+  shotgun: () => createBoomstickModel({ textureSize: 8 }),
+  sniper: () => createLongshotModel({ textureSize: 8 }),
+  rocket: () => createPartyPopperModel({ textureSize: 8 }),
+};
+
+// Held guns read better a little smaller than their concept scale next to the 1.45 m heroes.
+const GUN_SCALE = 0.8;
+const gunTemplates = new Map<GunId, THREE.Object3D>();
+
+export function registerGunModels(): void {
+  for (const gun of Object.keys(GUN_FACTORIES) as GunId[]) {
+    registerGunModel(gun, () => {
+      let t = gunTemplates.get(gun);
+      if (!t) {
+        t = toonify(GUN_FACTORIES[gun]());
+        t.scale.setScalar(GUN_SCALE);
+        gunTemplates.set(gun, t);
+      }
+      const g = new THREE.Group();
+      g.add(t.clone(true));
+      return g;
     });
   }
 }
