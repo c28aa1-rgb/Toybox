@@ -19,7 +19,8 @@ const page = await browser.newPage({ viewport: { width: 1024, height: 1024 } });
 for (const shot of shots) {
   const [name, spec] = shot.split('=');
   const [az, el, mode = 'neutral', hide = ''] = spec.split(',');
-  const url = `${base}?model=${model}&az=${az}&el=${el}&mode=${mode}&size=1024${hide ? `&hide=${hide.replace(/\|/g, ',')}` : ''}`;
+  const match = name === 'ref' && process.env.MATCH ? `&match=${process.env.MATCH}` : '';
+  const url = `${base}?model=${model}&az=${az}&el=${el}&mode=${mode}&size=1024${hide ? `&hide=${hide.replace(/\|/g, ',')}` : ''}${match}`;
   await page.goto(url);
   await page.waitForFunction(() => window.__ready || window.__error, null, { timeout: 30000 });
   const err = await page.evaluate(() => window.__error);

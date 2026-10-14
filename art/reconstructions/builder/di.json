@@ -1,0 +1,191 @@
+{
+  "sourceImage": "/Users/c28aa1/Desktop/Gun Game/art/concepts/builder.png",
+  "zonesDir": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/builder/detail-inventory",
+  "detailInventory": {
+    "scanMethod": "grid-3x3",
+    "targetMinDetails": 6,
+    "details": [
+      {
+        "id": "zone-r0c0",
+        "kind": "contour",
+        "description": "left brim of the hard hat",
+        "region": {
+          "x": 0.0,
+          "y": 0.0,
+          "width": 0.3333,
+          "height": 0.3333,
+          "units": "normalized"
+        },
+        "scale": "meso",
+        "affects": "silhouette",
+        "mapsTo": {
+          "type": "component",
+          "ref": "hard-hat"
+        },
+        "evidenceRef": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/builder/detail-inventory/zone-r0c0.png",
+        "confidence": 0.8
+      },
+      {
+        "id": "zone-r0c1",
+        "kind": "ridge",
+        "description": "yellow ribbed hard hat dome",
+        "region": {
+          "x": 0.3333,
+          "y": 0.0,
+          "width": 0.3333,
+          "height": 0.3333,
+          "units": "normalized"
+        },
+        "scale": "macro",
+        "affects": "silhouette",
+        "mapsTo": {
+          "type": "component",
+          "ref": "hard-hat"
+        },
+        "evidenceRef": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/builder/detail-inventory/zone-r0c1.png",
+        "confidence": 0.85
+      },
+      {
+        "id": "zone-r0c2",
+        "kind": "contour",
+        "description": "right side of the hard hat and its rear brim",
+        "region": {
+          "x": 0.6667,
+          "y": 0.0,
+          "width": 0.3333,
+          "height": 0.3333,
+          "units": "normalized"
+        },
+        "scale": "meso",
+        "affects": "silhouette",
+        "mapsTo": {
+          "type": "component",
+          "ref": "hard-hat"
+        },
+        "evidenceRef": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/builder/detail-inventory/zone-r0c2.png",
+        "confidence": 0.8
+      },
+      {
+        "id": "zone-r1c0",
+        "kind": "contour",
+        "description": "raised character-right mitt; left eye",
+        "region": {
+          "x": 0.0,
+          "y": 0.3333,
+          "width": 0.3333,
+          "height": 0.3333,
+          "units": "normalized"
+        },
+        "scale": "macro",
+        "affects": "silhouette",
+        "mapsTo": {
+          "type": "component",
+          "ref": "hand-r"
+        },
+        "evidenceRef": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/builder/detail-inventory/zone-r1c0.png",
+        "confidence": 0.8
+      },
+      {
+        "id": "zone-r1c1",
+        "kind": "decal",
+        "description": "two big eyes; top of the cream belly",
+        "region": {
+          "x": 0.3333,
+          "y": 0.3333,
+          "width": 0.3333,
+          "height": 0.3333,
+          "units": "normalized"
+        },
+        "scale": "meso",
+        "affects": "identity",
+        "mapsTo": {
+          "type": "component",
+          "ref": "eye-l"
+        },
+        "evidenceRef": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/builder/detail-inventory/zone-r1c1.png",
+        "confidence": 0.9
+      },
+      {
+        "id": "zone-r1c2",
+        "kind": "contour",
+        "description": "hanging character-left mitt",
+        "region": {
+          "x": 0.6667,
+          "y": 0.3333,
+          "width": 0.3333,
+          "height": 0.3333,
+          "units": "normalized"
+        },
+        "scale": "macro",
+        "affects": "silhouette",
+        "mapsTo": {
+          "type": "component",
+          "ref": "hand-l"
+        },
+        "evidenceRef": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/builder/detail-inventory/zone-r1c2.png",
+        "confidence": 0.8
+      },
+      {
+        "id": "zone-r2c0",
+        "kind": "fastener",
+        "description": "orange toy brick buckle on the belt; right foot",
+        "region": {
+          "x": 0.0,
+          "y": 0.6667,
+          "width": 0.3333,
+          "height": 0.3333,
+          "units": "normalized"
+        },
+        "scale": "micro",
+        "affects": "identity",
+        "mapsTo": {
+          "type": "component",
+          "ref": "buckle-brick"
+        },
+        "evidenceRef": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/builder/detail-inventory/zone-r2c0.png",
+        "confidence": 0.8
+      },
+      {
+        "id": "zone-r2c1",
+        "kind": "seam",
+        "description": "ink belt crossing the cream belly",
+        "region": {
+          "x": 0.3333,
+          "y": 0.6667,
+          "width": 0.3333,
+          "height": 0.3333,
+          "units": "normalized"
+        },
+        "scale": "meso",
+        "affects": "identity",
+        "mapsTo": {
+          "type": "component",
+          "ref": "belt"
+        },
+        "evidenceRef": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/builder/detail-inventory/zone-r2c1.png",
+        "confidence": 0.85
+      },
+      {
+        "id": "zone-r2c2",
+        "kind": "contour",
+        "description": "character-left violet foot; belt end",
+        "region": {
+          "x": 0.6667,
+          "y": 0.6667,
+          "width": 0.3333,
+          "height": 0.3333,
+          "units": "normalized"
+        },
+        "scale": "macro",
+        "affects": "silhouette",
+        "mapsTo": {
+          "type": "component",
+          "ref": "foot-l"
+        },
+        "evidenceRef": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/builder/detail-inventory/zone-r2c2.png",
+        "confidence": 0.85
+      }
+    ]
+  },
+  "authoringInstruction": "Open each zone crop under zonesDir and replace every detail stub's kind, description, scale, affects, mapsTo, and confidence with what is actually observed. Add more detail entries per zone if a single zone contains multiple distinct marks; do not leave stubs unfilled or unlinked (mapsTo must reference a real component.localFeatures or material.localOverrides entry)."
+}

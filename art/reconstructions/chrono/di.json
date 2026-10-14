@@ -1,0 +1,191 @@
+{
+  "sourceImage": "/Users/c28aa1/Desktop/Gun Game/art/concepts/chrono.png",
+  "zonesDir": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/chrono/detail-inventory",
+  "detailInventory": {
+    "scanMethod": "grid-3x3",
+    "targetMinDetails": 6,
+    "details": [
+      {
+        "id": "zone-r0c0",
+        "kind": "contour",
+        "description": "background only",
+        "region": {
+          "x": 0.0,
+          "y": 0.0,
+          "width": 0.3333,
+          "height": 0.3333,
+          "units": "normalized"
+        },
+        "scale": "macro",
+        "affects": "silhouette",
+        "mapsTo": {
+          "type": "none",
+          "ref": ""
+        },
+        "evidenceRef": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/chrono/detail-inventory/zone-r0c0.png",
+        "confidence": 0.9
+      },
+      {
+        "id": "zone-r0c1",
+        "kind": "contour",
+        "description": "yellow dome bell with knob on a stem; mint crown",
+        "region": {
+          "x": 0.3333,
+          "y": 0.0,
+          "width": 0.3333,
+          "height": 0.3333,
+          "units": "normalized"
+        },
+        "scale": "meso",
+        "affects": "silhouette",
+        "mapsTo": {
+          "type": "component",
+          "ref": "bell"
+        },
+        "evidenceRef": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/chrono/detail-inventory/zone-r0c1.png",
+        "confidence": 0.85
+      },
+      {
+        "id": "zone-r0c2",
+        "kind": "contour",
+        "description": "right edge of the bell dome",
+        "region": {
+          "x": 0.6667,
+          "y": 0.0,
+          "width": 0.3333,
+          "height": 0.3333,
+          "units": "normalized"
+        },
+        "scale": "meso",
+        "affects": "silhouette",
+        "mapsTo": {
+          "type": "component",
+          "ref": "bell"
+        },
+        "evidenceRef": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/chrono/detail-inventory/zone-r0c2.png",
+        "confidence": 0.7
+      },
+      {
+        "id": "zone-r1c0",
+        "kind": "contour",
+        "description": "raised character-right mitt; left eye",
+        "region": {
+          "x": 0.0,
+          "y": 0.3333,
+          "width": 0.3333,
+          "height": 0.3333,
+          "units": "normalized"
+        },
+        "scale": "macro",
+        "affects": "silhouette",
+        "mapsTo": {
+          "type": "component",
+          "ref": "hand-r"
+        },
+        "evidenceRef": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/chrono/detail-inventory/zone-r1c0.png",
+        "confidence": 0.8
+      },
+      {
+        "id": "zone-r1c1",
+        "kind": "decal",
+        "description": "two big eyes; top of the yellow bezel",
+        "region": {
+          "x": 0.3333,
+          "y": 0.3333,
+          "width": 0.3333,
+          "height": 0.3333,
+          "units": "normalized"
+        },
+        "scale": "meso",
+        "affects": "identity",
+        "mapsTo": {
+          "type": "component",
+          "ref": "eye-l"
+        },
+        "evidenceRef": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/chrono/detail-inventory/zone-r1c1.png",
+        "confidence": 0.9
+      },
+      {
+        "id": "zone-r1c2",
+        "kind": "contour",
+        "description": "hanging character-left mitt",
+        "region": {
+          "x": 0.6667,
+          "y": 0.3333,
+          "width": 0.3333,
+          "height": 0.3333,
+          "units": "normalized"
+        },
+        "scale": "macro",
+        "affects": "silhouette",
+        "mapsTo": {
+          "type": "component",
+          "ref": "hand-l"
+        },
+        "evidenceRef": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/chrono/detail-inventory/zone-r1c2.png",
+        "confidence": 0.8
+      },
+      {
+        "id": "zone-r2c0",
+        "kind": "contour",
+        "description": "character-right violet foot",
+        "region": {
+          "x": 0.0,
+          "y": 0.6667,
+          "width": 0.3333,
+          "height": 0.3333,
+          "units": "normalized"
+        },
+        "scale": "macro",
+        "affects": "silhouette",
+        "mapsTo": {
+          "type": "component",
+          "ref": "foot-r"
+        },
+        "evidenceRef": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/chrono/detail-inventory/zone-r2c0.png",
+        "confidence": 0.85
+      },
+      {
+        "id": "zone-r2c1",
+        "kind": "linework",
+        "description": "white dial with violet hands and hub inside the yellow bezel",
+        "region": {
+          "x": 0.3333,
+          "y": 0.6667,
+          "width": 0.3333,
+          "height": 0.3333,
+          "units": "normalized"
+        },
+        "scale": "meso",
+        "affects": "identity",
+        "mapsTo": {
+          "type": "component",
+          "ref": "clock-face"
+        },
+        "evidenceRef": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/chrono/detail-inventory/zone-r2c1.png",
+        "confidence": 0.9
+      },
+      {
+        "id": "zone-r2c2",
+        "kind": "contour",
+        "description": "character-left violet foot",
+        "region": {
+          "x": 0.6667,
+          "y": 0.6667,
+          "width": 0.3333,
+          "height": 0.3333,
+          "units": "normalized"
+        },
+        "scale": "macro",
+        "affects": "silhouette",
+        "mapsTo": {
+          "type": "component",
+          "ref": "foot-l"
+        },
+        "evidenceRef": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/chrono/detail-inventory/zone-r2c2.png",
+        "confidence": 0.85
+      }
+    ]
+  },
+  "authoringInstruction": "Open each zone crop under zonesDir and replace every detail stub's kind, description, scale, affects, mapsTo, and confidence with what is actually observed. Add more detail entries per zone if a single zone contains multiple distinct marks; do not leave stubs unfilled or unlinked (mapsTo must reference a real component.localFeatures or material.localOverrides entry)."
+}

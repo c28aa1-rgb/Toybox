@@ -65,6 +65,8 @@ def make_material(template: dict[str, Any], m: dict[str, Any]) -> dict[str, Any]
     out['localOverrides'] = m.get('localOverrides', [])
     if m.get('emissive'):
         out['emissive'] = {'color': m['emissive'], 'intensity': m.get('emissiveIntensity', 0.6)}
+    if m.get('doubleSided'):
+        out['doubleSided'] = True
     out['materialClass'] = m.get('materialClass', 'plastic')
     out['finishStyle'] = m.get('finish', 'gloss')
     return out
@@ -156,7 +158,7 @@ def build(workspace: Path, model: dict[str, Any]) -> Path:
         for key in ('reviewHistory', 'sculptPipeline', 'visualEvidence'):
             if key in current:
                 spec[key] = current[key]
-    comp_template = next(c for c in spec['componentTree'] if c['id'] == 'head')
+    comp_template = next((c for c in spec['componentTree'] if c['id'] == 'head'), spec['componentTree'][0])
     mat_template = spec['materials'][0]
 
     mats = {m['id']: m for m in model['materials']}

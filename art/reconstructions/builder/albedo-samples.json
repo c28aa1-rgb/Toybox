@@ -1,0 +1,53 @@
+{
+  "silhouetteBBoxNormalized": [
+    0.18,
+    0.125,
+    0.793,
+    0.918
+  ],
+  "silhouetteAspectWH": 0.773,
+  "regions": {
+    "body-plastic": {
+      "region_px": [
+        390,
+        650,
+        25,
+        40
+      ],
+      "median_rgb": [
+        253,
+        130,
+        23
+      ],
+      "hex": "#FD8217"
+    },
+    "hat-yellow": {
+      "region_px": [
+        700,
+        260,
+        40,
+        30
+      ],
+      "median_rgb": [
+        254,
+        238,
+        108
+      ],
+      "hex": "#FEEE6C"
+    },
+    "belt-ink": {
+      "region_px": [
+        640,
+        870,
+        40,
+        15
+      ],
+      "median_rgb": [
+        71,
+        60,
+        81
+      ],
+      "hex": "#473C51"
+    }
+  }
+}

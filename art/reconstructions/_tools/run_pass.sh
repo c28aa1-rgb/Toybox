@@ -20,6 +20,13 @@ mkdir -p "$R/src" "$B"
 IG forge/stage3_build/generate_threejs_factory.py "$SP" --out "$R/src/create${NAME}Model.ts" --pass-id "$PASS" $FORCE > "$B/generate.txt" 2>&1 || { tail -5 "$B/generate.txt"; exit 1; }
 mark build-current-pass --evidence "$R/src/create${NAME}Model.ts"
 
+# Match the reference silhouette box on the reference viewpoint (camera match for the 2D gates).
+export MATCH=$(~/.local/bin/uv run --quiet --python 3.12 --with pillow python3 -c "
+from PIL import Image
+im=Image.open('$REF').convert('RGB').resize((256,256)); px=im.load(); bg=px[2,2]
+pts=[(x,y) for y in range(256) for x in range(256) if sum(abs(a-b) for a,b in zip(px[x,y],bg))>40]
+xs=[p[0] for p in pts]; ys=[p[1] for p in pts]
+print(','.join('%.4f'%v for v in (min(xs)/256,min(ys)/256,(max(xs)+1)/256,(max(ys)+1)/256)))")
 (cd "$R" && node ../_tools/capture.mjs "$ID" "$B" >/dev/null) || { echo capture failed; exit 1; }
 mark render-capture --evidence "$B/ref.png" --evidence "$B/front.png" --evidence "$B/right.png" --evidence "$B/rear.png" --evidence "$B/left.png"
 mark review-contract-read --evidence "$HOME/.claude/skills/img2threejs/grimoire/review/gates_reference.md" --evidence "$HOME/.claude/skills/img2threejs/grimoire/review/self_correction.md"

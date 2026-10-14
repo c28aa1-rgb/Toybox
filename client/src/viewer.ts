@@ -69,11 +69,47 @@ async function main(): Promise<void> {
   // Margin 1.05 matches the concept framing (figure fills ~91% of frame height).
   const margin = Number(params.get('margin') ?? 1.05);
   if (frame) frame(camera, model, { azimuthDeg: az, elevationDeg: el, margin });
+  // &match=x0,y0,x1,y1 (normalized, y down) places the render silhouette on the reference
+  // silhouette box: zoom to its height, then offset the view to its centre. Only for the
+  // reference viewpoint; orbit views keep plain framing.
+  const match = params.get('match')?.split(',').map(Number);
+  if (match && match.length === 4) matchFraming(camera, model, match as [number, number, number, number], size);
   renderer.render(scene, camera);
   requestAnimationFrame(() => {
     renderer.render(scene, camera);
     (window as unknown as { __ready: boolean }).__ready = true;
   });
+}
+
+function projectedBox(camera: THREE.PerspectiveCamera, model: THREE.Object3D): [number, number, number, number] {
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  const v = new THREE.Vector3();
+  model.updateMatrixWorld(true);
+  camera.updateMatrixWorld(true);
+  model.traverse((o) => {
+    if (!(o instanceof THREE.Mesh) || !o.visible) return;
+    const pos = o.geometry.getAttribute('position');
+    for (let i = 0; i < pos.count; i++) {
+      v.fromBufferAttribute(pos, i).applyMatrix4(o.matrixWorld).project(camera);
+      x0 = Math.min(x0, v.x); x1 = Math.max(x1, v.x);
+      y0 = Math.min(y0, v.y); y1 = Math.max(y1, v.y);
+    }
+  });
+  return [x0, y0, x1, y1];
+}
+
+function matchFraming(camera: THREE.PerspectiveCamera, model: THREE.Object3D, ref: [number, number, number, number], size: number): void {
+  // Reference box in NDC (y up).
+  const tx = (ref[0] + ref[2]) - 1;
+  const ty = 1 - (ref[1] + ref[3]);
+  const th = 2 * (ref[3] - ref[1]);
+  const [x0, y0, x1, y1] = projectedBox(camera, model);
+  camera.zoom = th / (y1 - y0);
+  camera.updateProjectionMatrix();
+  const [a0, b0, a1, b1] = projectedBox(camera, model);
+  const cx = (a0 + a1) / 2;
+  const cy = (b0 + b1) / 2;
+  camera.setViewOffset(size, size, ((cx - tx) * size) / 2, ((ty - cy) * size) / 2, size, size);
 }
 
 main().catch((err) => {
