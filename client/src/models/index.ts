@@ -59,7 +59,7 @@ export function registerHeroModels(): void {
 }
 
 /** Guns are modelled at toy scale in metres with the origin at the grip top, muzzle along +Z. */
-const GUN_FACTORIES: Record<GunId, () => THREE.Group> = {
+const GUN_FACTORIES: Partial<Record<GunId, () => THREE.Group>> = {
   pistol: () => createPeaShooterModel({ textureSize: 8 }),
   smg: () => createBuzzboxModel({ textureSize: 8 }),
   shotgun: () => createBoomstickModel({ textureSize: 8 }),
@@ -76,7 +76,7 @@ export function registerGunModels(): void {
     registerGunModel(gun, () => {
       let t = gunTemplates.get(gun);
       if (!t) {
-        t = toonify(GUN_FACTORIES[gun]());
+        t = toonify(GUN_FACTORIES[gun]!());
         t.scale.setScalar(GUN_SCALE);
         gunTemplates.set(gun, t);
       }

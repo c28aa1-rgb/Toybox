@@ -2,11 +2,11 @@ import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { CSS2DObject } from 'three/examples/jsm/renderers/CSS2DRenderer.js';
 import {
-  CHAT_MAX, GUNS, GUN_IDS, HEROES, INTERP_DELAY, MAPS, MAX_HP, MAX_INPUT_DT, PICKUP_RADIUS, pointInRect, stepMovement,
+  CHAT_MAX, GUNS, GUN_IDS, HEROES, THROW, UTILS, isUtilId, throwFlightTime, type Loadout, type UtilId, type WeaponId, INTERP_DELAY, MAPS, MAX_HP, MAX_INPUT_DT, PICKUP_RADIUS, pointInRect, stepMovement,
   type DecoySnap, type GameEvent, type GunId, type HeroId, type InputFrame, type MapDef, type MapId, type PlayerSnap,
   type Rect, type Snapshot,
 } from '@gg/shared';
-import { createGunModel, createHeroSkin, type HeroSkin } from '../skins/registry';
+import { createGunModel, createHeroSkin, createUtilModel, type HeroSkin } from '../skins/registry';
 import { addKill, addWin, loadProfile, saveProfile } from '../unlocks';
 import { Sfx } from './audio';
 import { Particles, Rings, Shake, Shatter } from './fx';
@@ -24,6 +24,8 @@ export interface JoinOptions {
   name: string;
   hero: HeroId;
   gun: GunId;
+  secondary: GunId;
+  utility: UtilId;
 }
 
 interface PlayerView {
@@ -36,6 +38,8 @@ interface PlayerView {
   lastY: number;
   lastHp: number;
   laser: THREE.Mesh;
+  laserGlow: THREE.Mesh;
+  laserDot: THREE.Mesh;
 }
 
 interface DamageNumber {
@@ -46,11 +50,23 @@ interface DamageNumber {
 
 const BULLET_COLORS: Record<GunId, string> = {
   pistol: PALETTE.lemon,
+  minismg: '#7FCBFF',
+  thumper: PALETTE.tangerine,
   smg: PALETTE.sky,
   shotgun: '#FFB36B',
   sniper: PALETTE.mint,
   rocket: PALETTE.bubblegum,
 };
+
+const UTIL_COLORS: Record<UtilId, string> = { frag: PALETTE.mint, flash: PALETTE.lemon, smoke: '#B48CFF' };
+
+export function itemName(id: WeaponId): string {
+  return isUtilId(id) ? UTILS[id].name : GUNS[id].name;
+}
+
+function itemColor(id: WeaponId): string {
+  return isUtilId(id) ? UTIL_COLORS[id] : BULLET_COLORS[id];
+}
 
 const CAMERA_OFFSET = new THREE.Vector3(0, 18, 12);
 const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -68,6 +84,13 @@ export class GameClient {
   private bannerKey = 0;
   private scopeZoom = 0;
   private laserGeo = new THREE.BoxGeometry(0.05, 0.05, 1);
+  private laserGlowGeo = new THREE.BoxGeometry(0.2, 0.2, 1);
+  private laserDotGeo = new THREE.SphereGeometry(0.12, 12, 8);
+  private throwViews = new Map<number, { obj: THREE.Object3D; born: number }>();
+  private smokeViews = new Map<number, THREE.Group>();
+  private arcLine: THREE.Line;
+  private arcRing: THREE.Mesh;
+  private reticle: HTMLDivElement;
   private shake = new Shake();
   private sfx = new Sfx();
 
@@ -125,6 +148,29 @@ export class GameClient {
     this.cursorRing.rotation.x = -Math.PI / 2;
     this.s.scene.add(this.cursorRing);
 
+    // Throw preview: a dashed arc from the hand to where the throw will land.
+    this.arcLine = new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints(Array.from({ length: 32 }, () => new THREE.Vector3())),
+      new THREE.LineDashedMaterial({ color: '#FFFFFF', dashSize: 0.35, gapSize: 0.2, transparent: true, opacity: 0.9 }),
+    );
+    this.arcLine.visible = false;
+    this.arcLine.frustumCulled = false;
+    this.s.scene.add(this.arcLine);
+    this.arcRing = new THREE.Mesh(
+      new THREE.RingGeometry(0.85, 1, 40),
+      new THREE.MeshBasicMaterial({ color: '#FFFFFF', transparent: true, opacity: 0.6, depthWrite: false }),
+    );
+    (this.arcRing.material as THREE.Material).userData.outlineParameters = { visible: false };
+    this.arcRing.rotation.x = -Math.PI / 2;
+    this.arcRing.visible = false;
+    this.s.scene.add(this.arcRing);
+
+    // Scope reticle: follows the mouse, tightens while you hold the scope.
+    this.reticle = document.createElement('div');
+    this.reticle.className = 'reticle';
+    this.reticle.innerHTML = '<span class="reticle__ring"></span><span class="reticle__tick t"></span><span class="reticle__tick r"></span><span class="reticle__tick b"></span><span class="reticle__tick l"></span>';
+    container.appendChild(this.reticle);
+
     for (const g of GUN_IDS) {
       const m = new THREE.MeshBasicMaterial({ color: BULLET_COLORS[g] });
       m.userData.outlineParameters = { visible: false };
@@ -134,7 +180,7 @@ export class GameClient {
     this.hud = new HudStore({
       connected: false, error: null, room: opts.room ?? '', host: false, myId: null, me: null, players: [],
       phase: 'playing', winner: null, endsIn: 0, feed: [], ping: 0, killedBy: null, nearPickup: null,
-      loadout: { hero: opts.hero, gun: opts.gun }, scoreboard: false, hurtTick: 0, toast: null, bots: 0,
+      loadout: { hero: opts.hero, gun: opts.gun, secondary: opts.secondary, utility: opts.utility }, blind: 0, scoreboard: false, hurtTick: 0, toast: null, bots: 0,
       isPublic: opts.mode === 'public', map: null, chat: [], chatOpen: false, banner: null, scoped: false,
     });
 
@@ -161,7 +207,7 @@ export class GameClient {
       onClose: () => this.hud.set({ connected: false, error: this.hud.get().error ?? 'Disconnected from the server.' }),
     });
     this.net.whenOpen(() => {
-      this.net.send({ type: 'join', mode: opts.mode, room: opts.room, map: opts.map, name: opts.name, hero: opts.hero, gun: opts.gun });
+      this.net.send({ type: 'join', mode: opts.mode, room: opts.room, map: opts.map, name: opts.name, hero: opts.hero, gun: opts.gun, secondary: opts.secondary, utility: opts.utility });
     });
 
     this.raf = requestAnimationFrame(this.frame);
@@ -176,11 +222,10 @@ export class GameClient {
 
   // ---------- public controls ----------
 
-  setLoadout(hero: HeroId, gun: GunId): void {
-    this.net.send({ type: 'loadout', hero, gun });
-    this.hud.set({ loadout: { hero, gun } });
-    const p = loadProfile();
-    saveProfile({ ...p, hero, gun });
+  setLoadout(l: Loadout): void {
+    this.net.send({ type: 'loadout', ...l });
+    this.hud.set({ loadout: l });
+    saveProfile({ ...loadProfile(), ...l });
   }
 
   sendChat(text: string): void {
@@ -210,6 +255,7 @@ export class GameClient {
     this.net.close();
     for (const v of this.views.values()) v.skin.dispose();
     this.overlay.remove();
+    this.reticle.remove();
     this.s.dispose();
   }
 
@@ -280,6 +326,8 @@ export class GameClient {
       this.renderBullets(renderTime);
       this.renderDecoys(renderTime, dt, snap);
       this.renderStatic(snap, dt);
+      this.renderThrowables(renderTime, dt);
+      this.renderSmokes(snap);
     }
 
     this.particles.update(dt);
@@ -309,6 +357,9 @@ export class GameClient {
     const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.7);
     ray.ray.intersectPlane(plane, this.aimPoint);
     this.cursorRing.position.set(this.aimPoint.x, 0.05, this.aimPoint.z);
+    const scoping = this.input.scopeHeld && !this.hud.get().chatOpen && !!this.hud.get().me?.alive;
+    this.reticle.style.transform = `translate(${this.input.mouseX}px, ${this.input.mouseY}px)`;
+    this.reticle.classList.toggle('is-on', scoping);
   }
 
   private sendInput(dt: number, me: PlayerSnap, snap: Snapshot): void {
@@ -328,7 +379,13 @@ export class GameClient {
       scope: !typing && this.input.scopeHeld,
       ability: !typing && this.input.takeAbility(),
       pickup: !typing && this.input.takePickup(),
+      slot: 0,
+      throw: !typing && this.input.takeThrow(),
     };
+    const want = typing ? null : this.input.takeSlot();
+    if (want === 'toggle') frame.slot = me.slot === 'primary' ? 2 : 1;
+    else if (want) frame.slot = want;
+    this.updateThrowPreview(me, aimDist);
     if (me.alive && snap.phase === 'playing') {
       const { walls, bubbles } = this.predictionWorld();
       stepMovement(this.pred, mx, my, frame.dt, me.id, walls, bubbles, frame.scope);
@@ -466,12 +523,28 @@ export class GameClient {
     (laser.material as THREE.Material).userData.outlineParameters = { visible: false };
     laser.visible = false;
     this.s.world.add(laser);
-    return { skin, hero, label, nameEl, hpEl, lastX: NaN, lastY: NaN, lastHp: MAX_HP, laser };
+    const laserGlow = new THREE.Mesh(
+      this.laserGlowGeo,
+      new THREE.MeshBasicMaterial({ color: HEROES[hero].color, transparent: true, opacity: 0.18, depthWrite: false, blending: THREE.AdditiveBlending }),
+    );
+    (laserGlow.material as THREE.Material).userData.outlineParameters = { visible: false };
+    laserGlow.visible = false;
+    this.s.world.add(laserGlow);
+    const laserDot = new THREE.Mesh(
+      this.laserDotGeo,
+      new THREE.MeshBasicMaterial({ color: '#FFFFFF', transparent: true, opacity: 0.9, depthWrite: false }),
+    );
+    (laserDot.material as THREE.Material).userData.outlineParameters = { visible: false };
+    laserDot.visible = false;
+    this.s.world.add(laserDot);
+    return { skin, hero, label, nameEl, hpEl, lastX: NaN, lastY: NaN, lastHp: MAX_HP, laser, laserGlow, laserDot };
   }
 
   private removeView(view: PlayerView): void {
-    view.laser.removeFromParent();
-    (view.laser.material as THREE.Material).dispose();
+    for (const m of [view.laser, view.laserGlow, view.laserDot]) {
+      m.removeFromParent();
+      (m.material as THREE.Material).dispose();
+    }
     view.label.element.remove();
     view.skin.root.removeFromParent();
     view.skin.dispose();
@@ -501,9 +574,43 @@ export class GameClient {
     }
   }
 
+  /** Dashed arc preview while G is held, using the same flight curve the server simulates. */
+  private updateThrowPreview(me: PlayerSnap, aimDist: number): void {
+    const show = this.input.throwHeld && me.alive && me.utilCharges > 0 && !this.hud.get().chatOpen;
+    this.arcLine.visible = show;
+    this.arcRing.visible = show;
+    this.cursorRing.visible = !show && !this.input.scopeHeld;
+    if (!show) return;
+    const dist = Math.min(THROW.maxDistance, Math.max(THROW.minDistance, aimDist));
+    const T = throwFlightTime(dist);
+    const dx = Math.cos(this.aim);
+    const dy = Math.sin(this.aim);
+    const x0 = this.pred.x + dx * 0.7;
+    const y0 = this.pred.y + dy * 0.7;
+    const speed = (dist - 0.7) / T;
+    const vz = ((THROW.gravity * T * T) / 2 - THROW.releaseHeight) / T;
+    const pos = this.arcLine.geometry.getAttribute('position') as THREE.BufferAttribute;
+    for (let i = 0; i < pos.count; i++) {
+      const t = (T * i) / (pos.count - 1);
+      pos.setXYZ(i, x0 + dx * speed * t, Math.max(0.05, THROW.releaseHeight + vz * t - (THROW.gravity * t * t) / 2), y0 + dy * speed * t);
+    }
+    pos.needsUpdate = true;
+    this.arcLine.computeLineDistances();
+    const color = UTIL_COLORS[me.utility];
+    (this.arcLine.material as THREE.LineDashedMaterial).color.set(color);
+    (this.arcRing.material as THREE.MeshBasicMaterial).color.set(color);
+    const lx = x0 + dx * speed * T;
+    const ly = y0 + dy * speed * T;
+    this.arcRing.position.set(lx, 0.06, ly);
+    const r = UTILS[me.utility].radius;
+    this.arcRing.scale.setScalar(me.utility === 'flash' ? 1.2 : r);
+  }
+
   /** Laser from the gun along the aim, stopped by walls. */
   private updateLaser(view: PlayerView, x: number, y: number, aim: number, on: boolean, gun: GunId, mine: boolean): void {
     view.laser.visible = on;
+    view.laserGlow.visible = on;
+    view.laserDot.visible = on;
     if (!on) return;
     const max = mine ? Math.min(GUNS[gun].range, Math.hypot(this.aimPoint.x - x, this.aimPoint.z - y)) : GUNS[gun].range;
     const walls = this.mapWalls();
@@ -516,6 +623,12 @@ export class GameClient {
     view.laser.position.set(x + dx * mid, 0.75, y + dy * mid);
     view.laser.rotation.y = Math.PI / 2 - aim;
     view.laser.scale.set(1, 1, Math.max(0.01, len - start));
+    // A soft glow sheath that breathes, and a bright dot where the beam stops.
+    view.laserGlow.position.copy(view.laser.position);
+    view.laserGlow.rotation.copy(view.laser.rotation);
+    view.laserGlow.scale.set(1 + Math.sin(this.clock * 9) * 0.15, 1, Math.max(0.01, len - start));
+    view.laserDot.position.set(x + dx * len, 0.75, y + dy * len);
+    view.laserDot.scale.setScalar(0.8 + Math.sin(this.clock * 14) * 0.25);
   }
 
   private updateLabel(view: PlayerView, hp: number, alive: boolean): void {
@@ -563,6 +676,86 @@ export class GameClient {
     }
   }
 
+  private renderThrowables(renderTime: number, dt: number): void {
+    const br = this.bracket(renderTime);
+    if (!br) return;
+    const seen = new Set<number>();
+    for (const g of br.b.throwables) {
+      const a = br.a.throwables.find((o) => o.id === g.id) ?? g;
+      seen.add(g.id);
+      let v = this.throwViews.get(g.id);
+      if (!v) {
+        const obj = createUtilModel(g.util);
+        obj.scale.setScalar(1.3);
+        this.s.world.add(obj);
+        v = { obj, born: this.clock };
+        this.throwViews.set(g.id, v);
+      }
+      const x = a.x + (g.x - a.x) * br.k;
+      const y = a.y + (g.y - a.y) * br.k;
+      const z = a.z + (g.z - a.z) * br.k;
+      v.obj.position.set(x, z, y);
+      // Tumble while airborne; settle once it rests on the floor.
+      if (z > 0.02) {
+        v.obj.rotation.x += dt * 9;
+        v.obj.rotation.z += dt * 5;
+        if (Math.random() < 0.5) {
+          this.particles.burst({ x, y, z: z + 0.1, count: 1, color: [UTIL_COLORS[g.util], '#FFFFFF'], speed: 0.2, up: 0, life: 0.35, size: 0.08, gravity: 0 });
+        }
+      } else if (g.util === 'frag' && Math.random() < 0.6) {
+        this.particles.burst({ x, y, z: 0.3, count: 1, color: ['#FFE45C', '#FF8A1F'], speed: 1.5, up: 2, life: 0.25, size: 0.07 });
+      }
+    }
+    for (const [id, v] of this.throwViews) {
+      if (!seen.has(id)) {
+        v.obj.removeFromParent();
+        this.throwViews.delete(id);
+      }
+    }
+  }
+
+  private renderSmokes(snap: Snapshot): void {
+    const seen = new Set<number>();
+    for (const sm of snap.smokes) {
+      seen.add(sm.id);
+      let g = this.smokeViews.get(sm.id);
+      if (!g) {
+        g = new THREE.Group();
+        const mat = new THREE.MeshToonMaterial({ color: '#C8B9E6', transparent: true, opacity: 0.95 });
+        // A cluster of puffs; tall enough to hide anyone standing inside.
+        for (let i = 0; i < 14; i++) {
+          const a = (i / 14) * Math.PI * 2;
+          const rr = i < 7 ? sm.r * 0.55 : sm.r * 0.25;
+          const puff = new THREE.Mesh(new THREE.IcosahedronGeometry(1, 1), mat);
+          puff.position.set(Math.cos(a) * rr, 0.9 + (i % 3) * 0.55, Math.sin(a) * rr);
+          puff.scale.setScalar(sm.r * (0.42 + ((i * 37) % 10) / 40));
+          puff.userData.base = puff.scale.x;
+          puff.userData.phase = i;
+          g.add(puff);
+        }
+        g.position.set(sm.x, 0, sm.y);
+        g.userData.mat = mat;
+        g.userData.born = this.clock;
+        this.s.world.add(g);
+        this.smokeViews.set(sm.id, g);
+      }
+      const age = this.clock - (g.userData.born as number);
+      const grow = Math.min(1, age / 0.5);
+      const fade = Math.min(1, sm.endsIn / 1.2);
+      (g.userData.mat as THREE.MeshToonMaterial).opacity = 0.95 * fade;
+      for (const puff of g.children) {
+        const b = puff.userData.base as number;
+        puff.scale.setScalar(b * (0.3 + 0.7 * grow) * (1 + Math.sin(this.clock * 1.5 + (puff.userData.phase as number)) * 0.05));
+      }
+    }
+    for (const [id, g] of this.smokeViews) {
+      if (!seen.has(id)) {
+        g.removeFromParent();
+        this.smokeViews.delete(id);
+      }
+    }
+  }
+
   private renderStatic(snap: Snapshot, dt: number): void {
     // Pickups
     const seenP = new Set<number>();
@@ -571,12 +764,12 @@ export class GameClient {
       let g = this.pickupViews.get(k.id);
       if (!g) {
         g = new THREE.Group();
-        const model = createGunModel(k.gun);
+        const model = k.kind === 'gun' ? createGunModel(k.item as GunId) : createUtilModel(k.item as UtilId);
         model.scale.setScalar(1.15);
         model.name = 'model';
         const glow = new THREE.Mesh(
           new THREE.CircleGeometry(0.75, 28),
-          new THREE.MeshBasicMaterial({ color: BULLET_COLORS[k.gun], transparent: true, opacity: 0.45, depthWrite: false }),
+          new THREE.MeshBasicMaterial({ color: itemColor(k.item), transparent: true, opacity: 0.45, depthWrite: false }),
         );
         (glow.material as THREE.Material).userData.outlineParameters = { visible: false };
         glow.rotation.x = -Math.PI / 2;
@@ -592,6 +785,8 @@ export class GameClient {
       model.position.y = 0.75 + Math.sin(this.clock * 3 + k.id) * 0.12;
       const sc = g.scale.x + (1 - g.scale.x) * Math.min(1, dt * 10);
       g.scale.setScalar(sc);
+      // Blink for the last two seconds before the drop disappears.
+      g.visible = k.expiresIn > 2 || Math.floor(this.clock * 8) % 2 === 0;
     }
     for (const [id, g] of this.pickupViews) {
       if (!seenP.has(id)) {
@@ -765,9 +960,11 @@ export class GameClient {
         const victimView = this.views.get(ev.victim);
         if (victimView && pos) {
           const from = this.viewPos(ev.killer) ?? pos;
-          this.shatter.burst(victimView.skin.root, new THREE.Vector3(from.x, 0.7, from.y), ev.gun === 'rocket' || ev.gun === 'shotgun' ? 1.6 : 1);
+          this.shatter.burst(victimView.skin.root, new THREE.Vector3(from.x, 0.7, from.y), ev.gun === 'rocket' || ev.gun === 'shotgun' || ev.gun === 'frag' ? 1.6 : 1);
           victimView.skin.root.visible = false;
           victimView.laser.visible = false;
+          victimView.laserGlow.visible = false;
+          victimView.laserDot.visible = false;
         }
         if (ev.killer === me && ev.victim !== me) {
           this.hud.set({ banner: { key: ++this.bannerKey, kind: 'eliminated', name: this.nameOf(ev.victim) } });
@@ -857,8 +1054,25 @@ export class GameClient {
       case 'pickup':
         if (ev.id === me) {
           this.sfx.pickup();
-          this.toast(`Picked up the ${GUNS[ev.gun].name}. It's yours until you die.`);
+          this.toast(`Picked up the ${itemName(ev.item)}. It's yours until you die.`);
         }
+        break;
+      case 'throw':
+        if (ev.id === me || this.nearness(this.viewPos(ev.id)?.x ?? 0, this.viewPos(ev.id)?.y ?? 0) > 0.3) this.sfx.throwWhoosh();
+        break;
+      case 'weaponSwap':
+        if (ev.id === me) this.sfx.weaponSwap();
+        break;
+      case 'flash': {
+        const n = this.nearness(ev.x, ev.y);
+        this.particles.burst({ x: ev.x, y: ev.y, z: 0.6, count: 30, color: ['#FFFFFF', PALETTE.lemon], speed: 9, up: 4, life: 0.35, size: 0.2, gravity: 0 });
+        this.rings.spawn(ev.x, ev.y, 6, '#FFFFFF', 0.3);
+        this.sfx.flashBang(n);
+        break;
+      }
+      case 'smoke':
+        this.sfx.smokeHiss(this.nearness(ev.x, ev.y));
+        this.rings.spawn(ev.x, ev.y, 3.6, '#B48CFF', 0.5);
         break;
       case 'win': {
         this.sfx.win();
@@ -925,14 +1139,14 @@ export class GameClient {
 
   private pushHud(snap: Snapshot | null, me: PlayerSnap | null): void {
     if (!snap) return;
-    let nearPickup: GunId | null = null;
+    let nearPickup: WeaponId | null = null;
     if (me?.alive) {
       let best = PICKUP_RADIUS;
       for (const k of snap.pickups) {
         const d = Math.hypot(k.x - this.pred.x, k.y - this.pred.y);
         if (d < best) {
           best = d;
-          nearPickup = k.gun;
+          nearPickup = k.item;
         }
       }
     }
@@ -947,6 +1161,7 @@ export class GameClient {
       scoreboard: this.input.scoreboardHeld,
       bots: snap.players.filter((p) => p.bot).length,
       scoped: !!me?.alive && this.input.scopeHeld && !this.hud.get().chatOpen,
+      blind: me?.blindIn ?? 0,
     };
     if (this.botsWanted) {
       if (patch.bots === this.botsWanted.count || performance.now() - this.botsWanted.at > 1500) this.botsWanted = null;

@@ -5,6 +5,11 @@ export class Input {
   mouseY = 0;
   fireHeld = false;
   scopeHeld = false;
+  /** Held G: aiming a throw. Releasing it throws. */
+  throwHeld = false;
+  private throwReleased = false;
+  /** 1 or 2 from the number keys, or 'toggle' from the mouse wheel. */
+  private slotQueued: 1 | 2 | 'toggle' | null = null;
   private abilityQueued = false;
   private pickupQueued = false;
   scoreboardHeld = false;
@@ -23,6 +28,9 @@ export class Input {
         if (k === 'Space' || k === 'KeyQ') this.abilityQueued = true;
         if (k === 'KeyC') this.scopeHeld = !this.scopeHeld; // keyboard toggle for trackpads
         if (k === 'KeyE' || k === 'KeyF') this.pickupQueued = true;
+        if (k === 'Digit1') this.slotQueued = 1;
+        if (k === 'Digit2') this.slotQueued = 2;
+        if (k === 'KeyG') this.throwHeld = true;
       }
       if (k === 'Tab') this.scoreboardHeld = true;
       if (k === 'ShiftLeft') this.scopeHeld = true; // hold to scope
@@ -32,6 +40,10 @@ export class Input {
       this.keys.delete(e.code);
       if (e.code === 'Tab') this.scoreboardHeld = false;
       if (e.code === 'ShiftLeft') this.scopeHeld = false;
+      if (e.code === 'KeyG' && this.throwHeld) {
+        this.throwHeld = false;
+        this.throwReleased = true;
+      }
     });
     on('blur', () => {
       this.clear();
@@ -50,6 +62,9 @@ export class Input {
       if (e.button === 0) this.fireHeld = false;
       if (e.button === 2) this.scopeHeld = false;
     });
+    on('wheel', (e) => {
+      if (e.target === this.el && Math.abs(e.deltaY) > 4) this.slotQueued = 'toggle';
+    });
     on('contextmenu', (e) => {
       if (e.target === this.el) e.preventDefault();
     });
@@ -60,6 +75,19 @@ export class Input {
     this.keys.clear();
     this.fireHeld = false;
     this.scopeHeld = false;
+    this.throwHeld = false;
+  }
+
+  takeSlot(): 1 | 2 | 'toggle' | null {
+    const v = this.slotQueued;
+    this.slotQueued = null;
+    return v;
+  }
+
+  takeThrow(): boolean {
+    const v = this.throwReleased;
+    this.throwReleased = false;
+    return v;
   }
 
   move(): { mx: number; my: number } {

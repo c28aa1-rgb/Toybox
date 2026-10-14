@@ -21,7 +21,7 @@ export const CHAT_MAX = 120;
 export const PUBLIC_ROOM = 'PUBLIC';
 /** The public lobby keeps at least this many players by topping up with bots. */
 export const PUBLIC_MIN_PLAYERS = 6;
-export const DROP_LIFETIME = 20;
+export const DROP_LIFETIME = 8;
 
 /** Seconds other entities are rendered behind the newest snapshot. */
 export const INTERP_DELAY = 0.1;

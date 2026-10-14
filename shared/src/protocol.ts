@@ -1,6 +1,10 @@
 import type { GunId } from './guns';
 import type { HeroId } from './heroes';
 import type { MapId } from './map';
+import type { UtilId } from './utilities';
+
+/** Anything that can score a kill: a gun or a thrown utility. */
+export type WeaponId = GunId | UtilId;
 
 /** One frame of player intent. Movement is applied for `dt` seconds. */
 export interface InputFrame {
@@ -18,21 +22,28 @@ export interface InputFrame {
   /** Edge-triggered: true only on the frame the key went down. */
   ability: boolean;
   pickup: boolean;
+  /** 1 = switch to primary, 2 = switch to secondary, 0 = no change. */
+  slot: 0 | 1 | 2;
+  /** Edge-triggered: throw the utility toward the cursor. */
+  throw: boolean;
 }
 
 export interface Loadout {
   hero: HeroId;
+  /** Primary gun. */
   gun: GunId;
+  secondary: GunId;
+  utility: UtilId;
 }
 
 // ---- client -> server ----
 
 export type ClientMsg =
   /** public: the always-on lobby. create: a new private room on `map`. join: a private room by code. */
-  | { type: 'join'; mode: 'public' | 'create' | 'join'; room?: string; map?: MapId; name: string; hero: HeroId; gun: GunId }
+  | { type: 'join'; mode: 'public' | 'create' | 'join'; room?: string; map?: MapId; name: string; hero: HeroId; gun: GunId; secondary: GunId; utility: UtilId }
   | { type: 'chat'; text: string }
   | { type: 'input'; frames: InputFrame[] }
-  | { type: 'loadout'; hero: HeroId; gun: GunId }
+  | { type: 'loadout'; hero: HeroId; gun: GunId; secondary: GunId; utility: UtilId }
   | { type: 'bots'; count: number }
   | { type: 'ping'; t: number };
 
@@ -42,7 +53,15 @@ export interface PlayerSnap {
   id: string;
   name: string;
   hero: HeroId;
+  /** The gun in hand. */
   gun: GunId;
+  primary: GunId;
+  secondary: GunId;
+  slot: 'primary' | 'secondary';
+  utility: UtilId;
+  utilCharges: number;
+  /** Seconds of flash blindness left. */
+  blindIn: number;
   x: number;
   y: number;
   aim: number;
@@ -68,9 +87,28 @@ export interface BulletSnap {
 
 export interface PickupSnap {
   id: number;
-  gun: GunId;
+  kind: 'gun' | 'util';
+  item: WeaponId;
   x: number;
   y: number;
+  expiresIn: number;
+}
+
+export interface ThrowableSnap {
+  id: number;
+  util: UtilId;
+  x: number;
+  y: number;
+  /** Height above the floor. */
+  z: number;
+}
+
+export interface SmokeSnap {
+  id: number;
+  x: number;
+  y: number;
+  r: number;
+  endsIn: number;
 }
 
 export interface WallSnap {
@@ -103,7 +141,7 @@ export interface DecoySnap {
 export type GameEvent =
   | { t: 'shot'; id: string; gun: GunId; x: number; y: number; a: number }
   | { t: 'hit'; target: string; by: string; dmg: number; x: number; y: number }
-  | { t: 'kill'; killer: string; victim: string; gun: GunId }
+  | { t: 'kill'; killer: string; victim: string; gun: WeaponId }
   | { t: 'blink'; id: string; x1: number; y1: number; x2: number; y2: number }
   | { t: 'swap'; id: string; target: string }
   | { t: 'swapFail'; id: string }
@@ -113,7 +151,11 @@ export type GameEvent =
   | { t: 'wallBreak'; x: number; y: number }
   | { t: 'decoyPop'; x: number; y: number }
   | { t: 'explode'; x: number; y: number; r: number }
-  | { t: 'pickup'; id: string; gun: GunId }
+  | { t: 'pickup'; id: string; item: WeaponId }
+  | { t: 'throw'; id: string; util: UtilId }
+  | { t: 'flash'; x: number; y: number }
+  | { t: 'smoke'; x: number; y: number }
+  | { t: 'weaponSwap'; id: string }
   | { t: 'win'; id: string };
 
 export interface Snapshot {
@@ -131,6 +173,8 @@ export interface Snapshot {
   walls: WallSnap[];
   bubbles: BubbleSnap[];
   decoys: DecoySnap[];
+  throwables: ThrowableSnap[];
+  smokes: SmokeSnap[];
   events: GameEvent[];
 }
 

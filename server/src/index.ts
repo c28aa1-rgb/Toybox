@@ -3,7 +3,17 @@ import { createServer } from 'node:http';
 import { extname, join, normalize, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { WebSocketServer, type WebSocket } from 'ws';
-import { DEFAULT_MAP, MAPS, PUBLIC_MAP, PUBLIC_ROOM, isGunId, isHeroId, isMapId, type ClientMsg } from '@gg/shared';
+import { DEFAULT_MAP, MAPS, PUBLIC_MAP, PUBLIC_ROOM, isHeroId, isMapId, isPrimary, isSecondary, isUtilId, type ClientMsg, type Loadout } from '@gg/shared';
+
+function loadoutFrom(msg: { hero: unknown; gun: unknown; secondary: unknown; utility: unknown }): Loadout | null {
+  if (!isHeroId(msg.hero) || !isPrimary(msg.gun)) return null;
+  return {
+    hero: msg.hero,
+    gun: msg.gun,
+    secondary: isSecondary(msg.secondary) ? msg.secondary : 'pistol',
+    utility: isUtilId(msg.utility) ? msg.utility : 'frag',
+  };
+}
 import { Room } from './room';
 
 // GG_PORT wins in dev, where tools may set PORT for the Vite client.
@@ -66,7 +76,8 @@ wss.on('connection', (ws: WebSocket) => {
     }
     if (msg.type === 'join') {
       if (room) return;
-      if (!isHeroId(msg.hero) || !isGunId(msg.gun)) {
+      const loadout = loadoutFrom(msg);
+      if (!loadout) {
         ws.send(JSON.stringify({ type: 'error', message: 'Pick a hero and a gun first.' }));
         return;
       }
@@ -90,7 +101,7 @@ wss.on('connection', (ws: WebSocket) => {
       }
       if (!r) return;
       const code = r.code;
-      const id = r.join(ws, cleanName(msg.name), msg.hero, msg.gun);
+      const id = r.join(ws, cleanName(msg.name), loadout);
       if (!id) {
         ws.send(JSON.stringify({ type: 'error', message: `Room ${code} is full.` }));
         if (r.humanCount === 0 && !r.isPublic) rooms.delete(code);
@@ -106,7 +117,10 @@ wss.on('connection', (ws: WebSocket) => {
         room.onInput(playerId, msg.frames);
         break;
       case 'loadout':
-        if (isHeroId(msg.hero) && isGunId(msg.gun)) room.onLoadout(playerId, msg.hero, msg.gun);
+        {
+          const l = loadoutFrom(msg);
+          if (l) room.onLoadout(playerId, l);
+        }
         break;
       case 'bots':
         room.setBots(playerId, Number(msg.count) || 0);

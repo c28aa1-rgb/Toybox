@@ -4,3 +4,4 @@ export * from './heroes';
 export * from './map';
 export * from './protocol';
 export * from './sim';
+export * from './utilities';

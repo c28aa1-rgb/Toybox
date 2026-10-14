@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { HEROES, type GunId, type HeroId } from '@gg/shared';
+import { HEROES, type GunId, type HeroId, type UtilId } from '@gg/shared';
 import { mesh, toon } from './toon';
 
 /**
@@ -28,6 +28,11 @@ export type GunFactory = () => THREE.Group;
 
 const heroFactories: Partial<Record<HeroId, HeroFactory>> = {};
 const gunFactories: Partial<Record<GunId, GunFactory>> = {};
+const utilFactories: Partial<Record<UtilId, GunFactory>> = {};
+
+export function registerUtilModel(util: UtilId, f: GunFactory): void {
+  utilFactories[util] = f;
+}
 
 export function registerHeroModel(hero: HeroId, f: HeroFactory): void {
   heroFactories[hero] = f;
@@ -131,6 +136,15 @@ function placeholderGun(gun: GunId): THREE.Group {
       g.add(mesh(new THREE.BoxGeometry(0.14, 0.16, 0.5), toon('#3DDBB4'), [0, -0.02, -0.05]));
       g.add(mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.34), metal, [0, 0.14, 0.12], [Math.PI / 2, 0, 0]));
       break;
+    case 'minismg':
+      g.add(mesh(new THREE.BoxGeometry(0.12, 0.14, 0.36), toon('#7FCBFF'), [0, 0, 0.1]));
+      g.add(mesh(new THREE.BoxGeometry(0.07, 0.2, 0.08), metal, [0, -0.15, 0.12]));
+      break;
+    case 'thumper':
+      g.add(mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.42, 14), toon('#FF8A1F'), [0, 0.02, 0.18], [Math.PI / 2, 0, 0]));
+      g.add(mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.12, 14), metal, [0, 0.02, -0.02], [0, 0, Math.PI / 2]));
+      g.add(mesh(new THREE.BoxGeometry(0.1, 0.2, 0.1), metal, [0, -0.14, -0.06]));
+      break;
     case 'rocket':
       g.add(mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.95, 16), toon('#FF5FA2'), [0, 0.08, 0.2], [Math.PI / 2, 0, 0]));
       g.add(mesh(new THREE.ConeGeometry(0.14, 0.2, 16), toon('#FFE45C'), [0, 0.08, 0.76], [Math.PI / 2, 0, 0]));
@@ -138,6 +152,18 @@ function placeholderGun(gun: GunId): THREE.Group {
       break;
   }
   return g;
+}
+
+function placeholderUtil(util: UtilId): THREE.Group {
+  const g = new THREE.Group();
+  const colors: Record<UtilId, string> = { frag: '#3DDBB4', flash: '#FFE45C', smoke: '#B48CFF' };
+  g.add(mesh(new THREE.SphereGeometry(0.16, 14, 10), toon(colors[util]), [0, 0.16, 0]));
+  g.add(mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.08, 10), toon('#5B2A86'), [0, 0.34, 0]));
+  return g;
+}
+
+export function createUtilModel(util: UtilId): THREE.Group {
+  return (utilFactories[util] ?? (() => placeholderUtil(util)))();
 }
 
 export function createGunModel(gun: GunId): THREE.Group {

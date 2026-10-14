@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { CHAT_MAX, GUNS, HEROES, KILLS_TO_WIN, MAPS, MAX_PLAYERS, type PlayerSnap } from '@gg/shared';
+import { CHAT_MAX, GUNS, HEROES, KILLS_TO_WIN, MAPS, MAX_PLAYERS, SECONDARY_IDS, UTILS, type Loadout, type PlayerSnap } from '@gg/shared';
 import type { Banner, ChatLine } from '../game/store';
-import type { GameClient } from '../game/GameClient';
+import { itemName, type GameClient } from '../game/GameClient';
 import { useHud } from '../game/store';
 import { loadProfile } from '../unlocks';
 import type { Portraits } from './App';
-import { GunRack, HeroShelf } from './Pickers';
+import { GunRack, HeroShelf, UtilRack } from './Pickers';
 
 const pop = { type: 'spring', stiffness: 500, damping: 24 } as const;
 
@@ -60,7 +60,7 @@ export function Hud({ client, portraits, onLeave }: { client: GameClient; portra
                 transition={pop}
               >
                 <b>{f.killer}</b>
-                <span className="feed__gun">{GUNS[f.gun].name}</span>
+                <span className="feed__gun">{itemName(f.gun)}</span>
                 <b>{f.victim}</b>
               </motion.li>
             ))}
@@ -73,7 +73,7 @@ export function Hud({ client, portraits, onLeave }: { client: GameClient; portra
         <div className="hud__bottom">
           <HealthPill hp={me.hp} />
           <AbilityButton name={hero.ability} color={hero.color} readyIn={me.abilityReadyIn} cooldown={hero.cooldown} />
-          <GunCard gun={me.gun} portrait={portraits.guns[me.gun]} />
+          <Loadout me={me} portraits={portraits} />
         </div>
       )}
 
@@ -86,13 +86,15 @@ export function Hud({ client, portraits, onLeave }: { client: GameClient; portra
             exit={{ y: 8, opacity: 0 }}
             transition={pop}
           >
-            <kbd>E</kbd> Swap to {GUNS[s.nearPickup].name}
+            <kbd>E</kbd> Swap to {itemName(s.nearPickup)}
           </motion.div>
         )}
       </AnimatePresence>
 
       <Toast toast={s.toast} />
       <EliminationBanner banner={s.banner} />
+      <div className={`scope-vignette${me.alive && s.scoped ? ' is-on' : ''}`} aria-hidden />
+      <FlashOverlay blind={s.blind} />
       <Chat lines={s.chat} open={s.chatOpen} client={client} />
       {me.alive && s.scoped && <div className="scope-tag">SCOPED · SLOWER, STEADIER AIM</div>}
 
@@ -316,13 +318,40 @@ function AbilityButton({ name, color, readyIn, cooldown }: { name: string; color
   );
 }
 
-function GunCard({ gun, portrait }: { gun: keyof typeof GUNS; portrait: string }) {
+/** Primary and secondary with the one in hand raised, plus the utility and its charges. */
+function Loadout({ me, portraits }: { me: PlayerSnap; portraits: Portraits }) {
+  const slots: { key: string; slot: 'primary' | 'secondary'; gun: keyof typeof GUNS }[] = [
+    { key: '1', slot: 'primary', gun: me.primary },
+    { key: '2', slot: 'secondary', gun: me.secondary },
+  ];
   return (
-    <motion.div key={gun} className="guncard" initial={{ rotate: -8, scale: 0.8 }} animate={{ rotate: 0, scale: 1 }} transition={pop}>
-      <img src={portrait} alt="" />
-      <span>{GUNS[gun].name}</span>
-    </motion.div>
+    <div className="loadout">
+      {slots.map((s) => (
+        <motion.div
+          key={s.slot}
+          className={`loadout__gun${me.slot === s.slot ? ' is-active' : ''}`}
+          animate={{ y: me.slot === s.slot ? -8 : 0, scale: me.slot === s.slot ? 1 : 0.88 }}
+          transition={pop}
+        >
+          <kbd>{s.key}</kbd>
+          <img src={portraits.guns[s.gun]} alt="" />
+          <span>{GUNS[s.gun].name}</span>
+        </motion.div>
+      ))}
+      <div className={`loadout__util${me.utilCharges ? '' : ' is-empty'}`}>
+        <kbd>G</kbd>
+        <img src={portraits.utils[me.utility]} alt="" />
+        <span>{UTILS[me.utility].name}</span>
+        <b>×{me.utilCharges}</b>
+      </div>
+    </div>
   );
+}
+
+function FlashOverlay({ blind }: { blind: number }) {
+  // Full white while more than a second is left, then fades out.
+  const opacity = Math.min(1, blind / 1.0);
+  return <div className="flash-overlay" style={{ opacity }} aria-hidden />;
 }
 
 function Toast({ toast }: { toast: { key: number; text: string } | null }) {
@@ -374,7 +403,7 @@ function DeathPanel({
   respawnIn: number;
   client: GameClient;
   portraits: Portraits;
-  loadout: { hero: keyof typeof HEROES; gun: keyof typeof GUNS };
+  loadout: Loadout;
 }) {
   const kills = loadProfile().kills;
   return (
@@ -388,8 +417,10 @@ function DeathPanel({
       <h2 className="death__title">{killer ? `${killer} got you` : 'You went down'}</h2>
       <p className="death__timer">Back in {Math.ceil(respawnIn)}</p>
       <p className="death__hint">Change your loadout for the next life:</p>
-      <HeroShelf compact value={loadout.hero} portraits={portraits} onChange={(h) => client.setLoadout(h, loadout.gun)} />
-      <GunRack compact value={loadout.gun} kills={kills} portraits={portraits} onChange={(g) => client.setLoadout(loadout.hero, g)} />
+      <HeroShelf compact value={loadout.hero} portraits={portraits} onChange={(hero) => client.setLoadout({ ...loadout, hero })} />
+      <GunRack compact value={loadout.gun} kills={kills} portraits={portraits} onChange={(gun) => client.setLoadout({ ...loadout, gun })} />
+      <GunRack compact ids={SECONDARY_IDS} label="Secondary gun" value={loadout.secondary} kills={kills} portraits={portraits} onChange={(secondary) => client.setLoadout({ ...loadout, secondary })} />
+      <UtilRack compact value={loadout.utility} portraits={portraits} onChange={(utility) => client.setLoadout({ ...loadout, utility })} />
     </motion.div>
   );
 }

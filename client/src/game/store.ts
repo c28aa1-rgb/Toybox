@@ -1,11 +1,11 @@
 import { useSyncExternalStore } from 'react';
-import type { GunId, HeroId, MapId, PlayerSnap } from '@gg/shared';
+import type { GunId, HeroId, MapId, PlayerSnap, UtilId, WeaponId } from '@gg/shared';
 
 export interface FeedEntry {
   key: number;
   killer: string;
   victim: string;
-  gun: GunId;
+  gun: WeaponId;
   mine: boolean;
 }
 
@@ -38,8 +38,10 @@ export interface HudState {
   feed: FeedEntry[];
   ping: number;
   killedBy: string | null;
-  nearPickup: GunId | null;
-  loadout: { hero: HeroId; gun: GunId };
+  nearPickup: WeaponId | null;
+  loadout: { hero: HeroId; gun: GunId; secondary: GunId; utility: UtilId };
+  /** Seconds of flash blindness left for this player. */
+  blind: number;
   scoreboard: boolean;
   /** Bumps on each hit you take, used to flash the vignette. */
   hurtTick: number;

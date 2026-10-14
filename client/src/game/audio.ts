@@ -65,6 +65,8 @@ export class Sfx {
     const v = 0.15 + near * 0.85;
     switch (gun) {
       case 'pistol': this.tone(900, 180, 0.09, 'square', 0.12 * v); this.noise(0.06, 0.2 * v, 2400); break;
+      case 'minismg': this.tone(1400, 400, 0.04, 'square', 0.06 * v); this.noise(0.035, 0.12 * v, 3400); break;
+      case 'thumper': this.tone(300, 70, 0.22, 'sawtooth', 0.18 * v); this.noise(0.18, 0.4 * v, 700, 0.7); break;
       case 'smg': this.tone(1200, 300, 0.05, 'square', 0.07 * v); this.noise(0.04, 0.14 * v, 3000); break;
       case 'shotgun': this.noise(0.22, 0.45 * v, 900, 0.7); this.tone(220, 60, 0.18, 'sawtooth', 0.15 * v); break;
       case 'sniper': this.tone(1600, 90, 0.35, 'sawtooth', 0.14 * v); this.noise(0.25, 0.3 * v, 1800); break;
@@ -86,6 +88,10 @@ export class Sfx {
   bubble(): void { this.tone(300, 900, 0.4, 'sine', 0.15); }
   wall(): void { this.noise(0.15, 0.3, 400); this.tone(140, 90, 0.15, 'square', 0.12); }
   pop(): void { this.tone(800, 200, 0.12, 'triangle', 0.14); }
+  throwWhoosh(): void { this.noise(0.18, 0.12, 1800, 2); this.tone(500, 260, 0.16, 'sine', 0.06); }
+  flashBang(near: number): void { this.tone(3200, 2400, 0.6, 'sine', 0.2 * near); this.noise(0.25, 0.4 * near, 4000); }
+  smokeHiss(near: number): void { this.noise(0.9, 0.25 * (0.3 + near), 5000, 0.5); }
+  weaponSwap(): void { this.tone(600, 900, 0.05, 'square', 0.06); this.tone(900, 700, 0.05, 'square', 0.05, 0.06); }
   pickup(): void { this.tone(700, 1400, 0.1, 'square', 0.1); }
   win(): void {
     [523, 659, 784, 1046].forEach((f, i) => this.tone(f, f, 0.18, 'triangle', 0.18, i * 0.12));

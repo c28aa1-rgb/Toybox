@@ -1,5 +1,5 @@
 import {
-  GUNS, HERO_IDS, TICK_DT, allWalls, pointInRect,
+  GUNS, HERO_IDS, TICK_DT, allWalls, hasLineOfSight,
   type GameState, type HeroId, type InputFrame, type PlayerState, type Rect,
 } from '@gg/shared';
 
@@ -31,17 +31,6 @@ export function forgetBot(id: string): void {
   memory.delete(id);
 }
 
-function hasLineOfSight(x1: number, y1: number, x2: number, y2: number, walls: Rect[]): boolean {
-  const d = Math.hypot(x2 - x1, y2 - y1);
-  const steps = Math.ceil(d / 0.3);
-  for (let i = 1; i < steps; i++) {
-    const t = i / steps;
-    const x = x1 + (x2 - x1) * t;
-    const y = y1 + (y2 - y1) * t;
-    if (walls.some((w) => pointInRect(x, y, w))) return false;
-  }
-  return true;
-}
 
 export function botInput(state: GameState, p: PlayerState): InputFrame {
   let m = memory.get(p.id);
@@ -54,7 +43,7 @@ export function botInput(state: GameState, p: PlayerState): InputFrame {
   }
   m.seq++;
   const frame: InputFrame = {
-    seq: m.seq, dt: TICK_DT, mx: 0, my: 0, aim: p.aim, aimDist: 6, fire: false, scope: false, ability: false, pickup: false,
+    seq: m.seq, dt: TICK_DT, mx: 0, my: 0, aim: p.aim, aimDist: 6, fire: false, scope: false, ability: false, pickup: false, slot: 0, throw: false,
   };
   if (!p.alive || state.phase !== 'playing') return frame;
 
@@ -78,7 +67,7 @@ export function botInput(state: GameState, p: PlayerState): InputFrame {
   for (const o of state.players.values()) {
     if (o.id === p.id || !o.alive) continue;
     const d = Math.hypot(o.x - p.x, o.y - p.y);
-    const los = hasLineOfSight(p.x, p.y, o.x, o.y, walls);
+    const los = hasLineOfSight(state, p.x, p.y, o.x, o.y);
     // Prefer visible targets; a hidden one counts as farther away.
     const score = los ? d : d + 15;
     if (score < targetD) {
@@ -89,10 +78,18 @@ export function botInput(state: GameState, p: PlayerState): InputFrame {
   }
 
   // Grab a better gun if one is close.
-  const gunRank = { pistol: 0, smg: 1, shotgun: 2, sniper: 2, rocket: 3 } as const;
+  const gunRank: Record<string, number> = { pistol: 0, minismg: 0, thumper: 0, smg: 1, shotgun: 2, sniper: 2, rocket: 3 };
   const upgrade = state.pickups.find(
-    (k) => gunRank[k.gun] > gunRank[p.gun] && Math.hypot(k.x - p.x, k.y - p.y) < 7,
+    (k) => k.kind === 'gun' && GUNS[k.item as keyof typeof GUNS].slot === 'primary'
+      && gunRank[k.item] > gunRank[p.primary] && Math.hypot(k.x - p.x, k.y - p.y) < 7,
   );
+  // Flash-blinded bots stumble around and hold fire.
+  if (state.time < p.blindUntil) {
+    frame.mx = Math.cos(m.wanderAngle);
+    frame.my = Math.sin(m.wanderAngle);
+    if (rng() < 0.05) m.wanderAngle += Math.PI / 2;
+    return frame;
+  }
 
   let moveX = 0;
   let moveY = 0;
@@ -123,6 +120,10 @@ export function botInput(state: GameState, p: PlayerState): InputFrame {
       frame.fire = d < range * 0.95;
       // Snipers scope up for long shots, like players do.
       frame.scope = p.gun === 'sniper' && d > 10;
+      // Lob utility at mid range now and then.
+      if (p.utilCharges > 0 && d > 4 && d < 12 && state.time >= p.throwReadyAt && rng() < 0.012) frame.throw = true;
+      // Close in with the sidearm when the primary is a long gun.
+      frame.slot = p.primary === 'sniper' && d < 6 ? 2 : p.slot === 'secondary' && d > 8 ? 1 : 0;
       if (state.time >= p.abilityReadyAt && rng() < 0.025) {
         frame.ability = shouldUseAbility(p, d);
       }

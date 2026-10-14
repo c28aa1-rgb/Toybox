@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { MAPS, PARTY_MAP_IDS, PUBLIC_MAP, type GunId, type HeroId, type MapDef, type MapId } from '@gg/shared';
+import { MAPS, PARTY_MAP_IDS, PUBLIC_MAP, SECONDARY_IDS, type GunId, type HeroId, type MapDef, type MapId, type UtilId } from '@gg/shared';
 import type { JoinOptions } from '../game/GameClient';
 import { isUnlocked, loadProfile, saveProfile } from '../unlocks';
 import type { Portraits } from './App';
-import { GunRack, HeroShelf } from './Pickers';
+import { GunRack, HeroShelf, UtilRack } from './Pickers';
 
 function initialRoom(): string {
   return new URLSearchParams(location.search).get('room')?.toUpperCase().slice(0, 6) ?? '';
@@ -14,14 +14,16 @@ export function Lobby({ portraits, onPlay }: { portraits: Portraits; onPlay: (o:
   const profile = loadProfile();
   const [name, setName] = useState(profile.name);
   const [hero, setHero] = useState<HeroId>(profile.hero);
-  const [gun, setGun] = useState<GunId>(isUnlocked(profile.gun, profile.kills) ? profile.gun : 'pistol');
+  const [gun, setGun] = useState<GunId>(isUnlocked(profile.gun, profile.kills) ? profile.gun : 'smg');
+  const [secondary, setSecondary] = useState<GunId>(profile.secondary);
+  const [utility, setUtility] = useState<UtilId>(profile.utility);
   const [room, setRoom] = useState(initialRoom);
   const [map, setMap] = useState<MapId>('playmat');
   const invited = initialRoom() !== '';
 
   const go = (opts: Pick<JoinOptions, 'mode' | 'room' | 'map'>) => {
-    saveProfile({ ...loadProfile(), name: name.trim(), hero, gun });
-    onPlay({ ...opts, name: name.trim() || 'Player', hero, gun });
+    saveProfile({ ...loadProfile(), name: name.trim(), hero, gun, secondary, utility });
+    onPlay({ ...opts, name: name.trim() || 'Player', hero, gun, secondary, utility });
   };
 
   return (
@@ -74,8 +76,18 @@ export function Lobby({ portraits, onPlay }: { portraits: Portraits; onPlay: (o:
       </section>
 
       <section className="lobby__section">
-        <h2 className="section-title">Pick a starting gun</h2>
+        <h2 className="section-title">Primary</h2>
         <GunRack value={gun} onChange={setGun} kills={profile.kills} portraits={portraits} />
+      </section>
+
+      <section className="lobby__section">
+        <h2 className="section-title">Secondary</h2>
+        <GunRack ids={SECONDARY_IDS} label="Secondary gun" value={secondary} onChange={setSecondary} kills={profile.kills} portraits={portraits} />
+      </section>
+
+      <section className="lobby__section">
+        <h2 className="section-title">Utility</h2>
+        <UtilRack value={utility} onChange={setUtility} portraits={portraits} />
       </section>
 
       <section className="lobby__go">
@@ -138,7 +150,9 @@ export function Lobby({ portraits, onPlay }: { portraits: Portraits; onPlay: (o:
         <span><kbd>Click</kbd> shoot</span>
         <span><kbd>Left Shift</kbd> or <kbd>Right click</kbd> scope</span>
         <span><kbd>Space</kbd> or <kbd>Q</kbd> ability</span>
-        <span><kbd>E</kbd> pick up gun</span>
+        <span><kbd>1</kbd> <kbd>2</kbd> or <kbd>Wheel</kbd> swap guns</span>
+        <span>Hold <kbd>G</kbd> aim throw, release to throw</span>
+        <span><kbd>E</kbd> pick up</span>
         <span><kbd>Tab</kbd> scores</span>
         <span><kbd>Enter</kbd> chat</span>
       </footer>

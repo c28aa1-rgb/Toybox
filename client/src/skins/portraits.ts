@@ -1,12 +1,12 @@
 import * as THREE from 'three';
-import { GUN_IDS, HERO_IDS, type GunId, type HeroId } from '@gg/shared';
-import { createGunModel, createHeroSkin } from './registry';
+import { GUN_IDS, HERO_IDS, UTIL_IDS, type GunId, type HeroId, type UtilId } from '@gg/shared';
+import { createGunModel, createHeroSkin, createUtilModel } from './registry';
 
 /**
  * Renders each hero and gun once into a PNG data URL for the lobby cards.
  * Uses the same skin registry as the game, so new models show up here automatically.
  */
-export function renderPortraits(): { heroes: Record<HeroId, string>; guns: Record<GunId, string> } {
+export function renderPortraits(): { heroes: Record<HeroId, string>; guns: Record<GunId, string>; utils: Record<UtilId, string> } {
   const size = 256;
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
   renderer.setSize(size, size);
@@ -34,6 +34,24 @@ export function renderPortraits(): { heroes: Record<HeroId, string>; guns: Recor
   }
 
   const guns = {} as Record<GunId, string>;
+  const shoot = (g: THREE.Object3D, yaw: number): string => {
+    const box = new THREE.Box3().setFromObject(g);
+    const center = box.getCenter(new THREE.Vector3());
+    const len = box.getSize(new THREE.Vector3()).length();
+    g.position.sub(center);
+    const holder = new THREE.Group();
+    holder.add(g);
+    holder.rotation.set(0.25, yaw, 0);
+    scene.add(holder);
+    camera.position.set(0, 0, len * 2.1);
+    camera.lookAt(0, 0, 0);
+    renderer.render(scene, camera);
+    scene.remove(holder);
+    return renderer.domElement.toDataURL('image/png');
+  };
+  const utils = {} as Record<UtilId, string>;
+  for (const id of UTIL_IDS) utils[id] = shoot(createUtilModel(id), 0.5);
+
   for (const id of GUN_IDS) {
     const g = createGunModel(id);
     const box = new THREE.Box3().setFromObject(g);
@@ -53,5 +71,5 @@ export function renderPortraits(): { heroes: Record<HeroId, string>; guns: Recor
 
   renderer.dispose();
   renderer.forceContextLoss();
-  return { heroes, guns };
+  return { heroes, guns, utils };
 }

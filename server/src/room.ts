@@ -1,7 +1,7 @@
 import type { WebSocket } from 'ws';
 import {
   ABILITY, CHAT_MAX, MAX_PLAYERS, PUBLIC_MIN_PLAYERS, TICK_DT, TICK_RATE, addPlayer, applyInput, createGame, r2,
-  removePlayer, setLoadout, tick, type GameState, type GunId, type HeroId, type InputFrame, type MapId,
+  removePlayer, setLoadout, tick, type GameState, type GunId, type HeroId, type InputFrame, type MapId, type UtilId, type Loadout,
   type ServerMsg, type Snapshot,
 } from '@gg/shared';
 import { botHero, botInput, botName, forgetBot } from './bots';
@@ -45,7 +45,7 @@ export class Room {
     return this.clients.size;
   }
 
-  join(ws: WebSocket, name: string, hero: HeroId, gun: GunId): string | null {
+  join(ws: WebSocket, name: string, loadout: Loadout): string | null {
     if (this.clients.size + this.bots.length >= this.maxPlayers) {
       // Make room by dropping a bot before refusing a human.
       const bot = this.bots.pop();
@@ -54,7 +54,7 @@ export class Room {
     }
     const id = `p${this.nextClientId++}`;
     this.clients.set(id, { id, ws, queue: [], chatTimes: [] });
-    addPlayer(this.state, { id, name, hero, gun });
+    addPlayer(this.state, { id, name, ...loadout });
     if (!this.hostId && !this.isPublic) this.hostId = id;
     this.welcome(this.clients.get(id)!);
     if (!this.timer) this.timer = setInterval(() => this.step(), 1000 / TICK_RATE);
@@ -90,9 +90,9 @@ export class Room {
     }
   }
 
-  onLoadout(id: string, hero: HeroId, gun: GunId): void {
+  onLoadout(id: string, loadout: Loadout): void {
     const p = this.state.players.get(id);
-    if (p) setLoadout(this.state, p, { hero, gun });
+    if (p) setLoadout(this.state, p, loadout);
   }
 
   /** Only the host can change the bot count. */
@@ -113,8 +113,13 @@ export class Room {
     while (this.bots.length < target) {
       const i = this.botCounter++;
       const id = `b${i}`;
-      const guns: GunId[] = ['pistol', 'smg', 'shotgun'];
-      addPlayer(this.state, { id, name: botName(i), hero: botHero(i), gun: guns[i % guns.length], bot: true });
+      const guns: GunId[] = ['smg', 'shotgun', 'smg', 'sniper'];
+      const sides: GunId[] = ['pistol', 'minismg', 'thumper'];
+      const utils: UtilId[] = ['frag', 'flash', 'smoke'];
+      addPlayer(this.state, {
+        id, name: botName(i), hero: botHero(i), gun: guns[i % guns.length],
+        secondary: sides[i % sides.length], utility: utils[i % utils.length], bot: true,
+      });
       this.bots.push(id);
     }
   }
@@ -152,6 +157,8 @@ export class Room {
       endsIn: s.phase === 'ended' ? r2(s.endsAt - t) : 0,
       players: [...s.players.values()].map((p) => ({
         id: p.id, name: p.name, hero: p.hero, gun: p.gun,
+        primary: p.primary, secondary: p.secondary, slot: p.slot, utility: p.utility, utilCharges: p.utilCharges,
+        blindIn: r2(Math.max(0, p.blindUntil - t)),
         x: r2(p.x), y: r2(p.y), aim: r2(p.aim), hp: Math.max(0, Math.round(p.hp)),
         alive: p.alive, kills: p.kills, deaths: p.deaths, bot: p.bot,
         shield: p.alive && t < p.shieldUntil,
@@ -160,7 +167,9 @@ export class Room {
         abilityReadyIn: r2(Math.max(0, p.abilityReadyAt - t)),
       })),
       bullets: s.bullets.map((b) => ({ id: b.id, gun: b.gun, x: r2(b.x), y: r2(b.y), fake: b.fake })),
-      pickups: s.pickups.map((k) => ({ id: k.id, gun: k.gun, x: r2(k.x), y: r2(k.y) })),
+      pickups: s.pickups.map((k) => ({ id: k.id, kind: k.kind, item: k.item, x: r2(k.x), y: r2(k.y), expiresIn: r2(k.expiresAt - t) })),
+      throwables: s.throwables.map((g) => ({ id: g.id, util: g.util, x: r2(g.x), y: r2(g.y), z: r2(g.z) })),
+      smokes: s.smokes.map((sm) => ({ id: sm.id, x: r2(sm.x), y: r2(sm.y), r: sm.r, endsIn: r2(sm.expiresAt - t) })),
       walls: s.walls.map((w) => ({
         id: w.id, x: r2(w.x), y: r2(w.y), w: w.w, h: w.h, owner: w.owner,
         hp: Math.round((w.hp / ABILITY.wallHp) * 100) / 100,
