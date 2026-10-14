@@ -1,0 +1,33 @@
+/*
+ * Toy-box arcade theme (draft, pending sign-off).
+ * Glossy molded plastic on a foam play mat. Every surface gets a thick ink outline
+ * and a hard drop shadow, like a toy sitting on a table.
+ */
+:root {
+  --grape: #5b2a86;
+  --grape-deep: #24123f;
+  --mat: #3a2366;
+  --tangerine: #ff8a1f;
+  --bubblegum: #ff5fa2;
+  --mint: #3ddbb4;
+  --sky: #4fb3ff;
+  --lemon: #ffe45c;
+  --ink: #1b1030;
+  --cream: #fff4e0;
+  --danger: #ff3b5c;
+
+  --font-display: 'Bowlby One', 'Arial Black', sans-serif;
+  --font-body: 'Baloo 2', ui-rounded, system-ui, sans-serif;
+  --font-mono: 'DM Mono', ui-monospace, monospace;
+
+  --outline: 3px solid var(--ink);
+  --lift: 0 6px 0 var(--ink);
+  --lift-sm: 0 3px 0 var(--ink);
+  --radius: 18px;
+  --radius-sm: 10px;
+
+  /* Playful motion: quick, with overshoot. */
+  --ease-back: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --dur-quick: 140ms;
+  --dur-std: 240ms;
+}
