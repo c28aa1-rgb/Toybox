@@ -17,7 +17,10 @@ export interface HeroSkin {
   dispose(): void;
 }
 
-export type HeroFactory = () => { body: THREE.Group; gunSocket: THREE.Object3D };
+/** Optional animatable pivots; anything missing simply doesn't animate. */
+export type HeroParts = Partial<Record<'footL' | 'footR' | 'handL' | 'handR' | 'antenna', THREE.Object3D | null>>;
+
+export type HeroFactory = () => { body: THREE.Group; gunSocket: THREE.Object3D; parts?: HeroParts };
 export type GunFactory = () => THREE.Group;
 
 const heroFactories: Partial<Record<HeroId, HeroFactory>> = {};
@@ -141,7 +144,14 @@ export function createGunModel(gun: GunId): THREE.Group {
 // ---------- skin instance ----------
 
 export function createHeroSkin(hero: HeroId): HeroSkin {
-  const { body, gunSocket } = (heroFactories[hero] ?? (() => placeholderHero(hero)))();
+  const make: HeroFactory = heroFactories[hero] ?? (() => placeholderHero(hero));
+  const { body, gunSocket, parts = {} } = make();
+  const rest = new Map<THREE.Object3D, THREE.Euler>();
+  for (const p of Object.values(parts)) if (p) rest.set(p, p.rotation.clone());
+  const pose = (p: THREE.Object3D | null | undefined, x: number, z = 0) => {
+    const r = p && rest.get(p);
+    if (p && r) p.rotation.set(r.x + x, r.y, r.z + z);
+  };
   const root = new THREE.Group();
   const bob = new THREE.Group();
   bob.add(body);
@@ -180,6 +190,13 @@ export function createHeroSkin(hero: HeroId): HeroSkin {
       const s = 1 + Math.sin(squash * Math.PI) * 0.15;
       bob.scale.set(s, 2 - s, s);
       bob.rotation.z = moving > 0.05 ? Math.sin(phase) * 0.08 * moving : 0;
+      // Waddle: feet kick alternately and the free mitt swings. The gun mitt stays still so the
+      // gun keeps pointing where the player aims.
+      const step = Math.sin(phase) * 0.45 * moving;
+      pose(parts.footL, step);
+      pose(parts.footR, -step);
+      pose(parts.handL, -step * 0.6);
+      pose(parts.antenna, Math.sin(phase * 0.7) * 0.12, Math.cos(phase * 0.5) * 0.1);
       if (flashT > 0) {
         flashT -= dt;
         const on = flashT > 0;

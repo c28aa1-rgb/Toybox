@@ -125,6 +125,9 @@ def make_component(template: dict[str, Any], p: dict[str, Any], materials: dict[
         'evidenceRefs': p.get('evidenceRefs', ['full-object']),
     }
     c['surfaceDetail']['notes'] = p.get('surfaceNotes', 'Smooth moulded plastic; no relief.')
+    for key in ('vertexPaint', 'rootTipGradient'):
+        if key in p:
+            c[key] = p[key]
     return c
 
 

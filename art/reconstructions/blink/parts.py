@@ -12,7 +12,7 @@ from spec_builder import attach  # noqa: E402
 BODY_H, BODY_W, BODY_D = 1.25, 0.94, 0.80
 BODY_Y = 0.80  # body centre height; spans 0.175 .. 1.425
 
-def _egg_profile(n=26, widest=-0.12):
+def _egg_profile(n=48, widest=-0.12):
     """Egg outline [radius, y] in unit space: fuller superellipse below the widest point,
     rounder and tapered above it, matching the reference crown narrowing to ~0.72 of max width."""
     import math
@@ -34,6 +34,14 @@ def _egg_profile(n=26, widest=-0.12):
 # Egg profile: widest just below mid-height, tapering toward the crown. [radius, y] in unit space.
 BODY_PROFILE = _egg_profile()
 
+
+# Cream belly as a hard-edged colour region painted on the body (component-local metres, after
+# scale). A separate ellipsoid could not sit flush on the egg curvature.
+BELLY_PAINT = {
+    'baseColor': '#4AAEF8',
+    'regions': [{'id': 'belly', 'kind': 'ellipsoid', 'color': '#F3E6CC', 'softness': 0.02,
+                 'center': [0.0, -0.27, 0.4], 'radii': [0.3, 0.33, 0.25]}],
+}
 
 MATERIALS = [
     {'id': 'hidden', 'color': '#000000', 'roughness': 1.0, 'materialClass': 'unknown', 'finish': 'none'},
@@ -84,13 +92,13 @@ hand_l = {
     # Rest pose is symmetric. The reference raises the character-right mitt; the game applies
     # that as the aim pose on hand-r's pivot (see anatomy.json pose.jointAngles).
     'id': 'hand-l', 'level': 'macro', 'role': 'hand', 'parent': 'body', 'primitive': 'ellipsoid',
-    'dims': [0.32, 0.38, 0.32], 'pos': [0.44, -0.22, 0.04], 'rot': [0.0, 0.0, 0.25],
+    'dims': [0.32, 0.38, 0.32], 'pos': [0.52, -0.22, 0.04], 'rot': [0.0, 0.0, 0.25],
     'material': 'body-plastic', 'importance': 0.75, 'animationRole': 'sway', 'pivotMode': 'top', 'pivot': [0, 0.13, 0],
 }
 hand_r = {
     # Character-right mitt is raised forward at waist height: the gun hand in game.
     'id': 'hand-r', 'level': 'macro', 'role': 'hand', 'parent': 'body', 'primitive': 'ellipsoid',
-    'dims': [0.32, 0.38, 0.32], 'pos': [-0.44, -0.22, 0.04], 'rot': [0.0, 0.0, -0.25],
+    'dims': [0.32, 0.38, 0.32], 'pos': [-0.52, -0.22, 0.04], 'rot': [0.0, 0.0, -0.25],
     'material': 'body-plastic', 'importance': 0.8, 'animationRole': 'aim', 'pivotMode': 'top', 'pivot': [0.05, 0.1, -0.05],
     'sockets': [{'id': 'gun', 'localPosition': [-0.02, -0.02, 0.12], 'localRotation': [0, 0, 0], 'purpose': 'weapon grip'}],
 }
@@ -101,15 +109,13 @@ PARTS = [
     {'id': 'body', 'level': 'macro', 'role': 'body', 'parent': 'root', 'primitive': 'lathe',
      'dims': [BODY_W, BODY_H, BODY_D], 'pos': [0, BODY_Y, 0], 'material': 'body-plastic', 'importance': 1.0,
      'topologyClass': 'continuous-sculpt', 'topologyRationale': 'Head and torso are one continuous egg volume; a lathe profile gives the bottom-heavy taper an ellipsoid cannot.',
-     'descriptor': {'latheProfile': {'points': BODY_PROFILE, 'segments': 28}},
+     'descriptor': {'latheProfile': {'points': BODY_PROFILE, 'segments': 56}},
+     'vertexPaint': BELLY_PAINT,
      'localFeatures': [
          {'id': 'belly-seam', 'kind': 'seam', 'description': 'flush colour boundary where the cream belly meets the azure body', 'evidenceRef': 'detail-inventory/zone-r2c1.png'},
          {'id': 'crown-socket', 'kind': 'hole', 'description': 'antenna stalk socket at the crown', 'evidenceRef': 'detail-inventory/zone-r0c1.png'},
      ],
      'animationRole': 'squash', 'pivotMode': 'bottom', 'pivot': [0, -BODY_H / 2, 0],
-     },
-    {'id': 'belly-patch', 'level': 'meso', 'role': 'detail', 'parent': 'body', 'primitive': 'ellipsoid',
-     'dims': [0.6, 0.66, 0.24], 'pos': [0, -0.27, 0.3], 'rot': [0.12, 0, 0], 'material': 'belly-cream', 'importance': 0.9,
      },
     eye_l, mirror({**eye_l, 'id': 'eye-r'}),
     pupil_l, {**mirror(pupil_l), 'id': 'pupil-r', 'parent': 'eye-r'},
@@ -120,14 +126,14 @@ PARTS = [
      'dims': [0.08, 0.18, 0.08], 'material': 'violet-plastic', 'importance': 0.85,
      'animationRole': 'wobble', 'pivotMode': 'base',
      'topologyRationale': 'Lower half of the curved stalk; the generator builds attachment parts as tapered cylinders from localStart to localEnd in parent space.',
-     'attachment': {**attach('body', 'crown', [0, 0.6, 0], [0.02, 0.78, 0.02], 'socket', 0.025), 'baseRadius': 0.04, 'endRadius': 0.035}},
+     'attachment': {**attach('body', 'crown', [0, 0.6, 0], [0.02, 0.72, 0.02], 'socket', 0.025), 'baseRadius': 0.04, 'endRadius': 0.035}},
     {'id': 'antenna-tip', 'level': 'meso', 'role': 'antenna', 'parent': 'antenna-stalk', 'primitive': 'cylinder',
      'dims': [0.07, 0.14, 0.07], 'material': 'violet-plastic', 'importance': 0.8,
      'animationRole': 'wobble', 'pivotMode': 'base',
      'topologyRationale': 'Upper half of the stalk, bent toward character-left to approximate the S-curve.',
-     'attachment': {**attach('antenna-stalk', 'bend', [0.02, 0.17, 0.02], [0.13, 0.25, 0.06], 'overlap', 0.01), 'baseRadius': 0.035, 'endRadius': 0.03}},
+     'attachment': {**attach('antenna-stalk', 'bend', [0.02, 0.11, 0.02], [0.11, 0.18, 0.05], 'overlap', 0.01), 'baseRadius': 0.035, 'endRadius': 0.03}},
     {'id': 'antenna-gem', 'level': 'meso', 'role': 'ornament', 'parent': 'antenna-tip', 'primitive': 'lathe',
-     'dims': [0.33, 0.46, 0.33], 'pos': [0.15, 0.27, 0.05], 'rot': [0.0, 0.785, -0.3], 'material': 'gem-yellow', 'importance': 0.95,
+     'dims': [0.33, 0.46, 0.33], 'pos': [0.12, 0.23, 0.03], 'rot': [0.0, 0.785, -0.3], 'material': 'gem-yellow', 'importance': 0.95,
      'descriptor': {'latheProfile': {'points': [[0.0, -0.5], [0.5, 0.0], [0.0, 0.5]], 'segments': 4}},
      'normalStrategy': 'flat faceted normals',
      'localFeatures': [{'id': 'gem-facets', 'kind': 'bevel', 'description': 'eight flat facets meeting at a sharp waist', 'evidenceRef': 'detail-inventory/zone-r0c2.png'}],
@@ -137,7 +143,7 @@ PARTS = [
 PASS_COMPONENTS = {
     'blockout': ['root', 'body', 'hand-l', 'hand-r', 'foot-l', 'foot-r', 'antenna-stalk', 'antenna-tip', 'antenna-gem'],
     'structural-pass': ['root', 'body', 'hand-l', 'hand-r', 'foot-l', 'foot-r', 'antenna-stalk', 'antenna-tip', 'antenna-gem'],
-    'proportion-lock': ['root', 'body', 'belly-patch', 'hand-l', 'hand-r', 'foot-l', 'foot-r', 'antenna-stalk', 'antenna-tip', 'antenna-gem'],
+    'proportion-lock': ['root', 'body', 'hand-l', 'hand-r', 'foot-l', 'foot-r', 'antenna-stalk', 'antenna-tip', 'antenna-gem'],
 }
 
 DETAILS = [
@@ -152,7 +158,7 @@ DETAILS = [
     {'id': 'catchlights', 'kind': 'gloss', 'description': 'white catchlight dot on each pupil', 'scale': 'micro', 'affects': 'identity',
      'mapsTo': {'type': 'component', 'ref': 'catchlight-l'}, 'evidenceRef': 'detail-inventory/zone-r1c1.png', 'confidence': 0.8},
     {'id': 'belly-patch', 'kind': 'decal', 'description': 'cream ellipse on the lower front', 'scale': 'meso', 'affects': 'identity',
-     'mapsTo': {'type': 'component', 'ref': 'belly-patch'}, 'evidenceRef': 'detail-inventory/zone-r2c1.png', 'confidence': 0.9},
+     'mapsTo': {'type': 'component', 'ref': 'body/belly-seam'}, 'evidenceRef': 'detail-inventory/zone-r2c1.png', 'confidence': 0.9},
     {'id': 'violet-feet', 'kind': 'contour', 'description': 'two flattened violet feet under the body', 'scale': 'macro', 'affects': 'silhouette',
      'mapsTo': {'type': 'component', 'ref': 'foot-l'}, 'evidenceRef': 'detail-inventory/zone-r2c0.png', 'confidence': 0.85},
     {'id': 'gloss-finish', 'kind': 'gloss', 'description': 'low-roughness moulded plastic everywhere', 'scale': 'micro', 'affects': 'material',
@@ -200,7 +206,7 @@ MODEL = {
          'componentRefs': ['antenna-stalk', 'antenna-tip', 'antenna-gem'], 'evidenceRefs': ['full-object']},
         {'id': 'outfit-and-palette', 'name': 'Azure body, cream belly, violet feet, yellow gem', 'tier': 'important',
          'passIds': ['material-pass'], 'minimumScore': 0.7, 'mustPass': False,
-         'componentRefs': ['body', 'belly-patch', 'foot-l', 'antenna-gem'], 'evidenceRefs': ['full-object']},
+         'componentRefs': ['body', 'foot-l', 'antenna-gem'], 'evidenceRefs': ['full-object']},
     ],
     'silhouette': {
         'boundingShape': 'egg (bottom-heavy ovoid) with two side mitts, two feet below and a gem antenna above',
@@ -211,7 +217,7 @@ MODEL = {
         'landmarks': ['crown', 'eye line 0.317', 'belly centre 0.73', 'mitt centre 0.62'],
     },
     'coordinateFrame': {'front': '+Z (camera-facing in reference)', 'up': '+Y', 'characterLeft': '+X', 'units': 'meters', 'scaleReference': 'figure height 1.45 m sole to crown'},
-    'performanceBudget': {'qualityPriority': 'runtime', 'targetTriangles': 6000, 'maxDrawCalls': 20, 'textureSize': 0, 'fpsTarget': 60,
+    'performanceBudget': {'qualityPriority': 'runtime', 'targetTriangles': 9000, 'maxDrawCalls': 20, 'textureSize': 0, 'fpsTarget': 60,
                           'optimizationPolicy': 'Up to 9 copies on screen; stay in the low tessellation tier.'},
     'assumptions': ['Resolved unknowns (single view): see risks.', 'Back of body is a smooth continuation of the egg.', 'Antenna leans forward-left about 25 degrees.', 'Gem is a 4-sided bipyramid.'],
     'risks': ['Single 3/4 view: back and antenna depth are inferred (confidence 0.5).'],

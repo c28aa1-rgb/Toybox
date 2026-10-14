@@ -205,7 +205,7 @@
           "affects": "identity",
           "mapsTo": {
             "type": "component",
-            "ref": "belly-patch"
+            "ref": "body/belly-seam"
           },
           "evidenceRef": "detail-inventory/zone-r2c1.png",
           "confidence": 0.9
@@ -702,7 +702,6 @@
       "mustPass": false,
       "componentRefs": [
         "body",
-        "belly-patch",
         "foot-l",
         "antenna-gem"
       ],
@@ -723,14 +722,23 @@
       "interaction-pass",
       "optimization-pass"
     ],
-    "currentPass": "blockout",
-    "completedPasses": [],
-    "lastCompletedPass": "",
+    "currentPass": "material-pass",
+    "completedPasses": [
+      "blockout",
+      "structural-pass",
+      "proportion-lock",
+      "feature-placement"
+    ],
+    "lastCompletedPass": "feature-placement",
     "blockedReason": "",
     "nextRequiredEvidence": [
-      "Body reads as a bottom-heavy egg ~1.33x taller than wide",
-      "Feet peek out under the body",
-      "Antenna gem sits up and to character-left",
+      "Skin, hair, shirt, pants, shoe, and any enabled accessory materials match reference palette.",
+      "reference-derived albedo palette with dominant, secondary, and accent colors",
+      "independent albedo, roughness, height/normal, and AO maps",
+      "macro, meso, and micro surface-frequency response at 1024px or higher",
+      "local material masks: AO, dirt, wear, stains, moss, chips, scratches, wetness, or equivalent",
+      "neutral, grazing-light close-up, and reference-matched browser screenshots",
+      "AI vision comparison sheet score meeting the visual acceptance threshold",
       "browser render screenshot from your agent's browser/screenshot tool",
       "side-by-side reference/render comparison sheet for AI vision review",
       "banded interior difference vs the reference baseline (forge/stage4_review/interior_difference.py --from/--to per region)",
@@ -1058,111 +1066,199 @@
               -0.5
             ],
             [
-              0.2898,
-              -0.4615
+              0.2324,
+              -0.4792
             ],
             [
-              0.3661,
-              -0.4231
+              0.2981,
+              -0.4583
             ],
             [
-              0.4134,
-              -0.3846
+              0.3423,
+              -0.4375
             ],
             [
-              0.4455,
-              -0.3462
+              0.3754,
+              -0.4167
             ],
             [
-              0.4676,
-              -0.3077
+              0.4015,
+              -0.3958
             ],
             [
-              0.4826,
-              -0.2692
+              0.4225,
+              -0.375
             ],
             [
-              0.4921,
-              -0.2308
+              0.4397,
+              -0.3542
             ],
             [
-              0.4974,
-              -0.1923
+              0.4538,
+              -0.3333
             ],
             [
-              0.4996,
-              -0.1538
+              0.4653,
+              -0.3125
+            ],
+            [
+              0.4746,
+              -0.2917
+            ],
+            [
+              0.4821,
+              -0.2708
+            ],
+            [
+              0.4879,
+              -0.25
+            ],
+            [
+              0.4924,
+              -0.2292
+            ],
+            [
+              0.4956,
+              -0.2083
+            ],
+            [
+              0.4978,
+              -0.1875
+            ],
+            [
+              0.4992,
+              -0.1667
             ],
             [
               0.4998,
-              -0.1154
+              -0.1458
             ],
             [
-              0.4981,
-              -0.0769
+              0.5,
+              -0.125
             ],
             [
-              0.4957,
-              -0.0385
+              0.4993,
+              -0.1042
+            ],
+            [
+              0.4984,
+              -0.0833
+            ],
+            [
+              0.4973,
+              -0.0625
+            ],
+            [
+              0.496,
+              -0.0417
+            ],
+            [
+              0.4944,
+              -0.0208
             ],
             [
               0.4925,
               0.0
             ],
             [
-              0.4881,
-              0.0385
+              0.4903,
+              0.0208
             ],
             [
-              0.4823,
-              0.0769
+              0.4877,
+              0.0417
             ],
             [
-              0.4749,
-              0.1154
+              0.4847,
+              0.0625
             ],
             [
-              0.4656,
-              0.1538
+              0.4812,
+              0.0833
             ],
             [
-              0.4541,
-              0.1923
+              0.4772,
+              0.1042
             ],
             [
-              0.44,
-              0.2308
+              0.4728,
+              0.125
             ],
             [
-              0.4227,
-              0.2692
+              0.4677,
+              0.1458
             ],
             [
-              0.4015,
-              0.3077
+              0.462,
+              0.1667
             ],
             [
-              0.3752,
-              0.3462
+              0.4557,
+              0.1875
             ],
             [
-              0.3419,
-              0.3846
+              0.4485,
+              0.2083
             ],
             [
-              0.2975,
-              0.4231
+              0.4406,
+              0.2292
             ],
             [
-              0.2317,
-              0.4615
+              0.4317,
+              0.25
+            ],
+            [
+              0.4219,
+              0.2708
+            ],
+            [
+              0.4108,
+              0.2917
+            ],
+            [
+              0.3985,
+              0.3125
+            ],
+            [
+              0.3846,
+              0.3333
+            ],
+            [
+              0.3689,
+              0.3542
+            ],
+            [
+              0.351,
+              0.375
+            ],
+            [
+              0.3303,
+              0.3958
+            ],
+            [
+              0.306,
+              0.4167
+            ],
+            [
+              0.2764,
+              0.4375
+            ],
+            [
+              0.2386,
+              0.4583
+            ],
+            [
+              0.1844,
+              0.4792
             ],
             [
               0.0,
               0.5
             ]
           ],
-          "segments": 28
+          "segments": 56
         }
       },
       "parent": "root",
@@ -1287,137 +1383,26 @@
         "evidenceRefs": [
           "full-object"
         ]
-      }
-    },
-    {
-      "id": "belly-patch",
-      "name": "Belly Patch",
-      "level": "meso",
-      "role": "detail",
-      "importance": 0.9,
-      "confidence": 0.8,
-      "primitive": "ellipsoid",
-      "topologyClass": "assembled-solid",
-      "topologyRationale": "Discrete moulded toy part assembled onto the figure.",
-      "geometryDescriptor": {
-        "topologyIntent": "stylized toy part",
-        "edgeTreatment": {
-          "type": "none",
-          "bevelRadius": 0.0,
-          "segments": 1
-        },
-        "deformationStack": [],
-        "uvStrategy": "generated procedural coordinates",
-        "normalStrategy": "smooth vertex normals"
       },
-      "parent": "body",
-      "attachment": null,
-      "dimensions": {
-        "width": 0.6,
-        "height": 0.66,
-        "depth": 0.24,
-        "units": "meters",
-        "confidence": 0.8
-      },
-      "transform": {
-        "position": [
-          0,
-          -0.27,
-          0.3
-        ],
-        "rotation": [
-          0.12,
-          0,
-          0
-        ],
-        "scale": [
-          0.6,
-          0.66,
-          0.24
-        ]
-      },
-      "actionProfile": {
-        "animationRole": "static",
-        "pivot": {
-          "mode": "center",
-          "localPosition": [
-            0,
-            0,
-            0
-          ],
-          "axis": [
-            0,
-            1,
-            0
-          ],
-          "confidence": 0.7
-        },
-        "transformChannels": {
-          "translate": true,
-          "rotate": true,
-          "scale": true,
-          "bend": false,
-          "twist": false,
-          "detach": false,
-          "visibility": true,
-          "materialState": false
-        },
-        "sockets": [],
-        "collider": {
-          "type": "sphere",
-          "offset": [
-            0,
-            0,
-            0
-          ],
-          "scale": [
-            1,
-            1,
-            1
-          ],
-          "isTrigger": false,
-          "notes": "simplified proxy"
-        },
-        "constraints": [],
-        "destruction": {
-          "breakable": false,
-          "fractureGroup": "belly-patch",
-          "seamRefs": [],
-          "detachableFragments": [],
-          "breakImpulse": 0.0,
-          "debrisMaterial": "belly-cream"
-        }
-      },
-      "material": "belly-cream",
-      "materialLayers": [
-        "belly-cream"
-      ],
-      "deformations": [],
-      "joints": [],
-      "seams": [],
-      "localFeatures": [],
-      "surfaceDetail": {
-        "macroRoughness": 0.0,
-        "microRoughness": 0.0,
-        "bumpAmplitude": 0.0,
-        "normalPattern": "",
-        "displacementPattern": "",
-        "occlusionPattern": "",
-        "edgeWearPattern": "",
-        "notes": "Smooth moulded plastic; no relief."
-      },
-      "evidenceRefs": [
-        "full-object"
-      ],
-      "details": [],
-      "fidelityTier": "blockout",
-      "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(243, 230, 204, 1.0)",
-        "secondaryAlbedo": "rgba(207, 196, 173, 1.0)",
-        "materialClass": "plastic",
-        "materialClassConfidence": 0.9,
-        "evidenceRefs": [
-          "full-object"
+      "vertexPaint": {
+        "baseColor": "#4AAEF8",
+        "regions": [
+          {
+            "id": "belly",
+            "kind": "ellipsoid",
+            "color": "#F3E6CC",
+            "softness": 0.02,
+            "center": [
+              0.0,
+              -0.27,
+              0.4
+            ],
+            "radii": [
+              0.3,
+              0.33,
+              0.25
+            ]
+          }
         ]
       }
     },
@@ -2245,7 +2230,7 @@
       },
       "transform": {
         "position": [
-          0.44,
+          0.52,
           -0.22,
           0.04
         ],
@@ -2377,7 +2362,7 @@
       },
       "transform": {
         "position": [
-          -0.44,
+          -0.52,
           -0.22,
           0.04
         ],
@@ -2788,7 +2773,7 @@
         ],
         "localEnd": [
           0.02,
-          0.78,
+          0.72,
           0.02
         ],
         "contactType": "socket",
@@ -2936,13 +2921,13 @@
         "parentSocket": "bend",
         "localStart": [
           0.02,
-          0.17,
+          0.11,
           0.02
         ],
         "localEnd": [
-          0.13,
-          0.25,
-          0.06
+          0.11,
+          0.18,
+          0.05
         ],
         "contactType": "overlap",
         "overlap": 0.01,
@@ -3111,9 +3096,9 @@
       },
       "transform": {
         "position": [
-          0.15,
-          0.27,
-          0.05
+          0.12,
+          0.23,
+          0.03
         ],
         "rotation": [
           0.0,
@@ -3828,7 +3813,6 @@
       "componentRefs": [
         "root",
         "body",
-        "belly-patch",
         "hand-l",
         "hand-r",
         "foot-l",
@@ -3847,7 +3831,6 @@
       "componentRefs": [
         "root",
         "body",
-        "belly-patch",
         "eye-l",
         "eye-r",
         "pupil-l",
@@ -3872,7 +3855,6 @@
       "componentRefs": [
         "root",
         "body",
-        "belly-patch",
         "eye-l",
         "eye-r",
         "pupil-l",
@@ -3897,7 +3879,6 @@
       "componentRefs": [
         "root",
         "body",
-        "belly-patch",
         "eye-l",
         "eye-r",
         "pupil-l",
@@ -3922,7 +3903,6 @@
       "componentRefs": [
         "root",
         "body",
-        "belly-patch",
         "eye-l",
         "eye-r",
         "pupil-l",
@@ -3947,7 +3927,6 @@
       "componentRefs": [
         "root",
         "body",
-        "belly-patch",
         "eye-l",
         "eye-r",
         "pupil-l",
@@ -4066,6 +4045,254 @@
       "referenceScreenshot": "/Users/c28aa1/Desktop/Gun Game/art/concepts/blink.png",
       "renderScreenshot": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/blink/renders/blockout/ref-3.png",
       "comparisonImage": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/blink/renders/blockout/cmp-3.png",
+      "cameraView": "az25 el8",
+      "notes": "",
+      "aiVisionNotes": ""
+    },
+    {
+      "timestamp": "2026-10-14T18:24:47.554994+00:00",
+      "passId": "blockout",
+      "estimatedFidelity": 0.78,
+      "aiVisionScore": 0.78,
+      "visualAcceptanceThreshold": 0.7,
+      "layerScores": {
+        "silhouetteProportion": 0.78,
+        "componentStructure": 0.85,
+        "formDetail": 0.75,
+        "materialSurface": 0.72,
+        "lightingCamera": 0.78
+      },
+      "featureReviews": [
+        {
+          "id": "anatomy-proportion",
+          "score": 0.82,
+          "visible": true,
+          "notes": "Egg body, broad crown dome, belly coverage, eye size/spacing and feet match; mitts now extend ~0.2 m past the body edge. Aspect delta 0.072 remains from the rest pose vs the reference's raised mitt."
+        },
+        {
+          "id": "pose-silhouette",
+          "score": 0.8,
+          "visible": true,
+          "notes": "Antenna height and gem size match within ~5%. Stalk is two straight segments rather than a smooth curve."
+        }
+      ],
+      "referenceScreenshot": "/Users/c28aa1/Desktop/Gun Game/art/concepts/blink.png",
+      "renderScreenshot": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/blink/renders/blockout/ref-4.png",
+      "comparisonImage": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/blink/renders/blockout/cmp-4.png",
+      "cameraView": "az25 el8",
+      "notes": "",
+      "aiVisionNotes": ""
+    },
+    {
+      "timestamp": "2026-10-14T18:25:47.814664+00:00",
+      "passId": "structural-pass",
+      "estimatedFidelity": 0.78,
+      "aiVisionScore": 0.78,
+      "visualAcceptanceThreshold": 0.7,
+      "layerScores": {
+        "silhouetteProportion": 0.78,
+        "componentStructure": 0.88,
+        "formDetail": 0.75,
+        "materialSurface": 0.72,
+        "lightingCamera": 0.78
+      },
+      "featureReviews": [
+        {
+          "id": "anatomy-proportion",
+          "score": 0.82,
+          "visible": true,
+          "notes": "Unchanged from blockout; hierarchy changes did not move any part."
+        }
+      ],
+      "referenceScreenshot": "/Users/c28aa1/Desktop/Gun Game/art/concepts/blink.png",
+      "renderScreenshot": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/blink/renders/structural-pass/ref-1.png",
+      "comparisonImage": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/blink/renders/structural-pass/cmp-1.png",
+      "cameraView": "az25 el8",
+      "notes": "",
+      "aiVisionNotes": ""
+    },
+    {
+      "timestamp": "2026-10-14T18:26:40.389983+00:00",
+      "passId": "proportion-lock",
+      "estimatedFidelity": 0.72,
+      "aiVisionScore": 0.72,
+      "visualAcceptanceThreshold": 0.7,
+      "layerScores": {
+        "silhouetteProportion": 0.78,
+        "componentStructure": 0.85,
+        "formDetail": 0.66,
+        "materialSurface": 0.72,
+        "lightingCamera": 0.78
+      },
+      "featureReviews": [
+        {
+          "id": "anatomy-proportion",
+          "score": 0.76,
+          "visible": true,
+          "notes": "Body, mitts, feet and antenna proportions hold. Belly ellipsoid front sits ~0.03 m proud of the body surface; reference belly is flush."
+        },
+        {
+          "id": "pose-silhouette",
+          "score": 0.8,
+          "visible": true,
+          "notes": "Silhouette unchanged from blockout."
+        }
+      ],
+      "referenceScreenshot": "/Users/c28aa1/Desktop/Gun Game/art/concepts/blink.png",
+      "renderScreenshot": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/blink/renders/proportion-lock/ref-3.png",
+      "comparisonImage": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/blink/renders/proportion-lock/cmp-3.png",
+      "cameraView": "az25 el8",
+      "notes": "",
+      "aiVisionNotes": ""
+    },
+    {
+      "timestamp": "2026-10-14T18:27:31.721812+00:00",
+      "passId": "proportion-lock",
+      "estimatedFidelity": 0.6,
+      "aiVisionScore": 0.6,
+      "visualAcceptanceThreshold": 0.7,
+      "layerScores": {
+        "silhouetteProportion": 0.78,
+        "componentStructure": 0.85,
+        "formDetail": 0.5,
+        "materialSurface": 0.6,
+        "lightingCamera": 0.78
+      },
+      "featureReviews": [
+        {
+          "id": "anatomy-proportion",
+          "score": 0.62,
+          "visible": true,
+          "notes": "Belly front (z=0.385) now sits behind the body surface (z~0.40), so only a crescent of cream shows at the lower edge."
+        }
+      ],
+      "referenceScreenshot": "/Users/c28aa1/Desktop/Gun Game/art/concepts/blink.png",
+      "renderScreenshot": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/blink/renders/proportion-lock/ref-2.png",
+      "comparisonImage": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/blink/renders/proportion-lock/cmp-2.png",
+      "cameraView": "az25 el8",
+      "notes": "",
+      "aiVisionNotes": ""
+    },
+    {
+      "timestamp": "2026-10-14T18:28:52.372102+00:00",
+      "passId": "proportion-lock",
+      "estimatedFidelity": 0.64,
+      "aiVisionScore": 0.64,
+      "visualAcceptanceThreshold": 0.7,
+      "layerScores": {
+        "silhouetteProportion": 0.78,
+        "componentStructure": 0.82,
+        "formDetail": 0.55,
+        "materialSurface": 0.6,
+        "lightingCamera": 0.78
+      },
+      "featureReviews": [
+        {
+          "id": "anatomy-proportion",
+          "score": 0.66,
+          "visible": true,
+          "notes": "Belly ellipsoid cannot follow the egg curvature: its upper half sinks under the body surface and the edge z-fights at low tessellation."
+        }
+      ],
+      "referenceScreenshot": "/Users/c28aa1/Desktop/Gun Game/art/concepts/blink.png",
+      "renderScreenshot": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/blink/renders/proportion-lock/ref-3.png",
+      "comparisonImage": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/blink/renders/proportion-lock/cmp-3.png",
+      "cameraView": "az25 el8",
+      "notes": "",
+      "aiVisionNotes": ""
+    },
+    {
+      "timestamp": "2026-10-14T18:30:22.712868+00:00",
+      "passId": "proportion-lock",
+      "estimatedFidelity": 0.72,
+      "aiVisionScore": 0.72,
+      "visualAcceptanceThreshold": 0.7,
+      "layerScores": {
+        "silhouetteProportion": 0.8,
+        "componentStructure": 0.82,
+        "formDetail": 0.62,
+        "materialSurface": 0.68,
+        "lightingCamera": 0.78
+      },
+      "featureReviews": [
+        {
+          "id": "anatomy-proportion",
+          "score": 0.74,
+          "visible": true,
+          "notes": "Belly region now sits flush on the egg at the right size and height, but its boundary stair-steps because the body profile has 27 rings (~0.048 m apart). An earlier render in this cycle had no belly at all: spec_builder.py dropped the vertexPaint key (fixed)."
+        }
+      ],
+      "referenceScreenshot": "/Users/c28aa1/Desktop/Gun Game/art/concepts/blink.png",
+      "renderScreenshot": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/blink/renders/proportion-lock/ref-3.png",
+      "comparisonImage": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/blink/renders/proportion-lock/cmp-3.png",
+      "cameraView": "az25 el8",
+      "notes": "",
+      "aiVisionNotes": ""
+    },
+    {
+      "timestamp": "2026-10-14T18:31:16.964406+00:00",
+      "passId": "proportion-lock",
+      "estimatedFidelity": 0.76,
+      "aiVisionScore": 0.76,
+      "visualAcceptanceThreshold": 0.7,
+      "layerScores": {
+        "silhouetteProportion": 0.8,
+        "componentStructure": 0.84,
+        "formDetail": 0.72,
+        "materialSurface": 0.66,
+        "lightingCamera": 0.78
+      },
+      "featureReviews": [
+        {
+          "id": "anatomy-proportion",
+          "score": 0.8,
+          "visible": true,
+          "notes": "Body, belly region size/height, mitts, feet and antenna proportions all match. The belly boundary still stair-steps at vertex resolution; that is a surface/material issue carried to material-pass, not a proportion issue."
+        },
+        {
+          "id": "pose-silhouette",
+          "score": 0.8,
+          "visible": true,
+          "notes": "Silhouette unchanged and matching."
+        }
+      ],
+      "referenceScreenshot": "/Users/c28aa1/Desktop/Gun Game/art/concepts/blink.png",
+      "renderScreenshot": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/blink/renders/proportion-lock/ref-3.png",
+      "comparisonImage": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/blink/renders/proportion-lock/cmp-3.png",
+      "cameraView": "az25 el8",
+      "notes": "",
+      "aiVisionNotes": ""
+    },
+    {
+      "timestamp": "2026-10-14T18:32:01.526632+00:00",
+      "passId": "feature-placement",
+      "estimatedFidelity": 0.78,
+      "aiVisionScore": 0.78,
+      "visualAcceptanceThreshold": 0.7,
+      "layerScores": {
+        "silhouetteProportion": 0.8,
+        "componentStructure": 0.85,
+        "formDetail": 0.76,
+        "materialSurface": 0.68,
+        "lightingCamera": 0.78
+      },
+      "featureReviews": [
+        {
+          "id": "face-landmark-placement",
+          "score": 0.82,
+          "visible": true,
+          "notes": "Eye centres at 0.317 of body height, nearly touching as in the reference; pupils offset inward; catchlights upper-inner. Sclera reads light grey under the neutral review light vs off-white."
+        },
+        {
+          "id": "antenna-gem-signature",
+          "score": 0.78,
+          "visible": true,
+          "notes": "Yellow bipyramid on a violet stalk bent toward character-left; stalk is two straight segments, not a smooth curve."
+        }
+      ],
+      "referenceScreenshot": "/Users/c28aa1/Desktop/Gun Game/art/concepts/blink.png",
+      "renderScreenshot": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/blink/renders/feature-placement/ref-3.png",
+      "comparisonImage": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/blink/renders/feature-placement/cmp-3.png",
       "cameraView": "az25 el8",
       "notes": "",
       "aiVisionNotes": ""
@@ -4253,6 +4480,431 @@
         "notes": "",
         "aiVisionNotes": ""
       }
+    },
+    {
+      "timestamp": "2026-10-14T18:24:47.554994+00:00",
+      "passId": "blockout",
+      "estimatedFidelity": 0.78,
+      "aiVisionScore": 0.78,
+      "visualAcceptanceThreshold": 0.7,
+      "layerScores": {
+        "silhouetteProportion": 0.78,
+        "componentStructure": 0.85,
+        "formDetail": 0.75,
+        "materialSurface": 0.72,
+        "lightingCamera": 0.78
+      },
+      "featureReviews": [
+        {
+          "id": "anatomy-proportion",
+          "score": 0.82,
+          "visible": true,
+          "notes": "Egg body, broad crown dome, belly coverage, eye size/spacing and feet match; mitts now extend ~0.2 m past the body edge. Aspect delta 0.072 remains from the rest pose vs the reference's raised mitt."
+        },
+        {
+          "id": "pose-silhouette",
+          "score": 0.8,
+          "visible": true,
+          "notes": "Antenna height and gem size match within ~5%. Stalk is two straight segments rather than a smooth curve."
+        }
+      ],
+      "action": "continue",
+      "summary": "Blockout accepted: silhouette, part placement and antenna match the reference. Divine Eye flags reconstruction mode (objectness 0.60, scale delta 0.03); the IoU 0.70 hard-gate miss comes from 3D-render-vs-concept framing and the reference's raised-mitt pose, per self_correction.md photo-vs-procedural caveat.",
+      "matched": [
+        "egg body and crown",
+        "mitt size and offset",
+        "feet",
+        "antenna height and gem size",
+        "eye size and spacing",
+        "belly coverage"
+      ],
+      "mismatches": [
+        "stalk is two straight segments (reference is a smooth S-curve)",
+        "rest pose mitts vs reference raised mitt",
+        "belly ellipsoid shows faceting at low tessellation"
+      ],
+      "specFixes": [],
+      "codeFixes": [],
+      "evidence": [
+        "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/blink/renders/blockout/divine-eye.json",
+        "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/blink/renders/blockout/tier1.json",
+        "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/blink/renders/blockout/turntable.png"
+      ],
+      "mapStrippedRender": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/blink/renders/blockout/ref-4.png",
+      "visualEvidence": {
+        "referenceScreenshot": "/Users/c28aa1/Desktop/Gun Game/art/concepts/blink.png",
+        "renderScreenshot": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/blink/renders/blockout/ref-4.png",
+        "comparisonImage": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/blink/renders/blockout/cmp-4.png",
+        "cameraView": "az25 el8",
+        "notes": "",
+        "aiVisionNotes": ""
+      }
+    },
+    {
+      "timestamp": "2026-10-14T18:25:47.814664+00:00",
+      "passId": "structural-pass",
+      "estimatedFidelity": 0.78,
+      "aiVisionScore": 0.78,
+      "visualAcceptanceThreshold": 0.7,
+      "layerScores": {
+        "silhouetteProportion": 0.78,
+        "componentStructure": 0.88,
+        "formDetail": 0.75,
+        "materialSurface": 0.72,
+        "lightingCamera": 0.78
+      },
+      "featureReviews": [
+        {
+          "id": "anatomy-proportion",
+          "score": 0.82,
+          "visible": true,
+          "notes": "Unchanged from blockout; hierarchy changes did not move any part."
+        }
+      ],
+      "action": "continue",
+      "summary": "Structural pass accepted: 12 named pivot groups (root, body, belly, eyes, mitts, feet, antenna stalk/tip/gem) and a hand-r:gun socket; pupils/catchlights deferred to feature-placement by the pass filter.",
+      "matched": [
+        "pivot per part",
+        "mitt pivots at shoulder",
+        "feet pivot at top",
+        "antenna pivots at crown and bend",
+        "gun socket on forward mitt"
+      ],
+      "mismatches": [
+        "pupils not built in this pass by design",
+        "stalk still two straight segments"
+      ],
+      "specFixes": [],
+      "codeFixes": [],
+      "evidence": [
+        "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/blink/renders/structural-pass/divine-eye-1.json",
+        "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/blink/renders/structural-pass/tier1.json",
+        "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/blink/renders/structural-pass/turntable.png"
+      ],
+      "mapStrippedRender": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/blink/renders/structural-pass/ref-1.png",
+      "visualEvidence": {
+        "referenceScreenshot": "/Users/c28aa1/Desktop/Gun Game/art/concepts/blink.png",
+        "renderScreenshot": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/blink/renders/structural-pass/ref-1.png",
+        "comparisonImage": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/blink/renders/structural-pass/cmp-1.png",
+        "cameraView": "az25 el8",
+        "notes": "",
+        "aiVisionNotes": ""
+      }
+    },
+    {
+      "timestamp": "2026-10-14T18:26:40.389983+00:00",
+      "passId": "proportion-lock",
+      "estimatedFidelity": 0.72,
+      "aiVisionScore": 0.72,
+      "visualAcceptanceThreshold": 0.7,
+      "layerScores": {
+        "silhouetteProportion": 0.78,
+        "componentStructure": 0.85,
+        "formDetail": 0.66,
+        "materialSurface": 0.72,
+        "lightingCamera": 0.78
+      },
+      "featureReviews": [
+        {
+          "id": "anatomy-proportion",
+          "score": 0.76,
+          "visible": true,
+          "notes": "Body, mitts, feet and antenna proportions hold. Belly ellipsoid front sits ~0.03 m proud of the body surface; reference belly is flush."
+        },
+        {
+          "id": "pose-silhouette",
+          "score": 0.8,
+          "visible": true,
+          "notes": "Silhouette unchanged from blockout."
+        }
+      ],
+      "action": "refine-spec",
+      "summary": "Proportion-lock: proportions hold but the belly patch protrudes ~0.03 m instead of sitting flush.",
+      "matched": [
+        "body/mitt/feet/antenna proportions"
+      ],
+      "mismatches": [
+        "belly protrudes past body surface"
+      ],
+      "specFixes": [
+        "belly depth 0.2 at z=0.27 so its front is flush with the body (~0.37-0.39)"
+      ],
+      "codeFixes": [],
+      "evidence": [
+        "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/blink/renders/proportion-lock/divine-eye-3.json",
+        "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/blink/renders/proportion-lock/tier1.json",
+        "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/blink/renders/proportion-lock/turntable.png"
+      ],
+      "mapStrippedRender": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/blink/renders/proportion-lock/ref-3.png",
+      "visualEvidence": {
+        "referenceScreenshot": "/Users/c28aa1/Desktop/Gun Game/art/concepts/blink.png",
+        "renderScreenshot": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/blink/renders/proportion-lock/ref-3.png",
+        "comparisonImage": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/blink/renders/proportion-lock/cmp-3.png",
+        "cameraView": "az25 el8",
+        "notes": "",
+        "aiVisionNotes": ""
+      }
+    },
+    {
+      "timestamp": "2026-10-14T18:27:31.721812+00:00",
+      "passId": "proportion-lock",
+      "estimatedFidelity": 0.6,
+      "aiVisionScore": 0.6,
+      "visualAcceptanceThreshold": 0.7,
+      "layerScores": {
+        "silhouetteProportion": 0.78,
+        "componentStructure": 0.85,
+        "formDetail": 0.5,
+        "materialSurface": 0.6,
+        "lightingCamera": 0.78
+      },
+      "featureReviews": [
+        {
+          "id": "anatomy-proportion",
+          "score": 0.62,
+          "visible": true,
+          "notes": "Belly front (z=0.385) now sits behind the body surface (z~0.40), so only a crescent of cream shows at the lower edge."
+        }
+      ],
+      "action": "refine-spec",
+      "summary": "Proportion-lock cycle 2: belly overcorrected and is buried in the body; only a crescent shows.",
+      "matched": [
+        "silhouette unchanged"
+      ],
+      "mismatches": [
+        "belly buried"
+      ],
+      "specFixes": [
+        "belly depth 0.32 at z=0.255 so its front curvature tracks the body and the face sits ~1.5 cm proud"
+      ],
+      "codeFixes": [],
+      "evidence": [
+        "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/blink/renders/proportion-lock/divine-eye-2.json",
+        "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/blink/renders/proportion-lock/tier1.json",
+        "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/blink/renders/proportion-lock/turntable.png"
+      ],
+      "mapStrippedRender": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/blink/renders/proportion-lock/ref-2.png",
+      "visualEvidence": {
+        "referenceScreenshot": "/Users/c28aa1/Desktop/Gun Game/art/concepts/blink.png",
+        "renderScreenshot": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/blink/renders/proportion-lock/ref-2.png",
+        "comparisonImage": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/blink/renders/proportion-lock/cmp-2.png",
+        "cameraView": "az25 el8",
+        "notes": "",
+        "aiVisionNotes": ""
+      }
+    },
+    {
+      "timestamp": "2026-10-14T18:28:52.372102+00:00",
+      "passId": "proportion-lock",
+      "estimatedFidelity": 0.64,
+      "aiVisionScore": 0.64,
+      "visualAcceptanceThreshold": 0.7,
+      "layerScores": {
+        "silhouetteProportion": 0.78,
+        "componentStructure": 0.82,
+        "formDetail": 0.55,
+        "materialSurface": 0.6,
+        "lightingCamera": 0.78
+      },
+      "featureReviews": [
+        {
+          "id": "anatomy-proportion",
+          "score": 0.66,
+          "visible": true,
+          "notes": "Belly ellipsoid cannot follow the egg curvature: its upper half sinks under the body surface and the edge z-fights at low tessellation."
+        }
+      ],
+      "action": "refine-spec",
+      "summary": "Proportion-lock cycle 3: a separate belly ellipsoid cannot sit flush on the egg; replace it with a vertexPaint ellipsoid region on the body (the bib case in _shared/vertex_paint.py).",
+      "matched": [
+        "silhouette unchanged"
+      ],
+      "mismatches": [
+        "belly buried / z-fighting"
+      ],
+      "specFixes": [
+        "remove belly-patch component",
+        "body.vertexPaint ellipsoid region centre [0,-0.27,0.4] radii [0.3,0.33,0.25] softness 0",
+        "body lathe segments 48"
+      ],
+      "codeFixes": [],
+      "evidence": [
+        "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/blink/renders/proportion-lock/divine-eye-3.json",
+        "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/blink/renders/proportion-lock/tier1.json",
+        "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/blink/renders/proportion-lock/turntable.png"
+      ],
+      "mapStrippedRender": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/blink/renders/proportion-lock/ref-3.png",
+      "visualEvidence": {
+        "referenceScreenshot": "/Users/c28aa1/Desktop/Gun Game/art/concepts/blink.png",
+        "renderScreenshot": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/blink/renders/proportion-lock/ref-3.png",
+        "comparisonImage": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/blink/renders/proportion-lock/cmp-3.png",
+        "cameraView": "az25 el8",
+        "notes": "",
+        "aiVisionNotes": ""
+      }
+    },
+    {
+      "timestamp": "2026-10-14T18:30:22.712868+00:00",
+      "passId": "proportion-lock",
+      "estimatedFidelity": 0.72,
+      "aiVisionScore": 0.72,
+      "visualAcceptanceThreshold": 0.7,
+      "layerScores": {
+        "silhouetteProportion": 0.8,
+        "componentStructure": 0.82,
+        "formDetail": 0.62,
+        "materialSurface": 0.68,
+        "lightingCamera": 0.78
+      },
+      "featureReviews": [
+        {
+          "id": "anatomy-proportion",
+          "score": 0.74,
+          "visible": true,
+          "notes": "Belly region now sits flush on the egg at the right size and height, but its boundary stair-steps because the body profile has 27 rings (~0.048 m apart). An earlier render in this cycle had no belly at all: spec_builder.py dropped the vertexPaint key (fixed)."
+        }
+      ],
+      "action": "refine-spec",
+      "summary": "Proportion-lock cycle 4: vertex-painted belly is flush and correctly sized; boundary is jagged from sparse body vertices.",
+      "matched": [
+        "belly flush on body",
+        "belly size and height"
+      ],
+      "mismatches": [
+        "jagged belly boundary"
+      ],
+      "specFixes": [
+        "body profile 48 rings, 56 lathe segments",
+        "belly softness 0.02 m",
+        "triangle budget 9000"
+      ],
+      "codeFixes": [],
+      "evidence": [
+        "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/blink/renders/proportion-lock/divine-eye-3.json",
+        "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/blink/renders/proportion-lock/tier1.json",
+        "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/blink/renders/proportion-lock/turntable.png"
+      ],
+      "mapStrippedRender": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/blink/renders/proportion-lock/ref-3.png",
+      "visualEvidence": {
+        "referenceScreenshot": "/Users/c28aa1/Desktop/Gun Game/art/concepts/blink.png",
+        "renderScreenshot": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/blink/renders/proportion-lock/ref-3.png",
+        "comparisonImage": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/blink/renders/proportion-lock/cmp-3.png",
+        "cameraView": "az25 el8",
+        "notes": "",
+        "aiVisionNotes": ""
+      }
+    },
+    {
+      "timestamp": "2026-10-14T18:31:16.964406+00:00",
+      "passId": "proportion-lock",
+      "estimatedFidelity": 0.76,
+      "aiVisionScore": 0.76,
+      "visualAcceptanceThreshold": 0.7,
+      "layerScores": {
+        "silhouetteProportion": 0.8,
+        "componentStructure": 0.84,
+        "formDetail": 0.72,
+        "materialSurface": 0.66,
+        "lightingCamera": 0.78
+      },
+      "featureReviews": [
+        {
+          "id": "anatomy-proportion",
+          "score": 0.8,
+          "visible": true,
+          "notes": "Body, belly region size/height, mitts, feet and antenna proportions all match. The belly boundary still stair-steps at vertex resolution; that is a surface/material issue carried to material-pass, not a proportion issue."
+        },
+        {
+          "id": "pose-silhouette",
+          "score": 0.8,
+          "visible": true,
+          "notes": "Silhouette unchanged and matching."
+        }
+      ],
+      "action": "continue",
+      "summary": "Proportion-lock accepted: every proportion matches the landmarks; belly paint boundary jaggies deferred to material-pass.",
+      "matched": [
+        "belly region flush, sized 60% of body width, centred 0.73 from crown",
+        "mitts",
+        "feet",
+        "antenna"
+      ],
+      "mismatches": [
+        "belly boundary stair-steps at vertex resolution (material-pass)"
+      ],
+      "specFixes": [],
+      "codeFixes": [],
+      "evidence": [
+        "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/blink/renders/proportion-lock/divine-eye-3.json",
+        "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/blink/renders/proportion-lock/tier1.json",
+        "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/blink/renders/proportion-lock/turntable.png"
+      ],
+      "mapStrippedRender": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/blink/renders/proportion-lock/ref-3.png",
+      "visualEvidence": {
+        "referenceScreenshot": "/Users/c28aa1/Desktop/Gun Game/art/concepts/blink.png",
+        "renderScreenshot": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/blink/renders/proportion-lock/ref-3.png",
+        "comparisonImage": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/blink/renders/proportion-lock/cmp-3.png",
+        "cameraView": "az25 el8",
+        "notes": "",
+        "aiVisionNotes": ""
+      }
+    },
+    {
+      "timestamp": "2026-10-14T18:32:01.526632+00:00",
+      "passId": "feature-placement",
+      "estimatedFidelity": 0.78,
+      "aiVisionScore": 0.78,
+      "visualAcceptanceThreshold": 0.7,
+      "layerScores": {
+        "silhouetteProportion": 0.8,
+        "componentStructure": 0.85,
+        "formDetail": 0.76,
+        "materialSurface": 0.68,
+        "lightingCamera": 0.78
+      },
+      "featureReviews": [
+        {
+          "id": "face-landmark-placement",
+          "score": 0.82,
+          "visible": true,
+          "notes": "Eye centres at 0.317 of body height, nearly touching as in the reference; pupils offset inward; catchlights upper-inner. Sclera reads light grey under the neutral review light vs off-white."
+        },
+        {
+          "id": "antenna-gem-signature",
+          "score": 0.78,
+          "visible": true,
+          "notes": "Yellow bipyramid on a violet stalk bent toward character-left; stalk is two straight segments, not a smooth curve."
+        }
+      ],
+      "action": "continue",
+      "summary": "Feature-placement accepted: eyes, pupils and catchlights match the landmarks. Ship path (blockout..feature-placement) complete; later passes deferred per user decision.",
+      "matched": [
+        "eye size/spacing/height",
+        "pupil offset",
+        "catchlights",
+        "gem and stalk"
+      ],
+      "mismatches": [
+        "sclera slightly grey under neutral light",
+        "belly boundary jaggies",
+        "stalk not a smooth curve"
+      ],
+      "specFixes": [],
+      "codeFixes": [],
+      "evidence": [
+        "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/blink/renders/feature-placement/divine-eye-3.json",
+        "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/blink/renders/feature-placement/tier1.json",
+        "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/blink/renders/feature-placement/turntable.png"
+      ],
+      "mapStrippedRender": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/blink/renders/feature-placement/ref-3.png",
+      "visualEvidence": {
+        "referenceScreenshot": "/Users/c28aa1/Desktop/Gun Game/art/concepts/blink.png",
+        "renderScreenshot": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/blink/renders/feature-placement/ref-3.png",
+        "comparisonImage": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/blink/renders/feature-placement/cmp-3.png",
+        "cameraView": "az25 el8",
+        "notes": "",
+        "aiVisionNotes": ""
+      }
     }
   ],
   "lodPlan": [
@@ -4269,7 +4921,7 @@
   ],
   "performanceBudget": {
     "qualityPriority": "runtime",
-    "targetTriangles": 6000,
+    "targetTriangles": 9000,
     "maxDrawCalls": 20,
     "textureSize": 0,
     "fpsTarget": 60,
@@ -4459,180 +5111,85 @@
     {
       "passed": false,
       "checks": {
-        "silhouetteIoU": 0.5547,
-        "aspectRatioDelta": 0.1854,
-        "scaleDelta": 0.197,
-        "bilateralSymmetryError": 0.1898,
+        "silhouetteIoU": 0.716,
+        "aspectRatioDelta": 0.0719,
+        "scaleDelta": 0.0304,
+        "bilateralSymmetryError": 0.1336,
         "colorDelta": {
-          "checked": 16,
-          "maxDeltaE": 34.33,
+          "checked": 15,
+          "maxDeltaE": 34.47,
           "perComponent": [
             {
               "componentId": null,
-              "deltaE": 30.63
+              "deltaE": 32.02
             },
             {
               "componentId": null,
-              "deltaE": 16.16
+              "deltaE": 16.73
             },
             {
               "componentId": null,
-              "deltaE": 26.9
+              "deltaE": 26.4
             },
             {
               "componentId": null,
-              "deltaE": 28.57
+              "deltaE": 26.4
             },
             {
               "componentId": null,
-              "deltaE": 28.57
+              "deltaE": 29.32
             },
             {
               "componentId": null,
-              "deltaE": 27.96
+              "deltaE": 29.32
             },
             {
               "componentId": null,
-              "deltaE": 27.96
+              "deltaE": 30.5
             },
             {
               "componentId": null,
-              "deltaE": 32.43
+              "deltaE": 30.5
             },
             {
               "componentId": null,
-              "deltaE": 32.43
+              "deltaE": 16.73
             },
             {
               "componentId": null,
-              "deltaE": 16.16
+              "deltaE": 16.73
             },
             {
               "componentId": null,
-              "deltaE": 16.16
+              "deltaE": 23.34
             },
             {
               "componentId": null,
-              "deltaE": 24.63
+              "deltaE": 23.34
             },
             {
               "componentId": null,
-              "deltaE": 24.63
+              "deltaE": 23.34
             },
             {
               "componentId": null,
-              "deltaE": 24.63
+              "deltaE": 23.34
             },
             {
               "componentId": null,
-              "deltaE": 24.63
-            },
-            {
-              "componentId": null,
-              "deltaE": 34.33
+              "deltaE": 34.47
             }
           ],
           "gated": false
         }
       },
       "failures": [
-        "silhouette IoU 0.555 is below threshold 0.85",
-        "aspect-ratio delta 0.185 exceeds threshold 0.05",
-        "scale delta 0.197 exceeds threshold 0.08"
+        "silhouette IoU 0.716 is below threshold 0.85",
+        "aspect-ratio delta 0.072 exceeds threshold 0.05"
       ],
       "maskWarnings": [],
-      "renderHash": "a40152a43c433170",
-      "passId": "blockout",
-      "mapStrippedRender": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/blink/renders/blockout/ref.png"
-    },
-    {
-      "passed": false,
-      "checks": {
-        "silhouetteIoU": 0.6349,
-        "aspectRatioDelta": 0.222,
-        "scaleDelta": 0.1283,
-        "bilateralSymmetryError": 0.1256,
-        "colorDelta": {
-          "checked": 16,
-          "maxDeltaE": 65.32,
-          "perComponent": [
-            {
-              "componentId": null,
-              "deltaE": 29.1
-            },
-            {
-              "componentId": null,
-              "deltaE": 17.64
-            },
-            {
-              "componentId": null,
-              "deltaE": 26.21
-            },
-            {
-              "componentId": null,
-              "deltaE": 33.77
-            },
-            {
-              "componentId": null,
-              "deltaE": 33.77
-            },
-            {
-              "componentId": null,
-              "deltaE": 26.44
-            },
-            {
-              "componentId": null,
-              "deltaE": 26.44
-            },
-            {
-              "componentId": null,
-              "deltaE": 38.54
-            },
-            {
-              "componentId": null,
-              "deltaE": 38.54
-            },
-            {
-              "componentId": null,
-              "deltaE": 17.64
-            },
-            {
-              "componentId": null,
-              "deltaE": 17.64
-            },
-            {
-              "componentId": null,
-              "deltaE": 22.5
-            },
-            {
-              "componentId": null,
-              "deltaE": 22.5
-            },
-            {
-              "componentId": null,
-              "deltaE": 22.5
-            },
-            {
-              "componentId": null,
-              "deltaE": 22.5
-            },
-            {
-              "componentId": null,
-              "deltaE": 65.32
-            }
-          ],
-          "gated": false
-        }
-      },
-      "failures": [
-        "silhouette IoU 0.635 is below threshold 0.85",
-        "aspect-ratio delta 0.222 exceeds threshold 0.05",
-        "scale delta 0.128 exceeds threshold 0.08"
-      ],
-      "maskWarnings": [],
-      "renderHash": "c40d1fbf8ed17fb8",
-      "passId": "blockout",
-      "mapStrippedRender": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/blink/renders/blockout/ref.png"
+      "renderHash": "5e0e3f5206f2512c",
+      "passId": "feature-placement"
     }
   ]
 }

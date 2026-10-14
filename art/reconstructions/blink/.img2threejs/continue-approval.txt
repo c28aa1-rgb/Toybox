@@ -1,0 +1,1 @@
+user approved continuing after STOP max-correction-loops-reached:blockout:3/3 on 2026-10-14; caps raised to 5/pass, 15 total; ship path = blockout..feature-placement

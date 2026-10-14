@@ -48,7 +48,7 @@ const BULLET_COLORS: Record<GunId, string> = {
   rocket: PALETTE.bubblegum,
 };
 
-const CAMERA_OFFSET = new THREE.Vector3(0, 23, 15.5);
+const CAMERA_OFFSET = new THREE.Vector3(0, 18, 12);
 const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 export class GameClient {
@@ -410,7 +410,9 @@ export class GameClient {
     bar.appendChild(hpEl);
     wrap.append(nameEl, bar);
     const label = new CSS2DObject(wrap);
-    label.position.set(0, 2.15, 0);
+    // Sit the tag just above the tallest point of whichever model this hero uses.
+    const top = new THREE.Box3().setFromObject(skin.root).max.y;
+    label.position.set(0, Math.max(2.15, top + 0.35), 0);
     skin.root.add(label);
     return { skin, hero, label, nameEl, hpEl, lastX: NaN, lastY: NaN, lastHp: MAX_HP };
   }
