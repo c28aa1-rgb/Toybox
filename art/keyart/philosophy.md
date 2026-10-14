@@ -1,0 +1,11 @@
+# Molded Specimen
+
+Molded Specimen treats the toy as a specimen. Glossy, rounded, injection-molded figures are laid out with the restraint of a natural-history plate: one flat field, a measured grid underneath, every figure given its own patch of floor. The joke stays inside the form. Nothing winks; the rigor of the layout is what makes the toys feel precious. The work should look like it came from someone who catalogs plastic the way an entomologist pins beetles, meticulously crafted and placed with painstaking care.
+
+Space is the first material. The field is a single deep color, broken only by a faint foam-mat checker and hairline seams that read as a measuring grid. Figures stand on that grid at true relative scale, so the eye can compare them the way it compares specimens. Negative space is generous and even. Every gap between figures is a decision made over many passes, and the margins hold firm on all four sides.
+
+Color comes from the objects, never from decoration. The field stays dark and quiet so each figure's saturated plastic carries the palette: azure, bubblegum, mint, lavender, tangerine, each answered by the same violet feet and cream bellies. Accents are rationed. One warm yellow appears only where the subject already owns it. The palette should feel calibrated rather than chosen, the product of deep expertise in how saturated color behaves on a dark ground.
+
+Type is clinical and small, with one exception. A single heavy wordmark sits at the head of the plate like a museum title card printed too loud. Every other word is set tiny in a monospaced face: names, catalog numbers, measured cooldowns and unlock counts, the plain facts of each specimen. Labels align to the grid and never touch a figure. Text is a whisper next to the objects and is never explanation.
+
+Rhythm comes from repetition and measurement. Registration crosses mark the corners, a scale bar states the true height of a figure, and thin leader lines tie labels to their subjects. Repeated marks build the sense of a system that has been studied for a long time. The finished plate must look labored over at master level: no element crowding another, every alignment checked, nothing off the edge.

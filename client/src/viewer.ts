@@ -28,7 +28,8 @@ async function main(): Promise<void> {
     | ((c: THREE.PerspectiveCamera, o: THREE.Object3D, opts: object) => void)
     | undefined;
 
-  const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+  const transparent = params.get('bg') === 'none';
+  const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true, alpha: transparent });
   renderer.setPixelRatio(1);
   renderer.setSize(size, size);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -38,7 +39,11 @@ async function main(): Promise<void> {
   document.body.appendChild(renderer.domElement);
 
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color('#c9c9c9');
+  scene.background = transparent ? null : new THREE.Color('#c9c9c9');
+  if (transparent) {
+    document.body.style.background = 'transparent';
+    document.documentElement.style.background = 'transparent';
+  }
   const camera = new THREE.PerspectiveCamera(30, 1, 0.01, 100);
 
   const model = createModel({ castShadow: true, receiveShadow: true });
