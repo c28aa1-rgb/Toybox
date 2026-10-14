@@ -191,3 +191,80 @@ def build_gun_model(*, name: str, parts: list[dict[str, Any]], materials: list[d
                                'notes': 'Side panel repeats on both faces.'}],
         'rig': {'version': '1.0', 'bindPose': 'rest', 'forward': '+Z', 'bones': [], 'posedJoints': {}, 'notes': 'Rigid prop.'},
     }
+
+
+# ---------- upright utilities (front view: image x -> model X, image y -> model Y) ----------
+
+class FrontFrame:
+    """Front-view tracing frame: origin at the bottom centre of the object."""
+
+    def __init__(self, metres_per_px: float, center_x: float, bottom_y: float):
+        self.s = metres_per_px
+        self.cx, self.by = center_x, bottom_y
+
+    def x(self, px: float) -> float:
+        return round((px - self.cx) * self.s, 4)
+
+    def y(self, py: float) -> float:
+        return round((self.by - py) * self.s, 4)
+
+    def m(self, px: float) -> float:
+        return round(px * self.s, 4)
+
+
+def lathe_y(f: FrontFrame, pid: str, profile_px: list[tuple[float, float]], material: str, *, level: str = 'macro',
+            importance: float = 0.8, segments: int = 28, features: list[dict[str, Any]] | None = None) -> dict[str, Any]:
+    """Round body around the vertical axis. profile_px: (radius px, image y) pairs, bottom to top."""
+    ys = [f.y(py) for _, py in profile_px]
+    rmax = max(r for r, _ in profile_px) or 1
+    y0, y1 = min(ys), max(ys)
+    h = max(1e-4, y1 - y0)
+    pts = [[round(0.5 * r / rmax, 4), round((f.y(py) - y0) / h - 0.5, 4)] for r, py in profile_px]
+    w = 2 * f.m(rmax)
+    return {
+        'id': pid, 'level': level, 'role': 'body', 'parent': 'root', 'primitive': 'lathe', 'material': material,
+        'dims': [w, round(h, 4), w], 'pos': [0, round((y0 + y1) / 2, 4), 0],
+        'descriptor': {'latheProfile': {'points': pts, 'segments': segments}},
+        'topologyRationale': 'Round moulded body traced from the front silhouette and spun around the vertical axis.',
+        'importance': importance, 'localFeatures': features or [],
+    }
+
+
+def ring_xy(f: FrontFrame, pid: str, cx: float, cy: float, outer_px: float, inner_px: float, depth_m: float, material: str,
+            *, level: str = 'meso', importance: float = 0.6, horizontal: bool = False) -> dict[str, Any]:
+    """Torus. Default faces the viewer (ring pull); horizontal=True lies flat around the vertical axis (bands)."""
+    outer, inner = f.m(outer_px), f.m(inner_px)
+    big_r = (outer + inner) / 2
+    tube = (outer - inner) / 2
+    ratio = tube / big_r
+    k = outer / (0.45 * (1 + ratio))
+    kz = depth_m / (2 * 0.45 * ratio)
+    return {
+        'id': pid, 'level': level, 'role': 'detail', 'parent': 'root', 'primitive': 'torus', 'material': material,
+        'dims': [round(k, 4), round(k, 4), round(kz, 4)], 'pos': [f.x(cx), f.y(cy), 0],
+        'rot': [HALF_PI, 0, 0] if horizontal else [0, 0, 0], 'importance': importance,
+        'descriptor': {'torusTubeRatio': round(ratio, 4)},
+        'topologyRationale': 'Moulded ring: torus sized from its traced inner and outer radius.',
+    }
+
+
+def slab_xy(f: FrontFrame, pid: str, outline_px: list[tuple[float, float]], thickness: float, material: str, *,
+            level: str = 'meso', importance: float = 0.6, z: float = 0.0) -> dict[str, Any]:
+    """Flat moulded part traced in the front view, extruded toward the viewer."""
+    pts = [[f.x(x), f.y(y)] for x, y in outline_px]
+    xs = [p[0] for p in pts]
+    ys = [p[1] for p in pts]
+    return {
+        'id': pid, 'level': level, 'role': 'detail', 'parent': 'root', 'primitive': 'extrude', 'material': material,
+        'dims': [round(max(xs) - min(xs), 4), round(max(ys) - min(ys), 4), round(thickness, 4)],
+        'scale': [1, 1, 1], 'pos': [0, 0, round(z - thickness / 2, 4)],
+        'descriptor': {'profile2D': {'points': pts, 'depth': round(thickness, 4)}},
+        'topologyRationale': 'Flat moulded part traced from the front view and extruded across its thickness.',
+        'importance': importance,
+    }
+
+
+def dot(f: FrontFrame, pid: str, cx: float, cy: float, r_px: float, z: float, material: str) -> dict[str, Any]:
+    r = 2 * f.m(r_px)
+    return {'id': pid, 'level': 'micro', 'role': 'detail', 'parent': 'root', 'primitive': 'ellipsoid', 'material': material,
+            'dims': [r, r, r * 0.5], 'pos': [f.x(cx), f.y(cy), z], 'importance': 0.3}

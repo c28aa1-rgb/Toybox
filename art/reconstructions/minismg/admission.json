@@ -1,0 +1,14 @@
+{
+  "admitted": true,
+  "reasons": [],
+  "provenance": {
+    "viewpoint": "reference",
+    "sourcePath": "/Users/c28aa1/Desktop/Gun Game/art/concepts/minismg.png",
+    "width": 1254,
+    "height": 1254,
+    "foregroundCoverage": 0.2932,
+    "largestComponentFraction": 1.0,
+    "pHash": 14761863754292298114,
+    "duplicateOfHash": null
+  }
+}

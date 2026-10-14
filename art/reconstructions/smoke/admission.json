@@ -1,0 +1,14 @@
+{
+  "admitted": true,
+  "reasons": [],
+  "provenance": {
+    "viewpoint": "reference",
+    "sourcePath": "/Users/c28aa1/Desktop/Gun Game/art/concepts/smoke.png",
+    "width": 1254,
+    "height": 1254,
+    "foregroundCoverage": 0.2943,
+    "largestComponentFraction": 1.0,
+    "pHash": 12369886976510831274,
+    "duplicateOfHash": null
+  }
+}

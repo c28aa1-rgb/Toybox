@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import type { GunId, HeroId } from '@gg/shared';
+import type { GunId, HeroId, UtilId } from '@gg/shared';
 import { createFlickerModel } from '../../../art/reconstructions/blink/src/createFlickerModel';
 import { createSwitchModel } from '../../../art/reconstructions/swap/src/createSwitchModel';
 import { createTockModel } from '../../../art/reconstructions/chrono/src/createTockModel';
@@ -10,7 +10,12 @@ import { createBuzzboxModel } from '../../../art/reconstructions/smg/src/createB
 import { createBoomstickModel } from '../../../art/reconstructions/shotgun/src/createBoomstickModel';
 import { createLongshotModel } from '../../../art/reconstructions/sniper/src/createLongshotModel';
 import { createPartyPopperModel } from '../../../art/reconstructions/rocket/src/createPartyPopperModel';
-import { registerGunModel, registerHeroModel } from '../skins/registry';
+import { createMiniBuzzModel } from '../../../art/reconstructions/minismg/src/createMiniBuzzModel';
+import { createThumperModel } from '../../../art/reconstructions/thumper/src/createThumperModel';
+import { createFizzBombModel } from '../../../art/reconstructions/frag/src/createFizzBombModel';
+import { createFlashPopModel } from '../../../art/reconstructions/flash/src/createFlashPopModel';
+import { createPuffCanModel } from '../../../art/reconstructions/smoke/src/createPuffCanModel';
+import { registerGunModel, registerHeroModel, registerUtilModel } from '../skins/registry';
 import { toonify } from './toonify';
 
 /**
@@ -61,6 +66,8 @@ export function registerHeroModels(): void {
 /** Guns are modelled at toy scale in metres with the origin at the grip top, muzzle along +Z. */
 const GUN_FACTORIES: Partial<Record<GunId, () => THREE.Group>> = {
   pistol: () => createPeaShooterModel({ textureSize: 8 }),
+  minismg: () => createMiniBuzzModel({ textureSize: 8 }),
+  thumper: () => createThumperModel({ textureSize: 8 }),
   smg: () => createBuzzboxModel({ textureSize: 8 }),
   shotgun: () => createBoomstickModel({ textureSize: 8 }),
   sniper: () => createLongshotModel({ textureSize: 8 }),
@@ -79,6 +86,33 @@ export function registerGunModels(): void {
         t = toonify(GUN_FACTORIES[gun]!());
         t.scale.setScalar(GUN_SCALE);
         gunTemplates.set(gun, t);
+      }
+      const g = new THREE.Group();
+      g.add(t.clone(true));
+      return g;
+    });
+  }
+}
+
+/** Throwables, origin at the base. Scaled to a fixed height so they read the same in hand, in flight and as pickups. */
+const UTIL_FACTORIES: Record<UtilId, () => THREE.Group> = {
+  frag: () => createFizzBombModel({ textureSize: 8 }),
+  flash: () => createFlashPopModel({ textureSize: 8 }),
+  smoke: () => createPuffCanModel({ textureSize: 8 }),
+};
+
+const UTIL_HEIGHT = 0.42;
+const utilTemplates = new Map<UtilId, THREE.Object3D>();
+
+export function registerUtilModels(): void {
+  for (const util of Object.keys(UTIL_FACTORIES) as UtilId[]) {
+    registerUtilModel(util, () => {
+      let t = utilTemplates.get(util);
+      if (!t) {
+        t = toonify(UTIL_FACTORIES[util]());
+        const box = new THREE.Box3().setFromObject(t);
+        t.scale.setScalar(UTIL_HEIGHT / Math.max(0.001, box.max.y - box.min.y));
+        utilTemplates.set(util, t);
       }
       const g = new THREE.Group();
       g.add(t.clone(true));
