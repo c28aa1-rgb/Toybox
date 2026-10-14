@@ -20,16 +20,18 @@ export class Input {
       const k = e.code;
       if (k === 'Space' || k === 'Tab') e.preventDefault();
       if (!e.repeat) {
-        if (k === 'Space' || k === 'KeyQ' || k === 'ShiftLeft') this.abilityQueued = true;
+        if (k === 'Space' || k === 'KeyQ') this.abilityQueued = true;
         if (k === 'KeyC') this.scopeHeld = !this.scopeHeld; // keyboard toggle for trackpads
         if (k === 'KeyE' || k === 'KeyF') this.pickupQueued = true;
       }
       if (k === 'Tab') this.scoreboardHeld = true;
+      if (k === 'ShiftLeft') this.scopeHeld = true; // hold to scope
       this.keys.add(k);
     });
     on('keyup', (e) => {
       this.keys.delete(e.code);
       if (e.code === 'Tab') this.scoreboardHeld = false;
+      if (e.code === 'ShiftLeft') this.scopeHeld = false;
     });
     on('blur', () => {
       this.clear();

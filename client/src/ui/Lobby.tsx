@@ -136,7 +136,7 @@ export function Lobby({ portraits, onPlay }: { portraits: Portraits; onPlay: (o:
         <span><kbd>WASD</kbd> move</span>
         <span><kbd>Mouse</kbd> aim</span>
         <span><kbd>Click</kbd> shoot</span>
-        <span><kbd>Right click</kbd> or <kbd>C</kbd> scope</span>
+        <span><kbd>Left Shift</kbd> or <kbd>Right click</kbd> scope</span>
         <span><kbd>Space</kbd> or <kbd>Q</kbd> ability</span>
         <span><kbd>E</kbd> pick up gun</span>
         <span><kbd>Tab</kbd> scores</span>
