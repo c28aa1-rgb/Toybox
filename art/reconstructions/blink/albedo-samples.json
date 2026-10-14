@@ -1,0 +1,86 @@
+{
+  "body-plastic": {
+    "region_px": [
+      395,
+      760,
+      30,
+      60
+    ],
+    "median_rgb": [
+      50,
+      156,
+      229
+    ],
+    "hex": "#329CE5"
+  },
+  "belly-cream": {
+    "region_px": [
+      520,
+      900,
+      40,
+      40
+    ],
+    "median_rgb": [
+      228,
+      214,
+      191
+    ],
+    "hex": "#E4D6BF"
+  },
+  "eye-white": {
+    "region_px": [
+      430,
+      600,
+      20,
+      25
+    ],
+    "median_rgb": [
+      229,
+      224,
+      219
+    ],
+    "hex": "#E5E0DB"
+  },
+  "pupil-ink": {
+    "region_px": [
+      440,
+      570,
+      12,
+      14
+    ],
+    "median_rgb": [
+      47,
+      33,
+      31
+    ],
+    "hex": "#2F211F"
+  },
+  "violet-plastic": {
+    "region_px": [
+      470,
+      1120,
+      30,
+      18
+    ],
+    "median_rgb": [
+      70,
+      52,
+      96
+    ],
+    "hex": "#463460"
+  },
+  "gem-yellow": {
+    "region_px": [
+      780,
+      200,
+      25,
+      25
+    ],
+    "median_rgb": [
+      254,
+      197,
+      29
+    ],
+    "hex": "#FEC51D"
+  }
+}

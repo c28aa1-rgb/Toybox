@@ -2,7 +2,11 @@
   "name": "gun-game",
   "private": true,
   "type": "module",
-  "workspaces": ["shared", "server", "client"],
+  "workspaces": [
+    "shared",
+    "server",
+    "client"
+  ],
   "scripts": {
     "dev": "concurrently -k -n server,client -c magenta,cyan \"npm run dev -w server\" \"npm run dev -w client\"",
     "build": "npm run build -w client",
@@ -12,6 +16,7 @@
   },
   "devDependencies": {
     "concurrently": "^9.1.0",
+    "playwright-core": "^1.64.1",
     "typescript": "^5.6.0",
     "vitest": "^2.1.0"
   }

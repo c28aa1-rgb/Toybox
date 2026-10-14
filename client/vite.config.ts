@@ -6,6 +6,8 @@ export default defineConfig({
   server: {
     host: true,
     port: 5173,
+    // The review viewer imports img2threejs factories from ../art/reconstructions.
+    fs: { allow: ['..'] },
     proxy: {
       '/ws': { target: 'ws://localhost:3001', ws: true },
     },

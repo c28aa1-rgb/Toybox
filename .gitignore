@@ -4,3 +4,4 @@ dist/
 *.log
 .vite/
 art/reconstructions/**/renders/
+art/reconstructions/*/detail-inventory/
