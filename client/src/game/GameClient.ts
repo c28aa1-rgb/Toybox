@@ -888,8 +888,10 @@ export class GameClient {
       // Lean toward the cursor so you can see where you're aiming.
       const lead = new THREE.Vector3(this.aimPoint.x - target.x, 0, this.aimPoint.z - target.z);
       // Scoping pushes the view far out along the aim so long shots stay on screen.
+      // The Longshot reaches 50 m, so its scope pushes further than the others.
       const scoping = this.input.scopeHeld && !st.chatOpen;
-      lead.clampLength(0, scoping ? 18 : 10).multiplyScalar(scoping ? 0.5 : 0.18);
+      const longScope = scoping && me.gun === 'sniper';
+      lead.clampLength(0, longScope ? 34 : scoping ? 18 : 10).multiplyScalar(longScope ? 0.6 : scoping ? 0.5 : 0.18);
       target.add(lead);
     } else if (me) {
       const killer = st.killedBy ? this.views.get(st.killedBy) : null;
@@ -903,7 +905,7 @@ export class GameClient {
       this.camTarget.lerp(target, 1 - Math.exp(-7 * dt));
     }
     const shake = this.shake.offset(dt, reducedMotion());
-    const wantZoom = me?.alive && this.input.scopeHeld && !st.chatOpen ? 1 : 0;
+    const wantZoom = me?.alive && this.input.scopeHeld && !st.chatOpen ? (me.gun === 'sniper' ? 1.8 : 1) : 0;
     this.scopeZoom += (wantZoom - this.scopeZoom) * (1 - Math.exp(-6 * dt));
     const offset = CAMERA_OFFSET.clone().multiplyScalar(1 + this.scopeZoom * 0.22);
     this.s.camera.position.copy(this.camTarget).add(offset).add(shake);

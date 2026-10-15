@@ -20,11 +20,78 @@ export function Lobby({ portraits, onPlay }: { portraits: Portraits; onPlay: (o:
   const [room, setRoom] = useState(initialRoom);
   const [map, setMap] = useState<MapId>('playmat');
   const invited = initialRoom() !== '';
+  const [page, setPage] = useState<'home' | 'friends'>('home');
 
   const go = (opts: Pick<JoinOptions, 'mode' | 'room' | 'map'>) => {
     saveProfile({ ...loadProfile(), name: name.trim(), hero, gun, secondary, utility });
     onPlay({ ...opts, name: name.trim() || 'Player', hero, gun, secondary, utility });
   };
+
+  if (page === 'friends') {
+    return (
+      <main className="lobby lobby--friends">
+      <section className="lobby__go">
+        <div className="friends__top">
+          <motion.button type="button" className="btn btn--ghost btn--back" onClick={() => setPage('home')} whileTap={{ scale: 0.95 }}>
+            Back
+          </motion.button>
+          <h2 className="section-title">Private lobby</h2>
+        </div>
+        <p className="lobby__hint">Private rooms only let in people with the code. Pick a map, create the room, then share its link.</p>
+        <div className="maps" role="radiogroup" aria-label="Map">
+          {PARTY_MAP_IDS.map((id) => (
+            <motion.button
+              key={id}
+              type="button"
+              role="radio"
+              aria-checked={map === id}
+              className={`mapcard${map === id ? ' is-selected' : ''}`}
+              onClick={() => setMap(id)}
+              whileHover={{ y: -4 }}
+              whileTap={{ scale: 0.97 }}
+            >
+              <MiniMap map={MAPS[id]} />
+              <span className="mapcard__name">{MAPS[id].name}</span>
+              <span className="mapcard__blurb">{MAPS[id].blurb}</span>
+            </motion.button>
+          ))}
+        </div>
+        <div className="lobby__friends">
+          <motion.button
+            type="button"
+            className="btn btn--primary"
+            onClick={() => go({ mode: 'create', map })}
+            whileTap={{ scaleX: 1.06, scaleY: 0.92 }}
+          >
+            Create room on {MAPS[map].name}
+          </motion.button>
+          <form
+            className="join"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (room.trim().length >= 3) go({ mode: 'join', room: room.trim() });
+            }}
+          >
+            <label className="field field--inline">
+              <span className="field__label">Room code</span>
+              <input
+                className="field__input field__input--code"
+                value={room}
+                maxLength={6}
+                placeholder="ABCD"
+                onChange={(e) => setRoom(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+              />
+            </label>
+            <motion.button type="submit" className="btn btn--ghost" disabled={room.trim().length < 3} whileTap={{ scaleX: 1.06, scaleY: 0.92 }}>
+              Join room
+            </motion.button>
+          </form>
+        </div>
+      </section>
+
+      </main>
+    );
+  }
 
   return (
     <main className="lobby">
@@ -80,59 +147,15 @@ export function Lobby({ portraits, onPlay }: { portraits: Portraits; onPlay: (o:
         />
       </section>
 
-      <section className="lobby__go">
-        <h2 className="section-title">Play with friends</h2>
-        <p className="lobby__hint">Private rooms only let in people with the code. Pick a map, create the room, then share its link.</p>
-        <div className="maps" role="radiogroup" aria-label="Map">
-          {PARTY_MAP_IDS.map((id) => (
-            <motion.button
-              key={id}
-              type="button"
-              role="radio"
-              aria-checked={map === id}
-              className={`mapcard${map === id ? ' is-selected' : ''}`}
-              onClick={() => setMap(id)}
-              whileHover={{ y: -4 }}
-              whileTap={{ scale: 0.97 }}
-            >
-              <MiniMap map={MAPS[id]} />
-              <span className="mapcard__name">{MAPS[id].name}</span>
-              <span className="mapcard__blurb">{MAPS[id].blurb}</span>
-            </motion.button>
-          ))}
-        </div>
-        <div className="lobby__friends">
-          <motion.button
-            type="button"
-            className="btn btn--primary"
-            onClick={() => go({ mode: 'create', map })}
-            whileTap={{ scaleX: 1.06, scaleY: 0.92 }}
-          >
-            Create room on {MAPS[map].name}
-          </motion.button>
-          <form
-            className="join"
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (room.trim().length >= 3) go({ mode: 'join', room: room.trim() });
-            }}
-          >
-            <label className="field field--inline">
-              <span className="field__label">Room code</span>
-              <input
-                className="field__input field__input--code"
-                value={room}
-                maxLength={6}
-                placeholder="ABCD"
-                onChange={(e) => setRoom(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
-              />
-            </label>
-            <motion.button type="submit" className="btn btn--ghost" disabled={room.trim().length < 3} whileTap={{ scaleX: 1.06, scaleY: 0.92 }}>
-              Join room
-            </motion.button>
-          </form>
-        </div>
-      </section>
+      <motion.button
+        type="button"
+        className="btn btn--ghost btn--friends"
+        onClick={() => setPage('friends')}
+        whileHover={{ y: -3 }}
+        whileTap={{ scaleX: 1.04, scaleY: 0.94 }}
+      >
+        Create or join a private lobby
+      </motion.button>
 
       <footer className="lobby__keys">
         <span><kbd>WASD</kbd> move</span>
@@ -140,7 +163,7 @@ export function Lobby({ portraits, onPlay }: { portraits: Portraits; onPlay: (o:
         <span><kbd>Click</kbd> shoot</span>
         <span><kbd>Left Shift</kbd> or <kbd>Right click</kbd> scope</span>
         <span><kbd>Space</kbd> or <kbd>Q</kbd> ability</span>
-        <span><kbd>1</kbd> <kbd>2</kbd> or <kbd>Wheel</kbd> swap guns</span>
+        <span><kbd>F</kbd>, <kbd>1</kbd> <kbd>2</kbd> or <kbd>Wheel</kbd> swap guns</span>
         <span>Hold <kbd>G</kbd> aim throw, release to throw</span>
         <span><kbd>E</kbd> pick up</span>
         <span><kbd>Tab</kbd> scores</span>

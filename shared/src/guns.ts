@@ -45,7 +45,7 @@ export const GUNS: Record<GunId, GunDef> = {
   },
   sniper: {
     id: 'sniper', slot: 'primary', name: 'Longshot', blurb: 'One slow, heavy round across the map.',
-    damage: 72, cooldown: 1.35, speed: 55, range: 34, pellets: 1, spread: 0, unlockKills: 15,
+    damage: 72, cooldown: 1.35, speed: 60, range: 50, pellets: 1, spread: 0, unlockKills: 15,
   },
   rocket: {
     id: 'rocket', slot: 'primary', name: 'Party Popper', blurb: 'Slow rocket, big splash, sends people flying.',

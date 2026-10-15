@@ -27,7 +27,8 @@ export class Input {
       if (!e.repeat) {
         if (k === 'Space' || k === 'KeyQ') this.abilityQueued = true;
         if (k === 'KeyC') this.scopeHeld = !this.scopeHeld; // keyboard toggle for trackpads
-        if (k === 'KeyE' || k === 'KeyF') this.pickupQueued = true;
+        if (k === 'KeyE') this.pickupQueued = true;
+        if (k === 'KeyF') this.slotQueued = 'toggle';
         if (k === 'Digit1') this.slotQueued = 1;
         if (k === 'Digit2') this.slotQueued = 2;
         if (k === 'KeyG') this.throwHeld = true;

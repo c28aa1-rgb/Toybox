@@ -1470,3 +1470,9 @@ kbd {
   .slot__art, .slot__art img { height: 80px; max-height: 80px; }
   .slot.is-open::after { display: none; }
 }
+
+/* Private lobby lives on its own page; the main screen only links to it. */
+.btn--friends { align-self: center; padding-inline: 28px; }
+.lobby--friends { justify-content: flex-start; }
+.friends__top { display: flex; align-items: center; gap: 16px; }
+.friends__top .section-title { margin: 0; }
