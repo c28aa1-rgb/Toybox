@@ -88,6 +88,8 @@ export class GameClient {
   private laserDotGeo = new THREE.SphereGeometry(0.12, 12, 8);
   private throwViews = new Map<number, { obj: THREE.Object3D; born: number }>();
   private smokeViews = new Map<number, THREE.Group>();
+  /** True while this player stands inside a smoke cloud. */
+  private meSmoked = false;
   private arcLine: THREE.Line;
   private arcRing: THREE.Mesh;
   private reticle: HTMLDivElement;
@@ -180,7 +182,7 @@ export class GameClient {
     this.hud = new HudStore({
       connected: false, error: null, room: opts.room ?? '', host: false, myId: null, me: null, players: [],
       phase: 'playing', winner: null, endsIn: 0, feed: [], ping: 0, killedBy: null, nearPickup: null,
-      loadout: { hero: opts.hero, gun: opts.gun, secondary: opts.secondary, utility: opts.utility }, blind: 0, scoreboard: false, hurtTick: 0, toast: null, bots: 0,
+      loadout: { hero: opts.hero, gun: opts.gun, secondary: opts.secondary, utility: opts.utility }, blind: 0, smoked: false, scoreboard: false, hurtTick: 0, toast: null, bots: 0,
       isPublic: opts.mode === 'public', map: null, chat: [], chatOpen: false, banner: null, scoped: false,
     });
 
@@ -337,6 +339,8 @@ export class GameClient {
     this.updateDamageNumbers(rawDt);
 
     this.s.outline.render(this.s.scene, this.s.camera);
+    // Name tags sit above the HUD, so standing in smoke has to hide the whole layer.
+    this.s.labels.domElement.style.visibility = this.meSmoked ? 'hidden' : '';
     this.s.labels.render(this.s.scene, this.s.camera);
 
     if (now - this.hudAt > 100) {
@@ -452,9 +456,11 @@ export class GameClient {
         aim = p.aim;
         alive = p.alive;
       }
+      const smoked = inSmoke(snap, x, y);
+      if (p.id === this.myId) this.meSmoked = alive && smoked;
       this.placeView(view, x, y, aim, alive, dt, p.gun, shield);
       this.updateLaser(view, x, y, aim, alive && scoped, p.gun, p.id === this.myId);
-      this.updateLabel(view, p.hp, alive);
+      this.updateLabel(view, p.hp, alive && !smoked);
     }
     for (const [id, view] of this.views) {
       if (!seen.has(id)) {
@@ -485,7 +491,7 @@ export class GameClient {
       const y = da.y + (d.y - da.y) * k;
       this.placeView(view, x, y, lerpAngle(da.aim, d.aim, k), true, dt, owner.gun, false);
       // Decoys copy the owner's health bar so they can't be told apart by it.
-      this.updateLabel(view, owner.hp, true);
+      this.updateLabel(view, owner.hp, !inSmoke(snap, x, y));
     }
     for (const [id, view] of this.decoyViews) {
       if (!seen.has(id)) {
@@ -632,7 +638,8 @@ export class GameClient {
   }
 
   private updateLabel(view: PlayerView, hp: number, alive: boolean): void {
-    view.label.element.style.display = alive ? '' : 'none';
+    // CSS2DRenderer rewrites style.display every frame from `visible`, so toggle that instead.
+    view.label.visible = alive;
     if (hp !== view.lastHp) {
       if (hp < view.lastHp) view.skin.flash();
       view.lastHp = hp;
@@ -1162,6 +1169,7 @@ export class GameClient {
       bots: snap.players.filter((p) => p.bot).length,
       scoped: !!me?.alive && this.input.scopeHeld && !this.hud.get().chatOpen,
       blind: me?.blindIn ?? 0,
+      smoked: this.meSmoked,
     };
     if (this.botsWanted) {
       if (patch.bots === this.botsWanted.count || performance.now() - this.botsWanted.at > 1500) this.botsWanted = null;
@@ -1170,6 +1178,11 @@ export class GameClient {
     if (me?.alive && this.hud.get().killedBy) patch.killedBy = null;
     this.hud.set(patch);
   }
+}
+
+/** Smoke hides name tags and blinds whoever stands in it. Slightly inside the edge so it matches the puffs. */
+function inSmoke(snap: Snapshot, x: number, y: number): boolean {
+  return snap.smokes.some((s) => (x - s.x) ** 2 + (y - s.y) ** 2 < (s.r * 0.92) ** 2);
 }
 
 function lerpAngle(a: number, b: number, k: number): number {

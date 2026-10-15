@@ -1050,7 +1050,9 @@ kbd {
 
 .lobby__go {
   flex-direction: column;
+  flex-wrap: nowrap;
   align-items: stretch;
+  justify-content: flex-start;
 }
 
 .lobby__hint {
@@ -1356,4 +1358,115 @@ kbd {
 
 .rack--utils {
   grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+/* Inside a Puff Can cloud you see nothing but smoke. */
+.smoke-overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(circle at 30% 35%, #d9c8f2 0 18%, transparent 40%),
+    radial-gradient(circle at 70% 60%, #cbb6ea 0 20%, transparent 45%),
+    radial-gradient(circle at 45% 80%, #d2c0ef 0 16%, transparent 38%),
+    #bfa8e3;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 220ms ease-out;
+}
+.smoke-overlay.is-on { opacity: 1; }
+.smoke-overlay span {
+  font-family: var(--font-display, inherit);
+  font-size: 1.1rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #5b2a86;
+  opacity: 0.55;
+}
+
+/* Loadout: four slot boxes, one drawer underneath. */
+.slots {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.slot {
+  --slot: var(--tangerine);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 12px 12px 14px;
+  border: var(--outline);
+  border-radius: var(--radius);
+  background: var(--cream);
+  color: var(--ink);
+  box-shadow: var(--lift);
+  text-align: center;
+  cursor: pointer;
+}
+.slot:focus-visible { outline: 3px solid var(--lemon); outline-offset: 3px; }
+.slot.is-open { background: var(--lemon); }
+/* A tab nub that joins the open box to the drawer below it. */
+.slot.is-open::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -19px;
+  width: 22px;
+  height: 22px;
+  transform: translateX(-50%) rotate(45deg);
+  background: var(--grape-deep);
+  border-left: var(--outline);
+  border-top: var(--outline);
+  z-index: 2;
+}
+
+.slot__label {
+  align-self: flex-start;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--cream);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.slot__art {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 110px;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--slot) 22%, transparent);
+}
+.slot__art img { max-height: 110px; max-width: 100%; }
+.slot__name { font-family: var(--font-display); font-size: 18px; }
+.slot__detail { font-size: 13px; line-height: 1.25; opacity: 0.8; min-height: 2.5em; }
+.slot__change {
+  margin-top: 6px;
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--grape);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.slot-drawer { overflow: hidden; }
+.slot-drawer__inner {
+  margin-top: 18px;
+  padding: 18px;
+  border: var(--outline);
+  border-radius: var(--radius);
+  background: var(--grape-deep);
+}
+
+@media (max-width: 760px) {
+  .slots { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .slot__art, .slot__art img { height: 80px; max-height: 80px; }
+  .slot.is-open::after { display: none; }
 }

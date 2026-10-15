@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { motion } from 'framer-motion';
-import { MAPS, PARTY_MAP_IDS, PUBLIC_MAP, SECONDARY_IDS, type GunId, type HeroId, type MapDef, type MapId, type UtilId } from '@gg/shared';
+import { AnimatePresence, motion } from 'framer-motion';
+import { GUNS, HEROES, MAPS, PARTY_MAP_IDS, PUBLIC_MAP, SECONDARY_IDS, type GunId, type HeroId, type MapDef, type MapId, type UtilId, UTILS } from '@gg/shared';
 import type { JoinOptions } from '../game/GameClient';
 import { isUnlocked, loadProfile, saveProfile } from '../unlocks';
 import type { Portraits } from './App';
@@ -71,23 +71,13 @@ export function Lobby({ portraits, onPlay }: { portraits: Portraits; onPlay: (o:
       </section>
 
       <section className="lobby__section">
-        <h2 className="section-title">Pick a hero</h2>
-        <HeroShelf value={hero} onChange={setHero} portraits={portraits} />
-      </section>
-
-      <section className="lobby__section">
-        <h2 className="section-title">Primary</h2>
-        <GunRack value={gun} onChange={setGun} kills={profile.kills} portraits={portraits} />
-      </section>
-
-      <section className="lobby__section">
-        <h2 className="section-title">Secondary</h2>
-        <GunRack ids={SECONDARY_IDS} label="Secondary gun" value={secondary} onChange={setSecondary} kills={profile.kills} portraits={portraits} />
-      </section>
-
-      <section className="lobby__section">
-        <h2 className="section-title">Utility</h2>
-        <UtilRack value={utility} onChange={setUtility} portraits={portraits} />
+        <h2 className="section-title">Your loadout</h2>
+        <LoadoutPicker
+          portraits={portraits}
+          kills={profile.kills}
+          hero={hero} gun={gun} secondary={secondary} utility={utility}
+          setHero={setHero} setGun={setGun} setSecondary={setSecondary} setUtility={setUtility}
+        />
       </section>
 
       <section className="lobby__go">
@@ -169,5 +159,76 @@ function MiniMap({ map }: { map: MapDef }) {
         <rect key={i} x={w.x} y={w.y} width={w.w} height={w.h} rx={0.3} className="minimap__wall" />
       ))}
     </svg>
+  );
+}
+
+type SlotKey = 'hero' | 'primary' | 'secondary' | 'utility';
+
+/** Four boxes showing the current pick. Clicking one opens a drawer under the row with every option for that slot. */
+function LoadoutPicker(props: {
+  portraits: Portraits; kills: number;
+  hero: HeroId; gun: GunId; secondary: GunId; utility: UtilId;
+  setHero: (h: HeroId) => void; setGun: (g: GunId) => void; setSecondary: (g: GunId) => void; setUtility: (u: UtilId) => void;
+}) {
+  const { portraits, kills } = props;
+  const [open, setOpen] = useState<SlotKey | null>(null);
+  const slots: { key: SlotKey; label: string; name: string; detail: string; img: string; color?: string }[] = [
+    { key: 'hero', label: 'Hero', name: HEROES[props.hero].name, detail: `${HEROES[props.hero].ability} · ${HEROES[props.hero].cooldown}s`, img: portraits.heroes[props.hero], color: HEROES[props.hero].color },
+    { key: 'primary', label: 'Primary', name: GUNS[props.gun].name, detail: GUNS[props.gun].blurb, img: portraits.guns[props.gun] },
+    { key: 'secondary', label: 'Secondary', name: GUNS[props.secondary].name, detail: GUNS[props.secondary].blurb, img: portraits.guns[props.secondary] },
+    { key: 'utility', label: 'Utility', name: UTILS[props.utility].name, detail: `${UTILS[props.utility].charges} per life`, img: portraits.utils[props.utility] },
+  ];
+  // Picking something closes the drawer so the whole loadout is visible again.
+  const pick = <T,>(set: (v: T) => void) => (v: T) => { set(v); setOpen(null); };
+
+  return (
+    <div className="loadout-picker">
+      <div className="slots" role="tablist" aria-label="Loadout">
+        {slots.map((s) => {
+          const isOpen = open === s.key;
+          return (
+            <motion.button
+              key={s.key}
+              type="button"
+              role="tab"
+              aria-selected={isOpen}
+              aria-controls="slot-drawer"
+              className={`slot${isOpen ? ' is-open' : ''}`}
+              style={s.color ? ({ '--slot': s.color } as React.CSSProperties) : undefined}
+              onClick={() => setOpen(isOpen ? null : s.key)}
+              whileHover={{ y: -4 }}
+              whileTap={{ scale: 0.96 }}
+              transition={{ type: 'spring', stiffness: 520, damping: 22 }}
+            >
+              <span className="slot__label">{s.label}</span>
+              <span className="slot__art"><img src={s.img} alt="" draggable={false} /></span>
+              <span className="slot__name">{s.name}</span>
+              <span className="slot__detail">{s.detail}</span>
+              <span className="slot__change">{isOpen ? 'Close' : 'Change'}</span>
+            </motion.button>
+          );
+        })}
+      </div>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            key="drawer"
+            id="slot-drawer"
+            className="slot-drawer"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ type: 'spring', stiffness: 380, damping: 34 }}
+          >
+            <div className="slot-drawer__inner">
+              {open === 'hero' && <HeroShelf value={props.hero} onChange={pick(props.setHero)} portraits={portraits} />}
+              {open === 'primary' && <GunRack value={props.gun} onChange={pick(props.setGun)} kills={kills} portraits={portraits} />}
+              {open === 'secondary' && <GunRack ids={SECONDARY_IDS} label="Secondary gun" value={props.secondary} onChange={pick(props.setSecondary)} kills={kills} portraits={portraits} />}
+              {open === 'utility' && <UtilRack value={props.utility} onChange={pick(props.setUtility)} portraits={portraits} />}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }

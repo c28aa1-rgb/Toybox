@@ -94,6 +94,9 @@ export function Hud({ client, portraits, onLeave }: { client: GameClient; portra
       <Toast toast={s.toast} />
       <EliminationBanner banner={s.banner} />
       <div className={`scope-vignette${me.alive && s.scoped ? ' is-on' : ''}`} aria-hidden />
+      <div className={`smoke-overlay${me.alive && s.smoked ? ' is-on' : ''}`} aria-hidden>
+        <span>In smoke</span>
+      </div>
       <FlashOverlay blind={s.blind} />
       <Chat lines={s.chat} open={s.chatOpen} client={client} />
       {me.alive && s.scoped && <div className="scope-tag">SCOPED · SLOWER, STEADIER AIM</div>}

@@ -104,7 +104,8 @@ export class Room {
   /** The public lobby tops itself up with bots so a lone player always has a fight. */
   private balancePublicBots(): void {
     if (!this.isPublic || this.clients.size === 0) return;
-    this.applyBotCount(Math.max(0, PUBLIC_MIN_PLAYERS - this.clients.size));
+    // Bots only keep a lone player company; once a second person joins they all leave.
+    this.applyBotCount(this.clients.size > 1 ? 0 : PUBLIC_MIN_PLAYERS - 1);
   }
 
   private applyBotCount(count: number): void {

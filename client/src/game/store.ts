@@ -42,6 +42,8 @@ export interface HudState {
   loadout: { hero: HeroId; gun: GunId; secondary: GunId; utility: UtilId };
   /** Seconds of flash blindness left for this player. */
   blind: number;
+  /** Standing inside a smoke cloud: the whole view is covered. */
+  smoked: boolean;
   scoreboard: boolean;
   /** Bumps on each hit you take, used to flash the vignette. */
   hurtTick: number;
