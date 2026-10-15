@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { GUNS, HEROES, MAPS, PARTY_MAP_IDS, PUBLIC_MAP, SECONDARY_IDS, type GunId, type HeroId, type MapDef, type MapId, type UtilId, UTILS } from '@gg/shared';
+import { GUNS, HATS, HEROES, MAPS, MODES, MODE_IDS, PARTY_MAP_IDS, PUBLIC_MAP, SECONDARY_IDS, type GunId, type HeroId, type MapDef, type MapId, type ModeId, type HatId, type UtilId, UTILS } from '@gg/shared';
 import type { JoinOptions } from '../game/GameClient';
 import { isUnlocked, loadProfile, saveProfile } from '../unlocks';
 import type { Portraits } from './App';
-import { GunRack, HeroShelf, UtilRack } from './Pickers';
+import { GunRack, HatRack, HeroShelf, UtilRack } from './Pickers';
+import { music } from '../game/audio';
 
 function initialRoom(): string {
   return new URLSearchParams(location.search).get('room')?.toUpperCase().slice(0, 6) ?? '';
@@ -17,15 +18,32 @@ export function Lobby({ portraits, onPlay }: { portraits: Portraits; onPlay: (o:
   const [gun, setGun] = useState<GunId>(isUnlocked(profile.gun, profile.kills) ? profile.gun : 'smg');
   const [secondary, setSecondary] = useState<GunId>(profile.secondary);
   const [utility, setUtility] = useState<UtilId>(profile.utility);
+  const [hat, setHat] = useState<HatId>(profile.hat);
+  const [gameMode, setGameMode] = useState<ModeId>('ffa');
+  const [musicOn, setMusicOn] = useState(music.enabled);
+  useEffect(() => music.play('lobby'), []);
   const [room, setRoom] = useState(initialRoom);
   const [map, setMap] = useState<MapId>('playmat');
   const invited = initialRoom() !== '';
   const [page, setPage] = useState<'home' | 'friends'>('home');
 
-  const go = (opts: Pick<JoinOptions, 'mode' | 'room' | 'map'>) => {
-    saveProfile({ ...loadProfile(), name: name.trim(), hero, gun, secondary, utility });
-    onPlay({ ...opts, name: name.trim() || 'Player', hero, gun, secondary, utility });
+  const go = (opts: Pick<JoinOptions, 'mode' | 'room' | 'map' | 'gameMode'>) => {
+    saveProfile({ ...loadProfile(), name: name.trim(), hero, gun, secondary, utility, hat });
+    onPlay({ ...opts, name: name.trim() || 'Player', hero, gun, secondary, utility, hat });
   };
+  const musicToggle = (
+    <button
+      type="button"
+      className="btn btn--ghost btn--small btn--music"
+      aria-pressed={musicOn}
+      onClick={() => {
+        music.setEnabled(!musicOn);
+        setMusicOn(!musicOn);
+      }}
+    >
+      Music {musicOn ? 'on' : 'off'}
+    </button>
+  );
 
   if (page === 'friends') {
     return (
@@ -38,6 +56,25 @@ export function Lobby({ portraits, onPlay }: { portraits: Portraits; onPlay: (o:
           <h2 className="section-title">Private lobby</h2>
         </div>
         <p className="lobby__hint">Private rooms only let in people with the code. Pick a map, create the room, then share its link.</p>
+        <h3 className="friends__label">Mode</h3>
+        <div className="modes" role="radiogroup" aria-label="Mode">
+          {MODE_IDS.map((id) => (
+            <motion.button
+              key={id}
+              type="button"
+              role="radio"
+              aria-checked={gameMode === id}
+              className={`modecard modecard--${id}${gameMode === id ? ' is-selected' : ''}`}
+              onClick={() => setGameMode(id)}
+              whileHover={{ y: -4 }}
+              whileTap={{ scale: 0.97 }}
+            >
+              <span className="modecard__name">{MODES[id].name}</span>
+              <span className="modecard__blurb">{MODES[id].blurb}</span>
+            </motion.button>
+          ))}
+        </div>
+        <h3 className="friends__label">Map</h3>
         <div className="maps" role="radiogroup" aria-label="Map">
           {PARTY_MAP_IDS.map((id) => (
             <motion.button
@@ -60,10 +97,10 @@ export function Lobby({ portraits, onPlay }: { portraits: Portraits; onPlay: (o:
           <motion.button
             type="button"
             className="btn btn--primary"
-            onClick={() => go({ mode: 'create', map })}
+            onClick={() => go({ mode: 'create', map, gameMode })}
             whileTap={{ scaleX: 1.06, scaleY: 0.92 }}
           >
-            Create room on {MAPS[map].name}
+            Create {MODES[gameMode].name} on {MAPS[map].name}
           </motion.button>
           <form
             className="join"
@@ -142,8 +179,8 @@ export function Lobby({ portraits, onPlay }: { portraits: Portraits; onPlay: (o:
         <LoadoutPicker
           portraits={portraits}
           kills={profile.kills}
-          hero={hero} gun={gun} secondary={secondary} utility={utility}
-          setHero={setHero} setGun={setGun} setSecondary={setSecondary} setUtility={setUtility}
+          hero={hero} gun={gun} secondary={secondary} utility={utility} hat={hat}
+          setHero={setHero} setGun={setGun} setSecondary={setSecondary} setUtility={setUtility} setHat={setHat}
         />
       </section>
 
@@ -158,6 +195,7 @@ export function Lobby({ portraits, onPlay }: { portraits: Portraits; onPlay: (o:
       </motion.button>
 
       <footer className="lobby__keys">
+        {musicToggle}
         <span><kbd>WASD</kbd> move</span>
         <span><kbd>Mouse</kbd> aim</span>
         <span><kbd>Click</kbd> shoot</span>
@@ -185,13 +223,13 @@ function MiniMap({ map }: { map: MapDef }) {
   );
 }
 
-type SlotKey = 'hero' | 'primary' | 'secondary' | 'utility';
+type SlotKey = 'hero' | 'primary' | 'secondary' | 'utility' | 'hat';
 
 /** Four boxes showing the current pick. Clicking one opens a drawer under the row with every option for that slot. */
 function LoadoutPicker(props: {
   portraits: Portraits; kills: number;
-  hero: HeroId; gun: GunId; secondary: GunId; utility: UtilId;
-  setHero: (h: HeroId) => void; setGun: (g: GunId) => void; setSecondary: (g: GunId) => void; setUtility: (u: UtilId) => void;
+  hero: HeroId; gun: GunId; secondary: GunId; utility: UtilId; hat: HatId;
+  setHero: (h: HeroId) => void; setGun: (g: GunId) => void; setSecondary: (g: GunId) => void; setUtility: (u: UtilId) => void; setHat: (h: HatId) => void;
 }) {
   const { portraits, kills } = props;
   const [open, setOpen] = useState<SlotKey | null>(null);
@@ -200,6 +238,7 @@ function LoadoutPicker(props: {
     { key: 'primary', label: 'Primary', name: GUNS[props.gun].name, detail: GUNS[props.gun].blurb, img: portraits.guns[props.gun] },
     { key: 'secondary', label: 'Secondary', name: GUNS[props.secondary].name, detail: GUNS[props.secondary].blurb, img: portraits.guns[props.secondary] },
     { key: 'utility', label: 'Utility', name: UTILS[props.utility].name, detail: `${UTILS[props.utility].charges} per life`, img: portraits.utils[props.utility] },
+    { key: 'hat', label: 'Hat', name: HATS[props.hat].name, detail: 'Unlock more with kills', img: portraits.hats[props.hat] },
   ];
   // Picking something closes the drawer so the whole loadout is visible again.
   const pick = <T,>(set: (v: T) => void) => (v: T) => { set(v); setOpen(null); };
@@ -248,6 +287,7 @@ function LoadoutPicker(props: {
               {open === 'primary' && <GunRack value={props.gun} onChange={pick(props.setGun)} kills={kills} portraits={portraits} />}
               {open === 'secondary' && <GunRack ids={SECONDARY_IDS} label="Secondary gun" value={props.secondary} onChange={pick(props.setSecondary)} kills={kills} portraits={portraits} />}
               {open === 'utility' && <UtilRack value={props.utility} onChange={pick(props.setUtility)} portraits={portraits} />}
+              {open === 'hat' && <HatRack value={props.hat} onChange={pick(props.setHat)} kills={kills} portraits={portraits} />}
             </div>
           </motion.div>
         )}

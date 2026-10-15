@@ -1,4 +1,4 @@
-export type GunId = 'pistol' | 'minismg' | 'thumper' | 'smg' | 'shotgun' | 'sniper' | 'rocket';
+export type GunId = 'pistol' | 'minismg' | 'thumper' | 'bouncer' | 'stinger' | 'smg' | 'burst' | 'shotgun' | 'sniper' | 'rocket';
 
 export type GunSlot = 'primary' | 'secondary';
 
@@ -18,6 +18,13 @@ export interface GunDef {
   /** Rockets explode on impact or at max range. */
   splashRadius?: number;
   knockback?: number;
+  /** Shots per trigger pull; the extra shots follow `burstGap` seconds apart. */
+  burst?: number;
+  burstGap?: number;
+  /** Times a bullet ricochets off walls before it stops. */
+  bounces?: number;
+  /** Seconds a hit slows the target. */
+  slow?: number;
   /** Lifetime kills needed to pick this gun in the lobby. 0 = always available. */
   unlockKills: number;
 }
@@ -35,9 +42,21 @@ export const GUNS: Record<GunId, GunDef> = {
     id: 'thumper', slot: 'secondary', name: 'Thumper', blurb: 'Hand cannon. Slow, heavy, shoves people back.',
     damage: 36, cooldown: 0.65, speed: 32, range: 12, pellets: 1, spread: 0.03, knockback: 1.6, unlockKills: 0,
   },
+  bouncer: {
+    id: 'bouncer', slot: 'secondary', name: 'Bouncer', blurb: 'Rubber rounds bounce off walls twice. Shoot around corners.',
+    damage: 17, cooldown: 0.34, speed: 24, range: 22, pellets: 1, spread: 0.04, bounces: 2, unlockKills: 0,
+  },
+  stinger: {
+    id: 'stinger', slot: 'secondary', name: 'Stinger', blurb: 'Light darts. Every hit slows the target for a moment.',
+    damage: 11, cooldown: 0.2, speed: 30, range: 11, pellets: 1, spread: 0.08, slow: 0.9, unlockKills: 0,
+  },
   smg: {
     id: 'smg', slot: 'primary', name: 'Buzzbox', blurb: 'Sprays fast, loses accuracy at range.',
     damage: 9, cooldown: 0.09, speed: 28, range: 11, pellets: 1, spread: 0.16, unlockKills: 0,
+  },
+  burst: {
+    id: 'burst', slot: 'primary', name: 'Tri-Pop', blurb: 'Three-round bursts. Accurate at mid range.',
+    damage: 15, cooldown: 0.5, speed: 34, range: 17, pellets: 1, spread: 0.05, burst: 3, burstGap: 0.07, unlockKills: 10,
   },
   shotgun: {
     id: 'shotgun', slot: 'primary', name: 'Boomstick', blurb: 'Six pellets. Get close.',

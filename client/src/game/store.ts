@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react';
-import type { GunId, HeroId, MapId, PlayerSnap, UtilId, WeaponId } from '@gg/shared';
+import type { HillSnap, Loadout, MapId, ModeId, PlayerSnap, WeaponId } from '@gg/shared';
 
 export interface FeedEntry {
   key: number;
@@ -24,6 +24,14 @@ export interface Banner {
   name: string;
 }
 
+/** "Noodle is on a 5 streak" style call-out. */
+export interface StreakCall {
+  key: number;
+  name: string;
+  n: number;
+  mine: boolean;
+}
+
 export interface HudState {
   connected: boolean;
   error: string | null;
@@ -39,7 +47,14 @@ export interface HudState {
   ping: number;
   killedBy: string | null;
   nearPickup: WeaponId | null;
-  loadout: { hero: HeroId; gun: GunId; secondary: GunId; utility: UtilId };
+  loadout: Loadout;
+  mode: ModeId;
+  target: number;
+  teamScores: [number, number];
+  hill: HillSnap | null;
+  streak: StreakCall | null;
+  /** Seconds left on a slow from goo or a Stinger. */
+  slowed: boolean;
   /** Seconds of flash blindness left for this player. */
   blind: number;
   /** Standing inside a smoke cloud: the whole view is covered. */

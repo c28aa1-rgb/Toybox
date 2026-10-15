@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { CHAT_MAX, GUNS, HEROES, KILLS_TO_WIN, MAPS, MAX_PLAYERS, SECONDARY_IDS, UTILS, type Loadout, type PlayerSnap } from '@gg/shared';
-import type { Banner, ChatLine } from '../game/store';
+import { CHAT_MAX, GUNS, HEROES, MAPS, MAX_PLAYERS, MODES, SECONDARY_IDS, TEAM_COLORS, TEAM_NAMES, UTILS, type Loadout, type PlayerSnap } from '@gg/shared';
+import type { Banner, ChatLine, HudState, StreakCall } from '../game/store';
 import { itemName, type GameClient } from '../game/GameClient';
 import { useHud } from '../game/store';
 import { loadProfile } from '../unlocks';
 import type { Portraits } from './App';
-import { GunRack, HeroShelf, UtilRack } from './Pickers';
+import { GunRack, HatRack, HeroShelf, UtilRack } from './Pickers';
 
 const pop = { type: 'spring', stiffness: 500, damping: 24 } as const;
 
@@ -43,7 +43,8 @@ export function Hud({ client, portraits, onLeave }: { client: GameClient; portra
       </div>
 
       <div className="hud__tc">
-        <Race me={me} leader={leader} />
+        {s.mode === 'teams' ? <TeamRace s={s} me={me} /> : <Race me={me} leader={leader} s={s} />}
+        <ModeTag s={s} me={me} />
       </div>
 
       <div className="hud__tr">
@@ -92,6 +93,8 @@ export function Hud({ client, portraits, onLeave }: { client: GameClient; portra
       </AnimatePresence>
 
       <Toast toast={s.toast} />
+      <StreakCallout call={s.streak} />
+      {me.alive && s.slowed && <div className="slow-tag">Slowed</div>}
       <EliminationBanner banner={s.banner} />
       <div className={`scope-vignette${me.alive && s.scoped ? ' is-on' : ''}`} aria-hidden />
       <div className={`smoke-overlay${me.alive && s.smoked ? ' is-on' : ''}`} aria-hidden>
@@ -118,7 +121,7 @@ export function Hud({ client, portraits, onLeave }: { client: GameClient; portra
         {s.phase === 'ended' && <EndPanel key="end" s={s} />}
       </AnimatePresence>
 
-      {s.scoreboard && s.phase === 'playing' && <Scoreboard players={s.players} myId={s.myId} />}
+      {s.scoreboard && s.phase === 'playing' && <Scoreboard players={s.players} myId={s.myId} s={s} />}
     </div>
   );
 }
@@ -276,22 +279,84 @@ function BotStepper({ count, humans, onChange }: { count: number; humans: number
   );
 }
 
-function Race({ me, leader }: { me: PlayerSnap; leader?: PlayerSnap }) {
+/** Score bar toward the round target: kills, hill points or ladder steps depending on mode. */
+function Race({ me, leader, s }: { me: PlayerSnap; leader?: PlayerSnap; s: HudState }) {
   const leaderIsMe = !leader || leader.id === me.id;
+  const unit = s.mode === 'hill' ? 'points' : s.mode === 'ladder' ? 'guns' : 'kills';
+  const target = s.target;
   return (
     <div className="race">
       <div className="race__track">
-        <motion.span className="race__fill race__fill--me" animate={{ width: `${(me.kills / KILLS_TO_WIN) * 100}%` }} transition={pop} />
+        <motion.span className="race__fill race__fill--me" animate={{ width: `${(me.score / target) * 100}%` }} transition={pop} />
         {!leaderIsMe && leader && (
-          <motion.span className="race__marker" animate={{ left: `${(leader.kills / KILLS_TO_WIN) * 100}%` }} transition={pop} />
+          <motion.span className="race__marker" animate={{ left: `${(leader.score / target) * 100}%` }} transition={pop} />
         )}
       </div>
       <span className="race__text">
-        <b>{me.kills}</b> / {KILLS_TO_WIN}
-        {!leaderIsMe && leader && <> · {leader.name} has {leader.kills}</>}
-        {leaderIsMe && me.kills > 0 && <> · you're leading</>}
+        <b>{me.score}</b> / {target} {unit}
+        {!leaderIsMe && leader && <> · {leader.name} has {leader.score}</>}
+        {leaderIsMe && me.score > 0 && <> · you're leading</>}
       </span>
     </div>
+  );
+}
+
+function TeamRace({ s, me }: { s: HudState; me: PlayerSnap }) {
+  return (
+    <div className="teamrace">
+      {[0, 1].map((t) => (
+        <div key={t} className={`teamrace__side${me.team === t ? ' is-mine' : ''}`} style={{ '--team': TEAM_COLORS[t] } as React.CSSProperties}>
+          <span className="teamrace__name">{TEAM_NAMES[t]}{me.team === t ? ' (you)' : ''}</span>
+          <div className="teamrace__track">
+            <motion.span className="teamrace__fill" animate={{ width: `${(s.teamScores[t] / s.target) * 100}%` }} transition={pop} />
+          </div>
+          <b className="teamrace__score">{s.teamScores[t]}</b>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** One line under the score bar saying what this mode wants from you right now. */
+function ModeTag({ s, me }: { s: HudState; me: PlayerSnap }) {
+  if (s.mode === 'hill') {
+    const hill = s.hill;
+    const text = !hill?.holder
+      ? hill?.contested ? 'Ring contested: clear it out' : 'Ring empty: get in it'
+      : hill.holder === me.id ? 'You hold the ring' : `${s.players.find((p) => p.id === hill.holder)?.name ?? 'Someone'} holds the ring`;
+    return <span className={`modetag${hill?.holder === me.id ? ' is-good' : ''}`}>{text}</span>;
+  }
+  if (s.mode === 'ladder') {
+    return <span className="modetag">Gun {Math.min(me.score + 1, s.target)} of {s.target}: {GUNS[me.primary].name}</span>;
+  }
+  return null;
+}
+
+function StreakCallout({ call }: { call: StreakCall | null }) {
+  const [shown, setShown] = useState<StreakCall | null>(null);
+  useEffect(() => {
+    if (!call) return;
+    setShown(call);
+    const t = setTimeout(() => setShown(null), 2400);
+    return () => clearTimeout(t);
+  }, [call]);
+  const words: Record<number, string> = { 3: 'On a roll', 5: 'Rampage', 8: 'Unstoppable', 12: 'Toy box legend' };
+  return (
+    <AnimatePresence>
+      {shown && (
+        <motion.div
+          key={shown.key}
+          className={`streak${shown.mine ? ' is-mine' : ''}`}
+          initial={{ scale: 0.4, rotate: -12, opacity: 0, x: '-50%' }}
+          animate={{ scale: 1, rotate: -4, opacity: 1, x: '-50%' }}
+          exit={{ scale: 0.8, opacity: 0, x: '-50%' }}
+          transition={{ type: 'spring', stiffness: 600, damping: 14 }}
+        >
+          <b>{words[shown.n] ?? 'Streak'}</b>
+          <small>{shown.mine ? `${shown.n} kills without dying` : `${shown.name} has ${shown.n} in a row`}</small>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
 
@@ -424,13 +489,43 @@ function DeathPanel({
       <GunRack compact value={loadout.gun} kills={kills} portraits={portraits} onChange={(gun) => client.setLoadout({ ...loadout, gun })} />
       <GunRack compact ids={SECONDARY_IDS} label="Secondary gun" value={loadout.secondary} kills={kills} portraits={portraits} onChange={(secondary) => client.setLoadout({ ...loadout, secondary })} />
       <UtilRack compact value={loadout.utility} portraits={portraits} onChange={(utility) => client.setLoadout({ ...loadout, utility })} />
+      <HatRack compact value={loadout.hat} kills={kills} portraits={portraits} onChange={(hat) => client.setLoadout({ ...loadout, hat })} />
     </motion.div>
   );
 }
 
-function EndPanel({ s }: { s: ReturnType<typeof useHud> }) {
+interface Award {
+  title: string;
+  who: PlayerSnap;
+  stat: string;
+}
+
+/** Round awards picked from the final scoreboard. Each player gets at most one card. */
+function awards(players: PlayerSnap[]): Award[] {
+  const out: Award[] = [];
+  const used = new Set<string>();
+  const pick = (title: string, value: (p: PlayerSnap) => number, stat: (p: PlayerSnap) => string) => {
+    const best = [...players].filter((p) => !used.has(p.id)).sort((a, b) => value(b) - value(a))[0];
+    if (best && value(best) > 0) {
+      used.add(best.id);
+      out.push({ title, who: best, stat: stat(best) });
+    }
+  };
+  pick('Most damage', (p) => p.damage, (p) => `${p.damage} damage`);
+  pick('Longest streak', (p) => p.bestStreak, (p) => `${p.bestStreak} kills in a row`);
+  pick('Hardest to kill', (p) => (p.kills + 1) / (p.deaths + 1), (p) => `${p.kills} kills, ${p.deaths} deaths`);
+  return out;
+}
+
+function EndPanel({ s }: { s: HudState }) {
+  const teamWin = s.winner?.startsWith('team:') ? Number(s.winner.slice(5)) : null;
   const winner = s.players.find((p) => p.id === s.winner);
-  const iWon = s.winner === s.myId;
+  const me = s.me;
+  const iWon = s.winner === s.myId || (teamWin !== null && me?.team === teamWin);
+  const title = teamWin !== null
+    ? `${TEAM_NAMES[teamWin]} team wins`
+    : iWon ? 'You win!' : `${winner?.name ?? 'Someone'} wins`;
+  const list = awards(s.players);
   return (
     <motion.div
       className="hud-center end"
@@ -444,28 +539,54 @@ function EndPanel({ s }: { s: ReturnType<typeof useHud> }) {
         animate={{ scale: 1, rotate: -2 }}
         transition={{ type: 'spring', stiffness: 420, damping: 14 }}
       >
-        <h2 className="end__title">{iWon ? 'You win!' : `${winner?.name ?? 'Someone'} wins`}</h2>
-        <p className="end__sub">Next round in {Math.ceil(s.endsIn)}</p>
-        <Scoreboard players={s.players} myId={s.myId} inline />
+        <h2 className="end__title" style={teamWin !== null ? { color: TEAM_COLORS[teamWin] } : undefined}>{title}</h2>
+        <p className="end__sub">{MODES[s.mode].name} · next round in {Math.ceil(s.endsIn)}</p>
+        {list.length > 0 && (
+          <div className="awards">
+            {list.map((a, i) => (
+              <motion.div
+                key={a.title}
+                className={`award${a.who.id === s.myId ? ' is-me' : ''}`}
+                style={{ '--hero': HEROES[a.who.hero].color } as React.CSSProperties}
+                initial={{ y: 30, opacity: 0, rotate: 0 }}
+                animate={{ y: 0, opacity: 1, rotate: i % 2 ? 2 : -2 }}
+                transition={{ type: 'spring', stiffness: 500, damping: 18, delay: 0.25 + i * 0.12 }}
+              >
+                <span className="award__title">{a.title}</span>
+                <b className="award__who">{a.who.id === s.myId ? 'You' : a.who.name}</b>
+                <span className="award__stat">{a.stat}</span>
+                {a.who.favWeapon && <span className="award__weapon">Top weapon: {itemName(a.who.favWeapon)}</span>}
+              </motion.div>
+            ))}
+          </div>
+        )}
+        <Scoreboard players={s.players} myId={s.myId} s={s} inline />
       </motion.div>
     </motion.div>
   );
 }
 
-function Scoreboard({ players, myId, inline = false }: { players: PlayerSnap[]; myId: string | null; inline?: boolean }) {
+function Scoreboard({ players, myId, s, inline = false }: { players: PlayerSnap[]; myId: string | null; s: HudState; inline?: boolean }) {
+  const scoreLabel = s.mode === 'hill' ? 'Points' : s.mode === 'ladder' ? 'Gun' : null;
   return (
     <div className={inline ? 'scores scores--inline' : 'scores'}>
       <table>
         <thead>
-          <tr><th>Player</th><th>Hero</th><th>Kills</th><th>Deaths</th></tr>
+          <tr>
+            <th>Player</th><th>Hero</th>
+            {scoreLabel && <th>{scoreLabel}</th>}
+            <th>Kills</th><th>Deaths</th><th>Damage</th>
+          </tr>
         </thead>
         <tbody>
           {players.map((p) => (
-            <tr key={p.id} className={p.id === myId ? 'is-me' : ''}>
-              <td>{p.id === myId ? `${p.name} (you)` : p.name}</td>
+            <tr key={p.id} className={p.id === myId ? 'is-me' : ''} style={p.team >= 0 ? ({ '--team': TEAM_COLORS[p.team] } as React.CSSProperties) : undefined}>
+              <td className={p.team >= 0 ? 'has-team' : ''}>{p.id === myId ? `${p.name} (you)` : p.name}</td>
               <td style={{ color: HEROES[p.hero].color }}>{HEROES[p.hero].name}</td>
+              {scoreLabel && <td>{p.score}</td>}
               <td>{p.kills}</td>
               <td>{p.deaths}</td>
+              <td>{p.damage}</td>
             </tr>
           ))}
         </tbody>

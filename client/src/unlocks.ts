@@ -1,4 +1,4 @@
-import { GUNS, isPrimary, isSecondary, isUtilId, type GunId, type HeroId, type UtilId } from '@gg/shared';
+import { GUNS, HATS, isHatId, isPrimary, isSecondary, isUtilId, type GunId, type HatId, type HeroId, type UtilId } from '@gg/shared';
 
 export interface Profile {
   name: string;
@@ -6,6 +6,7 @@ export interface Profile {
   gun: GunId;
   secondary: GunId;
   utility: UtilId;
+  hat: HatId;
   kills: number;
   deaths: number;
   wins: number;
@@ -13,7 +14,7 @@ export interface Profile {
 
 const KEY = 'gg.profile.v1';
 
-const DEFAULT: Profile = { name: '', hero: 'blink', gun: 'smg', secondary: 'pistol', utility: 'frag', kills: 0, deaths: 0, wins: 0 };
+const DEFAULT: Profile = { name: '', hero: 'blink', gun: 'smg', secondary: 'pistol', utility: 'frag', hat: 'none', kills: 0, deaths: 0, wins: 0 };
 
 export function loadProfile(): Profile {
   try {
@@ -24,6 +25,7 @@ export function loadProfile(): Profile {
       if (!isPrimary(p.gun)) p.gun = 'smg';
       if (!isSecondary(p.secondary)) p.secondary = 'pistol';
       if (!isUtilId(p.utility)) p.utility = 'frag';
+      if (!isHatId(p.hat) || HATS[p.hat].unlockKills > p.kills) p.hat = 'none';
       return p;
     }
   } catch {

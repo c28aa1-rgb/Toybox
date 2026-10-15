@@ -3,6 +3,7 @@ import { GameClient, type JoinOptions } from '../game/GameClient';
 import { renderPortraits } from '../skins/portraits';
 import { Lobby } from './Lobby';
 import { Hud } from './Hud';
+import { music } from '../game/audio';
 
 export type Portraits = ReturnType<typeof renderPortraits>;
 
@@ -19,6 +20,7 @@ function Game({ opts, portraits, onLeave }: { opts: JoinOptions; portraits: Port
   const [client, setClient] = useState<GameClient | null>(null);
 
   useEffect(() => {
+    music.play('game');
     const c = new GameClient(ref.current!, opts);
     setClient(c);
     return () => c.dispose();

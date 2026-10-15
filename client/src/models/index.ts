@@ -95,7 +95,7 @@ export function registerGunModels(): void {
 }
 
 /** Throwables, origin at the base. Scaled to a fixed height so they read the same in hand, in flight and as pickups. */
-const UTIL_FACTORIES: Record<UtilId, () => THREE.Group> = {
+const UTIL_FACTORIES: Partial<Record<UtilId, () => THREE.Group>> = {
   frag: () => createFizzBombModel({ textureSize: 8 }),
   flash: () => createFlashPopModel({ textureSize: 8 }),
   smoke: () => createPuffCanModel({ textureSize: 8 }),
@@ -109,7 +109,7 @@ export function registerUtilModels(): void {
     registerUtilModel(util, () => {
       let t = utilTemplates.get(util);
       if (!t) {
-        t = toonify(UTIL_FACTORIES[util]());
+        t = toonify(UTIL_FACTORIES[util]!());
         const box = new THREE.Box3().setFromObject(t);
         t.scale.setScalar(UTIL_HEIGHT / Math.max(0.001, box.max.y - box.min.y));
         utilTemplates.set(util, t);

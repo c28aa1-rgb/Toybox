@@ -1,12 +1,13 @@
 import {
-  DROP_LIFETIME, KILLS_TO_WIN, MATCH_END_TIME, MAX_HP,
+  DROP_LIFETIME, HEAL_AMOUNT, HEAL_LIFETIME, MATCH_END_TIME, MAX_HP, STREAK_CALLS,
   MAX_INPUT_DT, PICKUP_RADIUS, PLAYER_RADIUS, PLAYER_SPEED, RESPAWN_TIME, SCOPE_SPEED, SCOPE_SPREAD, SPAWN_SHIELD,
 } from './constants';
 import { GUNS, type GunId } from './guns';
 import { ABILITY, HEROES, type HeroId } from './heroes';
 import { DEFAULT_MAP, MAPS, type MapDef, type MapId, type Rect } from './map';
 import type { GameEvent, InputFrame, Loadout, WeaponId } from './protocol';
-import { THROW, UTILS, throwFlightTime, type UtilId } from './utilities';
+import { SLOW_FACTOR, THROW, UTILS, throwFlightTime, type UtilId } from './utilities';
+import { GUN_LADDER, MODES, type ModeId } from './modes';
 
 // ---------- state ----------
 
@@ -25,6 +26,18 @@ export interface PlayerState {
   utilCharges: number;
   throwReadyAt: number;
   blindUntil: number;
+  slowUntil: number;
+  /** 0 red, 1 blue, -1 with no teams. */
+  team: number;
+  /** Mode score: kills, hill points or ladder step. */
+  score: number;
+  streak: number;
+  bestStreak: number;
+  damageDealt: number;
+  weaponKills: Partial<Record<WeaponId, number>>;
+  /** Shots left in the current burst and when the next one fires. */
+  burstLeft: number;
+  burstAt: number;
   wantSlot: 0 | 1 | 2;
   wantThrow: boolean;
   x: number;
@@ -59,12 +72,13 @@ export interface Bullet {
   dy: number;
   travelled: number;
   fake: boolean;
+  bounces: number;
 }
 
 export interface Pickup {
   id: number;
-  kind: 'gun' | 'util';
-  item: WeaponId;
+  kind: 'gun' | 'util' | 'heal';
+  item: WeaponId | 'heal';
   x: number;
   y: number;
   expiresAt: number;
@@ -111,6 +125,29 @@ export interface Throwable {
   vz: number;
   landed: boolean;
   fuseAt: number;
+  /** Snap Trap only: live from this time until `expiresAt`. */
+  armedAt: number;
+  expiresAt: number;
+}
+
+export interface Goo {
+  id: number;
+  owner: string;
+  team: number;
+  x: number;
+  y: number;
+  r: number;
+  expiresAt: number;
+}
+
+export interface Hill {
+  x: number;
+  y: number;
+  r: number;
+  holder: string | null;
+  contested: boolean;
+  /** Seconds banked toward the holder's next point. */
+  progress: number;
 }
 
 export interface Smoke {
@@ -132,6 +169,10 @@ export interface GameState {
   pickups: Pickup[];
   throwables: Throwable[];
   smokes: Smoke[];
+  goos: Goo[];
+  mode: ModeId;
+  teamScores: [number, number];
+  hill: Hill | null;
   walls: DynWall[];
   bubbles: Bubble[];
   decoys: Decoy[];
@@ -151,7 +192,8 @@ export function mulberry32(seed: number): () => number {
   };
 }
 
-export function createGame(seed = Date.now(), mapId: MapId = DEFAULT_MAP): GameState {
+export function createGame(seed = Date.now(), mapId: MapId = DEFAULT_MAP, mode: ModeId = 'ffa'): GameState {
+  const map = MAPS[mapId];
   return {
     time: 0,
     nextId: 1,
@@ -163,11 +205,15 @@ export function createGame(seed = Date.now(), mapId: MapId = DEFAULT_MAP): GameS
     pickups: [],
     throwables: [],
     smokes: [],
+    goos: [],
+    mode,
+    teamScores: [0, 0],
+    hill: mode === 'hill' ? { x: map.w / 2, y: map.h / 2, r: Math.min(map.w, map.h) * 0.12, holder: null, contested: false, progress: 0 } : null,
     walls: [],
     bubbles: [],
     decoys: [],
     events: [],
-    map: MAPS[mapId],
+    map,
     rng: mulberry32(seed),
   };
 }
@@ -261,6 +307,7 @@ export function stepMovement(
   walls: Rect[],
   bubbles: BubbleLike[],
   scoped = false,
+  slowed = false,
 ): void {
   const len = Math.hypot(mx, my);
   if (len > 1) {
@@ -268,8 +315,24 @@ export function stepMovement(
     my /= len;
   }
   if (len === 0) return;
-  const f = bubbleFactor(pos.x, pos.y, ownerId, bubbles, ABILITY.bubbleMoveFactor) * (scoped ? SCOPE_SPEED : 1);
+  const f = bubbleFactor(pos.x, pos.y, ownerId, bubbles, ABILITY.bubbleMoveFactor) * (scoped ? SCOPE_SPEED : 1) * (slowed ? SLOW_FACTOR : 1);
   moveCircle(pos, mx * PLAYER_SPEED * f * dt, my * PLAYER_SPEED * f * dt, walls);
+}
+
+/** True when (x, y) sits in a goo puddle that `id` (on `team`) is not immune to. */
+export function inEnemyGoo(goos: { x: number; y: number; r: number; owner: string; team: number }[], x: number, y: number, id: string, team: number): boolean {
+  return goos.some((g) => g.owner !== id && (team < 0 || g.team !== team) && (x - g.x) ** 2 + (y - g.y) ** 2 < g.r * g.r);
+}
+
+export function isSlowed(state: GameState, p: PlayerState): boolean {
+  return state.time < p.slowUntil || inEnemyGoo(state.goos, p.x, p.y, p.id, p.team);
+}
+
+export function sameTeam(state: GameState, a: string, b: string): boolean {
+  if (!MODES[state.mode].teams || a === b) return false;
+  const pa = state.players.get(a);
+  const pb = state.players.get(b);
+  return !!pa && !!pb && pa.team === pb.team;
 }
 
 export function allWalls(state: GameState): Rect[] {
@@ -280,13 +343,19 @@ export function allWalls(state: GameState): Rect[] {
 
 export function addPlayer(
   state: GameState,
-  opts: { id: string; name: string; hero: HeroId; gun: GunId; secondary: GunId; utility: UtilId; bot?: boolean },
+  opts: { id: string; name: string; hero: HeroId; gun: GunId; secondary: GunId; utility: UtilId; hat?: Loadout['hat']; bot?: boolean },
 ): PlayerState {
+  let team = -1;
+  if (MODES[state.mode].teams) {
+    const counts = [0, 0];
+    for (const o of state.players.values()) if (o.team >= 0) counts[o.team]++;
+    team = counts[0] <= counts[1] ? 0 : 1;
+  }
   const p: PlayerState = {
     id: opts.id,
     name: opts.name,
     bot: !!opts.bot,
-    loadout: { hero: opts.hero, gun: opts.gun, secondary: opts.secondary, utility: opts.utility },
+    loadout: { hero: opts.hero, gun: opts.gun, secondary: opts.secondary, utility: opts.utility, hat: opts.hat ?? 'none' },
     hero: opts.hero,
     gun: opts.gun,
     primary: opts.gun,
@@ -296,6 +365,15 @@ export function addPlayer(
     utilCharges: 0,
     throwReadyAt: 0,
     blindUntil: 0,
+    slowUntil: 0,
+    team,
+    score: 0,
+    streak: 0,
+    bestStreak: 0,
+    damageDealt: 0,
+    weaponKills: {},
+    burstLeft: 0,
+    burstAt: 0,
     wantSlot: 0,
     wantThrow: false,
     x: 0,
@@ -331,7 +409,8 @@ export function removePlayer(state: GameState, id: string): void {
 }
 
 function spawn(state: GameState, p: PlayerState): void {
-  const others = [...state.players.values()].filter((o) => o.id !== p.id && o.alive);
+  // Spawn away from enemies; teammates don't count as threats.
+  const others = [...state.players.values()].filter((o) => o.id !== p.id && o.alive && !sameTeam(state, o.id, p.id));
   let best = state.map.spawns[0];
   let bestScore = -1;
   for (const s of state.map.spawns) {
@@ -355,9 +434,18 @@ function spawn(state: GameState, p: PlayerState): void {
   p.slot = 'primary';
   p.gun = p.primary;
   p.utility = p.loadout.utility;
+  if (state.mode === 'ladder') {
+    const gun = GUN_LADDER[Math.min(p.score, GUN_LADDER.length - 1)];
+    p.primary = gun;
+    p.secondary = gun;
+    p.gun = gun;
+  }
   p.utilCharges = UTILS[p.utility].charges;
   p.throwReadyAt = state.time;
   p.blindUntil = 0;
+  p.slowUntil = 0;
+  p.burstLeft = 0;
+  p.streak = 0;
   p.wantSlot = 0;
   p.wantThrow = false;
   p.hp = MAX_HP;
@@ -385,7 +473,7 @@ export function applyInput(state: GameState, p: PlayerState, frame: InputFrame):
   const mx = clamp(frame.mx || 0, -1, 1);
   const my = clamp(frame.my || 0, -1, 1);
   p.scoped = !!frame.scope;
-  stepMovement(p, mx, my, dt, p.id, allWalls(state), state.bubbles, p.scoped);
+  stepMovement(p, mx, my, dt, p.id, allWalls(state), state.bubbles, p.scoped, isSlowed(state, p));
   p.fire = !!frame.fire;
   if (frame.ability) p.wantAbility = true;
   if (frame.pickup) p.wantPickup = true;
@@ -412,7 +500,11 @@ export function hasLineOfSight(state: GameState, x1: number, y1: number, x2: num
 
 function damagePlayer(state: GameState, target: PlayerState, dmg: number, by: string, gun: WeaponId): void {
   if (!target.alive || state.time < target.shieldUntil || state.phase !== 'playing') return;
+  if (sameTeam(state, target.id, by)) return;
+  const dealt = Math.min(dmg, Math.max(0, target.hp));
   target.hp -= dmg;
+  const attacker = state.players.get(by);
+  if (attacker && attacker.id !== target.id) attacker.damageDealt += dealt;
   state.events.push({ t: 'hit', target: target.id, by, dmg: Math.round(dmg), x: r2(target.x), y: r2(target.y) });
   if (target.hp <= 0) killPlayer(state, target, by, gun);
 }
@@ -421,24 +513,63 @@ function killPlayer(state: GameState, victim: PlayerState, killerId: string, gun
   victim.hp = 0;
   victim.alive = false;
   victim.fire = false;
+  victim.burstLeft = 0;
   victim.respawnAt = state.time + RESPAWN_TIME;
   victim.deaths++;
+  victim.streak = 0;
   state.events.push({ t: 'kill', killer: killerId, victim: victim.id, gun });
-  // Drop one random item from the loadout: primary, secondary or utility.
-  const roll = Math.floor(state.rng() * 3);
-  const drop: { kind: 'gun' | 'util'; item: WeaponId } =
-    roll === 0 ? { kind: 'gun', item: victim.primary } : roll === 1 ? { kind: 'gun', item: victim.secondary } : { kind: 'util', item: victim.utility };
-  state.pickups.push({ id: state.nextId++, ...drop, x: victim.x, y: victim.y, expiresAt: state.time + DROP_LIFETIME });
+  // Gun Ladder hands out fixed guns, so nothing drops there.
+  if (state.mode !== 'ladder') {
+    // Drop one random item from the loadout: primary, secondary or utility.
+    const roll = Math.floor(state.rng() * 3);
+    const drop: { kind: 'gun' | 'util'; item: WeaponId } =
+      roll === 0 ? { kind: 'gun', item: victim.primary } : roll === 1 ? { kind: 'gun', item: victim.secondary } : { kind: 'util', item: victim.utility };
+    state.pickups.push({ id: state.nextId++, ...drop, x: victim.x, y: victim.y, expiresAt: state.time + DROP_LIFETIME });
+  }
   const killer = state.players.get(killerId);
-  if (killer && killer.id !== victim.id) {
-    killer.kills++;
-    if (killer.kills >= KILLS_TO_WIN && state.phase === 'playing') {
-      state.phase = 'ended';
-      state.winner = killer.id;
-      state.endsAt = state.time + MATCH_END_TIME;
-      state.events.push({ t: 'win', id: killer.id });
+  if (!killer || killer.id === victim.id) return;
+  // A heal lands a little to the side so it doesn't hide the dropped item.
+  state.pickups.push({
+    id: state.nextId++, kind: 'heal', item: 'heal',
+    x: clamp(victim.x + 0.9, 1.5, state.map.w - 1.5), y: victim.y, expiresAt: state.time + HEAL_LIFETIME,
+  });
+  killer.kills++;
+  killer.streak++;
+  killer.bestStreak = Math.max(killer.bestStreak, killer.streak);
+  killer.weaponKills[gun] = (killer.weaponKills[gun] ?? 0) + 1;
+  if (STREAK_CALLS.includes(killer.streak)) state.events.push({ t: 'streak', id: killer.id, n: killer.streak });
+  const mode = MODES[state.mode];
+  if (state.mode === 'ffa') {
+    killer.score = killer.kills;
+    if (killer.score >= mode.target) endMatch(state, killer.id);
+  } else if (state.mode === 'teams') {
+    killer.score = killer.kills;
+    if (killer.team >= 0) {
+      state.teamScores[killer.team]++;
+      if (state.teamScores[killer.team] >= mode.target) endMatch(state, `team:${killer.team}`);
+    }
+  } else if (state.mode === 'ladder') {
+    killer.score++;
+    if (killer.score >= GUN_LADDER.length) {
+      endMatch(state, killer.id);
+    } else {
+      const next = GUN_LADDER[killer.score];
+      killer.primary = next;
+      killer.secondary = next;
+      killer.gun = next;
+      killer.burstLeft = 0;
+      killer.fireReadyAt = Math.max(killer.fireReadyAt, state.time + 0.3);
+      state.events.push({ t: 'ladder', id: killer.id, gun: next });
     }
   }
+}
+
+function endMatch(state: GameState, winner: string): void {
+  if (state.phase !== 'playing') return;
+  state.phase = 'ended';
+  state.winner = winner;
+  state.endsAt = state.time + MATCH_END_TIME;
+  state.events.push({ t: 'win', id: winner });
 }
 
 function damageWall(state: GameState, wall: DynWall, dmg: number): void {
@@ -487,8 +618,18 @@ function explode(state: GameState, x: number, y: number, owner: string, gun: Wea
 
 function fireGun(state: GameState, p: PlayerState): void {
   const def = GUNS[p.gun];
-  const spread = def.spread * (p.scoped ? SCOPE_SPREAD : 1);
   p.fireReadyAt = state.time + def.cooldown;
+  if (def.burst && def.burst > 1) {
+    p.burstLeft = def.burst - 1;
+    p.burstAt = state.time + (def.burstGap ?? 0.07);
+  }
+  shoot(state, p);
+}
+
+/** One trigger's worth of bullets, without touching the cooldown. Bursts call it again. */
+function shoot(state: GameState, p: PlayerState): void {
+  const def = GUNS[p.gun];
+  const spread = def.spread * (p.scoped ? SCOPE_SPREAD : 1);
   p.shieldUntil = Math.min(p.shieldUntil, state.time);
   for (let i = 0; i < def.pellets; i++) {
     let a = p.aim;
@@ -502,7 +643,7 @@ function fireGun(state: GameState, p: PlayerState): void {
     state.bullets.push({
       id: state.nextId++, owner: p.id, gun: p.gun,
       x: p.x + dx * (PLAYER_RADIUS + 0.15), y: p.y + dy * (PLAYER_RADIUS + 0.15),
-      dx, dy, travelled: 0, fake: false,
+      dx, dy, travelled: 0, fake: false, bounces: def.bounces ?? 0,
     });
   }
   state.events.push({ t: 'shot', id: p.id, gun: p.gun, x: r2(p.x), y: r2(p.y), a: r2(p.aim) });
@@ -623,6 +764,7 @@ function tryPickup(state: GameState, p: PlayerState): void {
   let best: Pickup | null = null;
   let bestD = PICKUP_RADIUS;
   for (const k of state.pickups) {
+    if (k.kind === 'heal') continue;
     const d = Math.hypot(k.x - p.x, k.y - p.y);
     if (d < bestD) {
       bestD = d;
@@ -635,18 +777,20 @@ function tryPickup(state: GameState, p: PlayerState): void {
     state.pickups.push({ id: state.nextId++, kind, item, x: p.x, y: p.y, expiresAt: state.time + DROP_LIFETIME });
   if (best.kind === 'gun') {
     const gun = best.item as GunId;
+    if (state.mode === 'ladder') return;
     const slot = GUNS[gun].slot;
     if (p[slot] !== gun) dropOld('gun', p[slot]);
     p[slot] = gun;
     if (p.slot === slot) p.gun = gun;
     p.fireReadyAt = Math.max(p.fireReadyAt, state.time + 0.2);
   } else {
+    if (state.mode === 'ladder') return;
     const util = best.item as UtilId;
     if (p.utility !== util && p.utilCharges > 0) dropOld('util', p.utility);
     p.utility = util;
     p.utilCharges = UTILS[util].charges;
   }
-  state.events.push({ t: 'pickup', id: p.id, item: best.item });
+  state.events.push({ t: 'pickup', id: p.id, item: best.item as WeaponId });
 }
 
 function switchSlot(state: GameState, p: PlayerState, want: 1 | 2): void {
@@ -671,7 +815,7 @@ function throwUtil(state: GameState, p: PlayerState): void {
   const vz = ((THROW.gravity * T * T) / 2 - THROW.releaseHeight) / T;
   state.throwables.push({
     id: state.nextId++, owner: p.id, util: p.utility, x, y, z: THROW.releaseHeight,
-    vx: dx * speed, vy: dy * speed, vz, landed: false, fuseAt: Infinity,
+    vx: dx * speed, vy: dy * speed, vz, landed: false, fuseAt: Infinity, armedAt: Infinity, expiresAt: Infinity,
   });
   p.utilCharges--;
   p.throwReadyAt = state.time + THROW.cooldown;
@@ -715,7 +859,12 @@ function updateThrowables(state: GameState, dt: number): void {
         g.z = 0;
         if (!g.landed) {
           g.landed = true;
-          g.fuseAt = state.time + UTILS[g.util].fuseAfterLanding;
+          if (g.util === 'trap') {
+            g.armedAt = state.time + THROW.trapArm;
+            g.expiresAt = state.time + THROW.trapLife;
+          } else {
+            g.fuseAt = state.time + UTILS[g.util].fuseAfterLanding;
+          }
         }
         g.vz = Math.abs(g.vz) > 2 ? -g.vz * 0.3 : 0;
         g.vx *= 0.55;
@@ -723,15 +872,26 @@ function updateThrowables(state: GameState, dt: number): void {
       }
     }
     if (state.time >= g.fuseAt) done.push(g);
+    else if (g.util === 'trap' && state.time >= g.armedAt && trapTriggered(state, g)) done.push(g);
   }
+  // Traps nobody stepped near fizzle out quietly.
+  state.throwables = state.throwables.filter((g) => g.expiresAt > state.time || done.includes(g));
   if (!done.length) return;
   state.throwables = state.throwables.filter((g) => !done.includes(g));
   for (const g of done) detonate(state, g);
 }
 
+function trapTriggered(state: GameState, g: Throwable): boolean {
+  for (const p of state.players.values()) {
+    if (!p.alive || p.id === g.owner || sameTeam(state, p.id, g.owner)) continue;
+    if (Math.hypot(p.x - g.x, p.y - g.y) < THROW.trapTrigger) return true;
+  }
+  return false;
+}
+
 function detonate(state: GameState, g: Throwable): void {
   const def = UTILS[g.util];
-  if (g.util === 'frag') {
+  if (g.util === 'frag' || g.util === 'trap') {
     explode(state, g.x, g.y, g.owner, 'frag', def.damage, def.radius, def.knockback);
   } else if (g.util === 'flash') {
     state.events.push({ t: 'flash', x: r2(g.x), y: r2(g.y) });
@@ -739,9 +899,14 @@ function detonate(state: GameState, g: Throwable): void {
       if (!p.alive) continue;
       const d = Math.hypot(p.x - g.x, p.y - g.y);
       if (d > def.radius || !hasLineOfSight(state, g.x, g.y, p.x, p.y)) continue;
+      if (sameTeam(state, p.id, g.owner)) continue;
       const full = 0.6 + 2.6 * (1 - d / def.radius);
       p.blindUntil = Math.max(p.blindUntil, state.time + (p.id === g.owner ? full * 0.5 : full));
     }
+  } else if (g.util === 'goo') {
+    const owner = state.players.get(g.owner);
+    state.goos.push({ id: state.nextId++, owner: g.owner, team: owner?.team ?? -1, x: g.x, y: g.y, r: def.radius, expiresAt: state.time + THROW.gooDuration });
+    state.events.push({ t: 'goo', x: r2(g.x), y: r2(g.y) });
   } else {
     state.smokes.push({ id: state.nextId++, x: g.x, y: g.y, r: def.radius, expiresAt: state.time + THROW.smokeDuration });
     state.events.push({ t: 'smoke', x: r2(g.x), y: r2(g.y) });
@@ -792,8 +957,20 @@ export function tick(state: GameState, dt: number): void {
       p.wantThrow = false;
       throwUtil(state, p);
     }
-    if (p.fire && state.time >= p.fireReadyAt) fireGun(state, p);
+    if (p.burstLeft > 0 && state.time >= p.burstAt) {
+      if (GUNS[p.gun].burst) {
+        shoot(state, p);
+        p.burstLeft--;
+        p.burstAt = state.time + (GUNS[p.gun].burstGap ?? 0.07);
+      } else {
+        p.burstLeft = 0;
+      }
+    } else if (p.fire && p.burstLeft === 0 && state.time >= p.fireReadyAt) {
+      fireGun(state, p);
+    }
+    collectHeals(state, p);
   }
+  if (state.hill) updateHill(state, state.hill, dt);
 
   updateDecoys(state, dt, walls);
   updateBullets(state, dt);
@@ -804,8 +981,39 @@ export function tick(state: GameState, dt: number): void {
   state.bubbles = state.bubbles.filter((b) => b.expiresAt > t);
   state.pickups = state.pickups.filter((k) => k.expiresAt > t);
   state.smokes = state.smokes.filter((sm) => sm.expiresAt > t);
+  state.goos = state.goos.filter((g) => g.expiresAt > t);
   for (const d of [...state.decoys]) if (d.expiresAt <= t) popDecoy(state, d);
 
+}
+
+/** Heals are picked up by walking over them, but only when you are hurt. */
+function collectHeals(state: GameState, p: PlayerState): void {
+  if (p.hp >= MAX_HP) return;
+  const k = state.pickups.find((k) => k.kind === 'heal' && Math.hypot(k.x - p.x, k.y - p.y) < PICKUP_RADIUS * 0.8);
+  if (!k) return;
+  state.pickups = state.pickups.filter((o) => o !== k);
+  p.hp = Math.min(MAX_HP, p.hp + HEAL_AMOUNT);
+  state.events.push({ t: 'heal', id: p.id, x: r2(k.x), y: r2(k.y) });
+}
+
+/** King of the Toybox: one player alone in the ring banks a point per second. */
+function updateHill(state: GameState, hill: Hill, dt: number): void {
+  if (state.phase !== 'playing') return;
+  const inside = [...state.players.values()].filter((p) => p.alive && Math.hypot(p.x - hill.x, p.y - hill.y) < hill.r);
+  hill.contested = inside.length > 1;
+  const holder = inside.length === 1 ? inside[0] : null;
+  if (!holder || holder.id !== hill.holder) hill.progress = 0;
+  hill.holder = holder?.id ?? null;
+  if (!holder) return;
+  hill.progress += dt;
+  while (hill.progress >= 1) {
+    hill.progress -= 1;
+    holder.score++;
+    if (holder.score >= MODES.hill.target) {
+      endMatch(state, holder.id);
+      return;
+    }
+  }
 }
 
 function updateDecoys(state: GameState, dt: number, walls: Rect[]): void {
@@ -843,7 +1051,7 @@ function updateDecoys(state: GameState, dt: number, walls: Rect[]): void {
       state.bullets.push({
         id: state.nextId++, owner: d.owner, gun,
         x: d.x + dx * (PLAYER_RADIUS + 0.15), y: d.y + dy * (PLAYER_RADIUS + 0.15),
-        dx, dy, travelled: 0, fake: true,
+        dx, dy, travelled: 0, fake: true, bounces: 0,
       });
       state.events.push({ t: 'shot', id: `decoy:${d.id}`, gun, x: r2(d.x), y: r2(d.y), a: r2(d.aim) });
     }
@@ -865,11 +1073,16 @@ function updateBullets(state: GameState, dt: number): void {
       b.y += b.dy * stepLen;
       b.travelled += stepLen;
 
-      if (state.map.walls.some((w) => pointInRect(b.x, b.y, w, BULLET_RADIUS))) {
+      const hitMap = state.map.walls.some((w) => pointInRect(b.x, b.y, w, BULLET_RADIUS));
+      const wall = hitMap ? null : state.walls.find((w) => pointInRect(b.x, b.y, w, BULLET_RADIUS));
+      if ((hitMap || wall) && b.bounces > 0) {
+        bounce(state, b, stepLen);
+        continue;
+      }
+      if (hitMap) {
         if (def.splashRadius && !b.fake) explodeGun(state, b.x - b.dx * 0.3, b.y - b.dy * 0.3, b.owner, b.gun);
         continue outer;
       }
-      const wall = state.walls.find((w) => pointInRect(b.x, b.y, w, BULLET_RADIUS));
       if (wall) {
         if (!b.fake) {
           if (def.splashRadius) explodeGun(state, b.x - b.dx * 0.3, b.y - b.dy * 0.3, b.owner, b.gun);
@@ -878,11 +1091,12 @@ function updateBullets(state: GameState, dt: number): void {
         continue outer;
       }
       for (const p of state.players.values()) {
-        if (!p.alive || p.id === b.owner) continue;
+        if (!p.alive || p.id === b.owner || sameTeam(state, p.id, b.owner)) continue;
         if ((p.x - b.x) ** 2 + (p.y - b.y) ** 2 < (PLAYER_RADIUS + BULLET_RADIUS) ** 2) {
           if (!b.fake) {
             if (def.splashRadius) explodeGun(state, b.x, b.y, b.owner, b.gun);
             else {
+              if (def.slow && state.time >= p.shieldUntil) p.slowUntil = Math.max(p.slowUntil, state.time + def.slow);
               damagePlayer(state, p, def.damage, b.owner, b.gun);
               if (def.knockback) {
                 p.vx += b.dx * def.knockback;
@@ -916,6 +1130,20 @@ function updateBullets(state: GameState, dt: number): void {
   state.bullets = survivors;
 }
 
+/** Step back out of the wall and mirror whichever axis ran into it. */
+function bounce(state: GameState, b: Bullet, stepLen: number): void {
+  const walls = allWalls(state);
+  const px = b.x - b.dx * stepLen;
+  const py = b.y - b.dy * stepLen;
+  const blockedX = walls.some((w) => pointInRect(b.x, py, w, BULLET_RADIUS));
+  const blockedY = walls.some((w) => pointInRect(px, b.y, w, BULLET_RADIUS));
+  b.x = px;
+  b.y = py;
+  if (blockedX || !blockedY) b.dx = -b.dx;
+  if (blockedY || !blockedX) b.dy = -b.dy;
+  b.bounces--;
+}
+
 export function resetMatch(state: GameState): void {
   state.phase = 'playing';
   state.winner = null;
@@ -923,12 +1151,23 @@ export function resetMatch(state: GameState): void {
   state.pickups = [];
   state.throwables = [];
   state.smokes = [];
+  state.goos = [];
+  state.teamScores = [0, 0];
+  if (state.hill) {
+    state.hill.holder = null;
+    state.hill.contested = false;
+    state.hill.progress = 0;
+  }
   state.walls = [];
   state.bubbles = [];
   state.decoys = [];
   for (const p of state.players.values()) {
     p.kills = 0;
     p.deaths = 0;
+    p.score = 0;
+    p.bestStreak = 0;
+    p.damageDealt = 0;
+    p.weaponKills = {};
     p.alive = false;
   }
   for (const p of state.players.values()) spawn(state, p);

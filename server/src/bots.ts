@@ -1,5 +1,5 @@
 import {
-  GUNS, HERO_IDS, TICK_DT, allWalls, hasLineOfSight,
+  GUNS, HERO_IDS, TICK_DT, allWalls, hasLineOfSight, sameTeam,
   type GameState, type HeroId, type InputFrame, type PlayerState, type Rect,
 } from '@gg/shared';
 
@@ -65,7 +65,7 @@ export function botInput(state: GameState, p: PlayerState): InputFrame {
   let targetD = Infinity;
   let visible = false;
   for (const o of state.players.values()) {
-    if (o.id === p.id || !o.alive) continue;
+    if (o.id === p.id || !o.alive || sameTeam(state, o.id, p.id)) continue;
     const d = Math.hypot(o.x - p.x, o.y - p.y);
     const los = hasLineOfSight(state, p.x, p.y, o.x, o.y);
     // Prefer visible targets; a hidden one counts as farther away.
@@ -78,8 +78,8 @@ export function botInput(state: GameState, p: PlayerState): InputFrame {
   }
 
   // Grab a better gun if one is close.
-  const gunRank: Record<string, number> = { pistol: 0, minismg: 0, thumper: 0, smg: 1, shotgun: 2, sniper: 2, rocket: 3 };
-  const upgrade = state.pickups.find(
+  const gunRank: Record<string, number> = { pistol: 0, minismg: 0, thumper: 0, bouncer: 0, stinger: 0, smg: 1, burst: 2, shotgun: 2, sniper: 2, rocket: 3 };
+  const upgrade = state.mode === 'ladder' ? undefined : state.pickups.find(
     (k) => k.kind === 'gun' && GUNS[k.item as keyof typeof GUNS].slot === 'primary'
       && gunRank[k.item] > gunRank[p.primary] && Math.hypot(k.x - p.x, k.y - p.y) < 7,
   );
@@ -94,7 +94,23 @@ export function botInput(state: GameState, p: PlayerState): InputFrame {
   let moveX = 0;
   let moveY = 0;
 
-  if (upgrade && (!target || !visible)) {
+  // Hurt bots detour for a nearby heal; King of the Toybox bots head for the ring when nothing is in their face.
+  const heal = p.hp < 60 ? state.pickups.find((k) => k.kind === 'heal' && Math.hypot(k.x - p.x, k.y - p.y) < 9) : undefined;
+  const hill = state.hill;
+  const offHill = hill && Math.hypot(p.x - hill.x, p.y - hill.y) > hill.r * 0.6;
+
+  if (heal && (!visible || p.hp < 35)) {
+    moveX = heal.x - p.x;
+    moveY = heal.y - p.y;
+  } else if (hill && offHill && (!visible || targetD > 7) && state.time >= m.wanderUntil) {
+    moveX = hill.x - p.x;
+    moveY = hill.y - p.y;
+    if (target && visible) {
+      frame.aim = Math.atan2(target.y - p.y, target.x - p.x);
+      frame.aimDist = targetD;
+      frame.fire = targetD < GUNS[p.gun].range * 0.95;
+    }
+  } else if (upgrade && (!target || !visible)) {
     moveX = upgrade.x - p.x;
     moveY = upgrade.y - p.y;
     frame.pickup = Math.hypot(moveX, moveY) < 1.2;

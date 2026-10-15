@@ -2,11 +2,12 @@ import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { CSS2DObject } from 'three/examples/jsm/renderers/CSS2DRenderer.js';
 import {
-  CHAT_MAX, GUNS, GUN_IDS, HEROES, THROW, UTILS, isUtilId, throwFlightTime, type Loadout, type UtilId, type WeaponId, INTERP_DELAY, MAPS, MAX_HP, MAX_INPUT_DT, PICKUP_RADIUS, pointInRect, stepMovement,
+  CHAT_MAX, GUNS, GUN_IDS, HATS, HAT_IDS, HEROES, MODES, TEAM_COLORS, THROW, UTILS, inEnemyGoo, isUtilId, throwFlightTime, type HatId, type Loadout, type ModeId, type UtilId, type WeaponId, INTERP_DELAY, MAPS, MAX_HP, MAX_INPUT_DT, PICKUP_RADIUS, pointInRect, stepMovement,
   type DecoySnap, type GameEvent, type GunId, type HeroId, type InputFrame, type MapDef, type MapId, type PlayerSnap,
   type Rect, type Snapshot,
 } from '@gg/shared';
 import { createGunModel, createHeroSkin, createUtilModel, type HeroSkin } from '../skins/registry';
+import { createHealModel } from '../skins/hats';
 import { addDeath, addKill, addWin, loadProfile, saveProfile } from '../unlocks';
 import { Sfx } from './audio';
 import { Particles, Rings, Shake, Shatter } from './fx';
@@ -21,11 +22,14 @@ export interface JoinOptions {
   mode: 'public' | 'create' | 'join';
   room?: string;
   map?: MapId;
+  /** Private rooms only; the public lobby is always free-for-all. */
+  gameMode?: ModeId;
   name: string;
   hero: HeroId;
   gun: GunId;
   secondary: GunId;
   utility: UtilId;
+  hat: HatId;
 }
 
 interface PlayerView {
@@ -40,6 +44,7 @@ interface PlayerView {
   laser: THREE.Mesh;
   laserGlow: THREE.Mesh;
   laserDot: THREE.Mesh;
+  team: number;
 }
 
 interface DamageNumber {
@@ -52,13 +57,16 @@ const BULLET_COLORS: Record<GunId, string> = {
   pistol: PALETTE.lemon,
   minismg: '#7FCBFF',
   thumper: PALETTE.tangerine,
+  bouncer: PALETTE.bubblegum,
+  stinger: '#C6F25B',
   smg: PALETTE.sky,
+  burst: '#7FF0D2',
   shotgun: '#FFB36B',
   sniper: PALETTE.mint,
   rocket: PALETTE.bubblegum,
 };
 
-const UTIL_COLORS: Record<UtilId, string> = { frag: PALETTE.mint, flash: PALETTE.lemon, smoke: '#B48CFF' };
+const UTIL_COLORS: Record<UtilId, string> = { frag: PALETTE.mint, flash: PALETTE.lemon, smoke: '#B48CFF', goo: '#8BE05A', trap: PALETTE.tangerine };
 
 export function itemName(id: WeaponId): string {
   return isUtilId(id) ? UTILS[id].name : GUNS[id].name;
@@ -88,6 +96,9 @@ export class GameClient {
   private laserDotGeo = new THREE.SphereGeometry(0.12, 12, 8);
   private throwViews = new Map<number, { obj: THREE.Object3D; born: number }>();
   private smokeViews = new Map<number, THREE.Group>();
+  private gooViews = new Map<number, THREE.Group>();
+  private hillView: THREE.Group | null = null;
+  private streakKey = 0;
   /** True while this player stands inside a smoke cloud. */
   private meSmoked = false;
   private arcLine: THREE.Line;
@@ -182,18 +193,19 @@ export class GameClient {
     this.hud = new HudStore({
       connected: false, error: null, room: opts.room ?? '', host: false, myId: null, me: null, players: [],
       phase: 'playing', winner: null, endsIn: 0, feed: [], ping: 0, killedBy: null, nearPickup: null,
-      loadout: { hero: opts.hero, gun: opts.gun, secondary: opts.secondary, utility: opts.utility }, blind: 0, smoked: false, scoreboard: false, hurtTick: 0, toast: null, bots: 0,
+      loadout: { hero: opts.hero, gun: opts.gun, secondary: opts.secondary, utility: opts.utility, hat: opts.hat }, blind: 0, smoked: false,
+      mode: opts.gameMode ?? 'ffa', target: MODES[opts.gameMode ?? 'ffa'].target, teamScores: [0, 0], hill: null, streak: null, slowed: false, scoreboard: false, hurtTick: 0, toast: null, bots: 0,
       isPublic: opts.mode === 'public', map: null, chat: [], chatOpen: false, banner: null, scoped: false,
     });
 
     this.net = new Net({
-      onWelcome: (id, room, host, map, isPublic) => {
+      onWelcome: (id, room, host, map, mode, isPublic) => {
         this.myId = id;
         if (this.map?.id !== map) {
           this.map = MAPS[map];
           this.s.setMap(this.map);
         }
-        this.hud.set({ connected: true, myId: id, room, host, map, isPublic });
+        this.hud.set({ connected: true, myId: id, room, host, map, mode, isPublic });
         // Private rooms keep their code in the URL so it can be shared; the public lobby doesn't.
         const url = new URL(location.href);
         if (isPublic) url.searchParams.delete('room');
@@ -209,7 +221,10 @@ export class GameClient {
       onClose: () => this.hud.set({ connected: false, error: this.hud.get().error ?? 'Disconnected from the server.' }),
     });
     this.net.whenOpen(() => {
-      this.net.send({ type: 'join', mode: opts.mode, room: opts.room, map: opts.map, name: opts.name, hero: opts.hero, gun: opts.gun, secondary: opts.secondary, utility: opts.utility });
+      this.net.send({
+        type: 'join', mode: opts.mode, room: opts.room, map: opts.map, gameMode: opts.gameMode, name: opts.name,
+        hero: opts.hero, gun: opts.gun, secondary: opts.secondary, utility: opts.utility, hat: opts.hat,
+      });
     });
 
     this.raf = requestAnimationFrame(this.frame);
@@ -271,6 +286,11 @@ export class GameClient {
     };
   }
 
+  /** Same slow rule as the server, so prediction doesn't rubber-band in goo. */
+  private isSlowed(me: PlayerSnap, snap: Snapshot): boolean {
+    return me.slowIn > 0 || inEnemyGoo(snap.goos, this.pred.x, this.pred.y, me.id, me.team);
+  }
+
   private mapWalls(): Rect[] {
     return this.map?.walls ?? [];
   }
@@ -293,7 +313,7 @@ export class GameClient {
     this.pending = this.pending.filter((f) => f.seq > snap.ack);
     this.pred = { x: me.x, y: me.y };
     const { walls, bubbles } = this.predictionWorld();
-    for (const f of this.pending) stepMovement(this.pred, f.mx, f.my, f.dt, me.id, walls, bubbles, f.scope);
+    for (const f of this.pending) stepMovement(this.pred, f.mx, f.my, f.dt, me.id, walls, bubbles, f.scope, this.isSlowed(me, snap));
     const ex = before.x - this.pred.x;
     const ey = before.y - this.pred.y;
     if (Math.hypot(ex, ey) > 2) this.predOffset.set(0, 0);
@@ -330,6 +350,8 @@ export class GameClient {
       this.renderStatic(snap, dt);
       this.renderThrowables(renderTime, dt);
       this.renderSmokes(snap);
+      this.renderGoos(snap);
+      this.renderHill(snap);
     }
 
     this.particles.update(dt);
@@ -392,7 +414,7 @@ export class GameClient {
     this.updateThrowPreview(me, aimDist);
     if (me.alive && snap.phase === 'playing') {
       const { walls, bubbles } = this.predictionWorld();
-      stepMovement(this.pred, mx, my, frame.dt, me.id, walls, bubbles, frame.scope);
+      stepMovement(this.pred, mx, my, frame.dt, me.id, walls, bubbles, frame.scope, this.isSlowed(me, snap));
       this.pending.push(frame);
       if (this.pending.length > 120) this.pending.shift();
     }
@@ -426,6 +448,15 @@ export class GameClient {
         if (view) this.removeView(view);
         view = this.makeView(p.hero, p.name, p.id === this.myId);
         this.views.set(p.id, view);
+      }
+      view.skin.setHat(p.hat);
+      if (view.team !== p.team) {
+        // Team Brawl tints name tags and lasers by team so friend and foe read at a glance.
+        view.team = p.team;
+        const color = p.team >= 0 ? TEAM_COLORS[p.team] : HEROES[p.hero].color;
+        view.nameEl.style.setProperty('--hero', color);
+        view.label.element.classList.toggle('nametag--team', p.team >= 0);
+        for (const m of [view.laser, view.laserGlow]) (m.material as THREE.MeshBasicMaterial).color.set(color);
       }
       let x: number;
       let y: number;
@@ -543,7 +574,7 @@ export class GameClient {
     (laserDot.material as THREE.Material).userData.outlineParameters = { visible: false };
     laserDot.visible = false;
     this.s.world.add(laserDot);
-    return { skin, hero, label, nameEl, hpEl, lastX: NaN, lastY: NaN, lastHp: MAX_HP, laser, laserGlow, laserDot };
+    return { skin, hero, label, nameEl, hpEl, lastX: NaN, lastY: NaN, lastHp: MAX_HP, laser, laserGlow, laserDot, team: -1 };
   }
 
   private removeView(view: PlayerView): void {
@@ -694,6 +725,13 @@ export class GameClient {
       if (!v) {
         const obj = createUtilModel(g.util);
         obj.scale.setScalar(1.3);
+        if (g.util === 'trap') {
+          const light = new THREE.Mesh(new THREE.SphereGeometry(0.07, 10, 8), new THREE.MeshBasicMaterial({ color: '#FF3B5C' }));
+          (light.material as THREE.Material).userData.outlineParameters = { visible: false };
+          light.position.y = 0.36;
+          light.name = 'trapLight';
+          obj.add(light);
+        }
         this.s.world.add(obj);
         v = { obj, born: this.clock };
         this.throwViews.set(g.id, v);
@@ -709,6 +747,14 @@ export class GameClient {
         if (Math.random() < 0.5) {
           this.particles.burst({ x, y, z: z + 0.1, count: 1, color: [UTIL_COLORS[g.util], '#FFFFFF'], speed: 0.2, up: 0, life: 0.35, size: 0.08, gravity: 0 });
         }
+      } else if (g.util === 'trap') {
+        // Armed traps sit flat and blink red; teammates and the owner see a calmer pulse.
+        v.obj.rotation.set(0, 0, 0);
+        const light = v.obj.getObjectByName('trapLight');
+        if (g.armed && Math.floor(this.clock * 4) % 2 === 0 && Math.random() < 0.3) {
+          this.particles.burst({ x, y, z: 0.25, count: 1, color: ['#FF3B5C'], speed: 0.3, up: 0.6, life: 0.3, size: 0.09, gravity: 0 });
+        }
+        if (light) light.visible = !g.armed || Math.floor(this.clock * 4) % 2 === 0;
       } else if (g.util === 'frag' && Math.random() < 0.6) {
         this.particles.burst({ x, y, z: 0.3, count: 1, color: ['#FFE45C', '#FF8A1F'], speed: 1.5, up: 2, life: 0.25, size: 0.07 });
       }
@@ -763,6 +809,109 @@ export class GameClient {
     }
   }
 
+  /** Goo puddles: a glossy green disc with a few bubbles that pop up and settle. */
+  private renderGoos(snap: Snapshot): void {
+    const seen = new Set<number>();
+    for (const goo of snap.goos) {
+      seen.add(goo.id);
+      let g = this.gooViews.get(goo.id);
+      if (!g) {
+        g = new THREE.Group();
+        const mat = new THREE.MeshToonMaterial({ color: '#8BE05A', transparent: true, opacity: 0.85 });
+        const disc = new THREE.Mesh(new THREE.CircleGeometry(1, 40), mat);
+        disc.rotation.x = -Math.PI / 2;
+        disc.position.y = 0.04;
+        disc.receiveShadow = true;
+        g.add(disc);
+        for (let i = 0; i < 7; i++) {
+          const a = (i / 7) * Math.PI * 2 + i;
+          const r = 0.25 + ((i * 13) % 7) / 10;
+          const blob = new THREE.Mesh(new THREE.SphereGeometry(0.11, 10, 8), mat);
+          blob.position.set(Math.cos(a) * r, 0.05, Math.sin(a) * r);
+          blob.scale.set(1, 0.6, 1);
+          blob.userData.phase = i * 1.7;
+          g.add(blob);
+        }
+        g.position.set(goo.x, 0, goo.y);
+        g.userData.born = this.clock;
+        g.userData.mat = mat;
+        this.s.world.add(g);
+        this.gooViews.set(goo.id, g);
+      }
+      const age = this.clock - (g.userData.born as number);
+      const spread = Math.min(1, age / 0.3);
+      g.scale.setScalar(goo.r * (0.4 + 0.6 * spread));
+      (g.userData.mat as THREE.MeshToonMaterial).opacity = 0.85 * Math.min(1, goo.endsIn / 0.8);
+      for (const blob of g.children.slice(1)) {
+        blob.position.y = 0.04 + Math.max(0, Math.sin(this.clock * 3 + (blob.userData.phase as number))) * 0.06;
+      }
+    }
+    for (const [id, g] of this.gooViews) {
+      if (!seen.has(id)) {
+        g.removeFromParent();
+        this.gooViews.delete(id);
+      }
+    }
+  }
+
+  /** King of the Toybox ring: white when empty, the holder's colour when held, flashing when contested. */
+  private renderHill(snap: Snapshot): void {
+    const hill = snap.hill;
+    if (!hill) {
+      if (this.hillView) {
+        this.hillView.removeFromParent();
+        this.hillView = null;
+      }
+      return;
+    }
+    if (!this.hillView) {
+      const g = new THREE.Group();
+      const fill = new THREE.Mesh(
+        new THREE.CircleGeometry(1, 56),
+        new THREE.MeshBasicMaterial({ color: '#FFFFFF', transparent: true, opacity: 0.12, depthWrite: false }),
+      );
+      fill.rotation.x = -Math.PI / 2;
+      fill.position.y = 0.03;
+      fill.name = 'fill';
+      const rim = new THREE.Mesh(
+        new THREE.RingGeometry(0.94, 1, 72),
+        new THREE.MeshBasicMaterial({ color: '#FFFFFF', transparent: true, opacity: 0.9, depthWrite: false }),
+      );
+      rim.rotation.x = -Math.PI / 2;
+      rim.position.y = 0.04;
+      rim.name = 'rim';
+      // Dashes rotate around the rim so the ring reads as "active".
+      const dashes = new THREE.Group();
+      dashes.name = 'dashes';
+      for (let i = 0; i < 16; i++) {
+        const a = (i / 16) * Math.PI * 2;
+        const d = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, 0.16), new THREE.MeshBasicMaterial({ color: '#FFFFFF' }));
+        d.position.set(Math.cos(a) * 1.08, 0.05, Math.sin(a) * 1.08);
+        d.rotation.y = -a;
+        dashes.add(d);
+      }
+      g.add(fill, rim, dashes);
+      g.traverse((o) => {
+        if (o instanceof THREE.Mesh) (o.material as THREE.Material).userData.outlineParameters = { visible: false };
+      });
+      g.position.set(hill.x, 0, hill.y);
+      g.scale.setScalar(hill.r);
+      this.s.world.add(g);
+      this.hillView = g;
+    }
+    const holder = hill.holder ? snap.players.find((p) => p.id === hill.holder) : null;
+    const color = hill.contested
+      ? (Math.floor(this.clock * 6) % 2 ? '#FF3B5C' : '#FFFFFF')
+      : holder ? (holder.id === this.myId ? PALETTE.lemon : HEROES[holder.hero].color) : '#FFFFFF';
+    for (const name of ['fill', 'rim']) {
+      ((this.hillView.getObjectByName(name) as THREE.Mesh).material as THREE.MeshBasicMaterial).color.set(color);
+    }
+    ((this.hillView.getObjectByName('fill') as THREE.Mesh).material as THREE.MeshBasicMaterial).opacity = holder ? 0.24 : 0.12;
+    const dashes = this.hillView.getObjectByName('dashes')!;
+    dashes.rotation.y += holder ? 0.02 : 0.005;
+    dashes.children.forEach((d) => ((d as THREE.Mesh).material as THREE.MeshBasicMaterial).color.set(color));
+  }
+
   private renderStatic(snap: Snapshot, dt: number): void {
     // Pickups
     const seenP = new Set<number>();
@@ -771,12 +920,12 @@ export class GameClient {
       let g = this.pickupViews.get(k.id);
       if (!g) {
         g = new THREE.Group();
-        const model = k.kind === 'gun' ? createGunModel(k.item as GunId) : createUtilModel(k.item as UtilId);
-        model.scale.setScalar(1.15);
+        const model = k.kind === 'heal' ? createHealModel() : k.kind === 'gun' ? createGunModel(k.item as GunId) : createUtilModel(k.item as UtilId);
+        model.scale.setScalar(k.kind === 'heal' ? 1.4 : 1.15);
         model.name = 'model';
         const glow = new THREE.Mesh(
           new THREE.CircleGeometry(0.75, 28),
-          new THREE.MeshBasicMaterial({ color: itemColor(k.item), transparent: true, opacity: 0.45, depthWrite: false }),
+          new THREE.MeshBasicMaterial({ color: k.item === 'heal' ? '#FF5F6D' : itemColor(k.item), transparent: true, opacity: 0.45, depthWrite: false }),
         );
         (glow.material as THREE.Material).userData.outlineParameters = { visible: false };
         glow.rotation.x = -Math.PI / 2;
@@ -1084,9 +1233,28 @@ export class GameClient {
         this.sfx.smokeHiss(this.nearness(ev.x, ev.y));
         this.rings.spawn(ev.x, ev.y, 3.6, '#B48CFF', 0.5);
         break;
+      case 'heal':
+        this.particles.burst({ x: ev.x, y: ev.y, z: 0.8, count: 16, color: ['#FF5F6D', '#FFFFFF'], speed: 2.5, up: 4, life: 0.6, size: 0.16, gravity: 3 });
+        if (ev.id === me) this.sfx.heal();
+        break;
+      case 'streak':
+        this.hud.set({ streak: { key: ++this.streakKey, name: this.nameOf(ev.id), n: ev.n, mine: ev.id === me } });
+        if (ev.id === me) this.sfx.streak(ev.n);
+        break;
+      case 'goo':
+        this.particles.burst({ x: ev.x, y: ev.y, z: 0.2, count: 26, color: ['#8BE05A', '#C6F25B', '#4E9A2E'], speed: 5, up: 3, life: 0.5, size: 0.22 });
+        this.sfx.splat(this.nearness(ev.x, ev.y));
+        break;
+      case 'ladder':
+        if (ev.id === me) {
+          this.sfx.pickup();
+          this.toast(`Next gun: ${GUNS[ev.gun].name}`);
+        }
+        break;
       case 'win': {
         this.sfx.win();
-        if (ev.id === me) addWin();
+        const mine = this.latest?.players.find((p) => p.id === me);
+        if (ev.id === me || (mine && ev.id === `team:${mine.team}`)) addWin();
         const p = this.viewPos(ev.id);
         if (p) {
           this.particles.burst({
@@ -1103,7 +1271,9 @@ export class GameClient {
     const before = loadProfile().kills;
     const after = addKill().kills;
     const unlocked = GUN_IDS.filter((g) => GUNS[g].unlockKills > before && GUNS[g].unlockKills <= after);
+    const hats = HAT_IDS.filter((h) => HATS[h].unlockKills > before && HATS[h].unlockKills <= after);
     if (unlocked.length) this.toast(`Unlocked the ${GUNS[unlocked[0]].name}. Pick it next time you respawn.`);
+    else if (hats.length) this.toast(`Unlocked the ${HATS[hats[0]].name}. Put it on from the lobby or when you respawn.`);
   }
 
   private toast(text: string): void {
@@ -1153,16 +1323,22 @@ export class GameClient {
     if (me?.alive) {
       let best = PICKUP_RADIUS;
       for (const k of snap.pickups) {
+        if (k.kind === 'heal' || snap.mode === 'ladder') continue;
         const d = Math.hypot(k.x - this.pred.x, k.y - this.pred.y);
         if (d < best) {
           best = d;
-          nearPickup = k.item;
+          nearPickup = k.item as WeaponId;
         }
       }
     }
     const patch: Partial<HudState> = {
       me,
-      players: [...snap.players].sort((a, b) => b.kills - a.kills || a.deaths - b.deaths),
+      players: [...snap.players].sort((a, b) => b.score - a.score || b.kills - a.kills || a.deaths - b.deaths),
+      mode: snap.mode,
+      target: snap.target,
+      teamScores: snap.teamScores,
+      hill: snap.hill,
+      slowed: !!me?.alive && this.isSlowed(me, snap),
       phase: snap.phase,
       winner: snap.winner,
       endsIn: snap.endsIn,

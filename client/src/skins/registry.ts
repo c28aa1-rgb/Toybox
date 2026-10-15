@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import { HEROES, type GunId, type HeroId, type UtilId } from '@gg/shared';
+import { HEROES, type GunId, type HatId, type HeroId, type UtilId } from '@gg/shared';
+import { createHatModel } from './hats';
 import { mesh, toon } from './toon';
 
 /**
@@ -10,6 +11,7 @@ import { mesh, toon } from './toon';
 export interface HeroSkin {
   root: THREE.Group;
   setGun(gun: GunId): void;
+  setHat(hat: HatId): void;
   /**
    * moving: 0..1 movement amount this frame. moveX/moveZ: unit movement direction in the
    * model's own frame (+Z forward). Returns true on a footfall, for dust puffs and sounds.
@@ -145,6 +147,21 @@ function placeholderGun(gun: GunId): THREE.Group {
       g.add(mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.12, 14), metal, [0, 0.02, -0.02], [0, 0, Math.PI / 2]));
       g.add(mesh(new THREE.BoxGeometry(0.1, 0.2, 0.1), metal, [0, -0.14, -0.06]));
       break;
+    case 'burst':
+      g.add(mesh(new THREE.BoxGeometry(0.14, 0.17, 0.72), toon('#3DDBB4'), [0, 0, 0.2]));
+      g.add(mesh(new THREE.BoxGeometry(0.08, 0.24, 0.1), metal, [0, -0.17, 0.06]));
+      for (let i = 0; i < 3; i++) g.add(mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.18), toon('#FFE45C'), [(i - 1) * 0.04, 0.02, 0.62], [Math.PI / 2, 0, 0]));
+      break;
+    case 'bouncer':
+      g.add(mesh(new THREE.BoxGeometry(0.12, 0.14, 0.36), toon('#FF5FA2'), [0, 0, 0.1]));
+      g.add(mesh(new THREE.SphereGeometry(0.09, 14, 10), toon('#FFE45C'), [0, 0.02, 0.32]));
+      g.add(mesh(new THREE.BoxGeometry(0.1, 0.2, 0.1), metal, [0, -0.13, -0.02]));
+      break;
+    case 'stinger':
+      g.add(mesh(new THREE.BoxGeometry(0.11, 0.13, 0.34), toon('#FFE45C'), [0, 0, 0.08]));
+      g.add(mesh(new THREE.ConeGeometry(0.05, 0.22, 10), metal, [0, 0, 0.36], [Math.PI / 2, 0, 0]));
+      g.add(mesh(new THREE.BoxGeometry(0.09, 0.2, 0.09), metal, [0, -0.13, -0.02]));
+      break;
     case 'rocket':
       g.add(mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.95, 16), toon('#FF5FA2'), [0, 0.08, 0.2], [Math.PI / 2, 0, 0]));
       g.add(mesh(new THREE.ConeGeometry(0.14, 0.2, 16), toon('#FFE45C'), [0, 0.08, 0.76], [Math.PI / 2, 0, 0]));
@@ -156,7 +173,12 @@ function placeholderGun(gun: GunId): THREE.Group {
 
 function placeholderUtil(util: UtilId): THREE.Group {
   const g = new THREE.Group();
-  const colors: Record<UtilId, string> = { frag: '#3DDBB4', flash: '#FFE45C', smoke: '#B48CFF' };
+  const colors: Record<UtilId, string> = { frag: '#3DDBB4', flash: '#FFE45C', smoke: '#B48CFF', goo: '#8BE05A', trap: '#FF8A1F' };
+  if (util === 'trap') {
+    g.add(mesh(new THREE.CylinderGeometry(0.2, 0.22, 0.1, 16), toon(colors.trap), [0, 0.05, 0]));
+    g.add(mesh(new THREE.SphereGeometry(0.06, 10, 8), toon('#FF3B5C'), [0, 0.12, 0]));
+    return g;
+  }
   g.add(mesh(new THREE.SphereGeometry(0.16, 14, 10), toon(colors[util]), [0, 0.16, 0]));
   g.add(mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.08, 10), toon('#5B2A86'), [0, 0.34, 0]));
   return g;
@@ -207,6 +229,21 @@ export function createHeroSkin(hero: HeroId): HeroSkin {
 
   let gunModel: THREE.Group | null = null;
   let currentGun: GunId | null = null;
+  let hatModel: THREE.Group | null = null;
+  let currentHat: HatId = 'none';
+  // Hats sit on the crown of the head. Antennae and bells are left out of the measurement
+  // so the hat doesn't float above them.
+  const hatY = (() => {
+    const box = new THREE.Box3();
+    const skip = parts.antenna;
+    body.updateMatrixWorld(true);
+    body.traverse((o) => {
+      if (!(o instanceof THREE.Mesh)) return;
+      for (let a: THREE.Object3D | null = o; a; a = a.parent) if (a === skip) return;
+      box.expandByObject(o, false);
+    });
+    return box.isEmpty() ? 1.4 : box.max.y - 0.05;
+  })();
   let phase = 0;
   let flashT = 0;
   let squash = 0;
@@ -224,8 +261,20 @@ export function createHeroSkin(hero: HeroId): HeroSkin {
       gunSocket.add(gunModel);
       squash = 1;
     },
+    setHat(hat) {
+      if (hat === currentHat) return;
+      currentHat = hat;
+      if (hatModel) bob.remove(hatModel);
+      hatModel = createHatModel(hat);
+      if (hatModel) {
+        hatModel.position.y = hatY;
+        bob.add(hatModel);
+      }
+    },
     animate(dt, moving, moveX = 0, moveZ = 1) {
       const prevSin = Math.sin(phase);
+      const spin = hatModel?.getObjectByName('spin');
+      if (spin) spin.rotation.y += dt * (6 + moving * 14);
       phase += dt * (5 + moving * 12);
       idle += dt;
       const sin = Math.sin(phase);

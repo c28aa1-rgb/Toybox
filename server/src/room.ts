@@ -1,8 +1,8 @@
 import type { WebSocket } from 'ws';
 import {
   ABILITY, CHAT_MAX, MAX_PLAYERS, PUBLIC_MIN_PLAYERS, TICK_DT, TICK_RATE, addPlayer, applyInput, createGame, r2,
-  removePlayer, setLoadout, tick, type GameState, type GunId, type HeroId, type InputFrame, type MapId, type UtilId, type Loadout,
-  type ServerMsg, type Snapshot,
+  HAT_IDS, MODES, removePlayer, setLoadout, tick, type GameState, type GunId, type HeroId, type InputFrame, type MapId, type ModeId, type UtilId, type Loadout,
+  type ServerMsg, type Snapshot, type WeaponId,
 } from '@gg/shared';
 import { botHero, botInput, botName, forgetBot } from './bots';
 
@@ -22,6 +22,7 @@ export class Room {
   readonly state: GameState;
   readonly mapId: MapId;
   readonly isPublic: boolean;
+  readonly mode: ModeId;
   private clients = new Map<string, Client>();
   private bots: string[] = [];
   private botCounter = 0;
@@ -30,11 +31,12 @@ export class Room {
   private nextClientId = 1;
   onEmpty: (() => void) | null = null;
 
-  constructor(code: string, mapId: MapId, isPublic = false) {
+  constructor(code: string, mapId: MapId, isPublic = false, mode: ModeId = 'ffa') {
     this.code = code;
     this.mapId = mapId;
     this.isPublic = isPublic;
-    this.state = createGame(Date.now(), mapId);
+    this.mode = mode;
+    this.state = createGame(Date.now(), mapId, mode);
   }
 
   private get maxPlayers(): number {
@@ -64,7 +66,7 @@ export class Room {
   }
 
   private welcome(c: Client): void {
-    this.send(c.ws, { type: 'welcome', id: c.id, room: this.code, host: this.hostId === c.id, map: this.mapId, isPublic: this.isPublic });
+    this.send(c.ws, { type: 'welcome', id: c.id, room: this.code, host: this.hostId === c.id, map: this.mapId, mode: this.mode, isPublic: this.isPublic });
   }
 
   leave(id: string): void {
@@ -114,12 +116,12 @@ export class Room {
     while (this.bots.length < target) {
       const i = this.botCounter++;
       const id = `b${i}`;
-      const guns: GunId[] = ['smg', 'shotgun', 'smg', 'sniper'];
-      const sides: GunId[] = ['pistol', 'minismg', 'thumper'];
-      const utils: UtilId[] = ['frag', 'flash', 'smoke'];
+      const guns: GunId[] = ['smg', 'shotgun', 'burst', 'sniper', 'smg'];
+      const sides: GunId[] = ['pistol', 'minismg', 'thumper', 'bouncer', 'stinger'];
+      const utils: UtilId[] = ['frag', 'flash', 'smoke', 'goo', 'trap'];
       addPlayer(this.state, {
         id, name: botName(i), hero: botHero(i), gun: guns[i % guns.length],
-        secondary: sides[i % sides.length], utility: utils[i % utils.length], bot: true,
+        secondary: sides[(i * 2) % sides.length], utility: utils[(i * 3) % utils.length], hat: HAT_IDS[i % HAT_IDS.length], bot: true,
       });
       this.bots.push(id);
     }
@@ -156,10 +158,22 @@ export class Room {
       phase: s.phase,
       winner: s.winner,
       endsIn: s.phase === 'ended' ? r2(s.endsAt - t) : 0,
+      mode: s.mode,
+      target: MODES[s.mode].target,
+      teamScores: s.teamScores,
+      hill: s.hill ? { x: r2(s.hill.x), y: r2(s.hill.y), r: r2(s.hill.r), holder: s.hill.holder, contested: s.hill.contested } : null,
       players: [...s.players.values()].map((p) => ({
         id: p.id, name: p.name, hero: p.hero, gun: p.gun,
         primary: p.primary, secondary: p.secondary, slot: p.slot, utility: p.utility, utilCharges: p.utilCharges,
         blindIn: r2(Math.max(0, p.blindUntil - t)),
+        slowIn: r2(Math.max(0, p.slowUntil - t)),
+        hat: p.loadout.hat,
+        team: p.team,
+        score: p.score,
+        streak: p.streak,
+        bestStreak: p.bestStreak,
+        damage: Math.round(p.damageDealt),
+        favWeapon: favWeapon(p.weaponKills),
         x: r2(p.x), y: r2(p.y), aim: r2(p.aim), hp: Math.max(0, Math.round(p.hp)),
         alive: p.alive, kills: p.kills, deaths: p.deaths, bot: p.bot,
         shield: p.alive && t < p.shieldUntil,
@@ -169,7 +183,8 @@ export class Room {
       })),
       bullets: s.bullets.map((b) => ({ id: b.id, gun: b.gun, x: r2(b.x), y: r2(b.y), fake: b.fake })),
       pickups: s.pickups.map((k) => ({ id: k.id, kind: k.kind, item: k.item, x: r2(k.x), y: r2(k.y), expiresIn: r2(k.expiresAt - t) })),
-      throwables: s.throwables.map((g) => ({ id: g.id, util: g.util, x: r2(g.x), y: r2(g.y), z: r2(g.z) })),
+      throwables: s.throwables.map((g) => ({ id: g.id, util: g.util, x: r2(g.x), y: r2(g.y), z: r2(g.z), armed: t >= g.armedAt, owner: g.owner })),
+      goos: s.goos.map((g) => ({ id: g.id, x: r2(g.x), y: r2(g.y), r: g.r, owner: g.owner, team: g.team, endsIn: r2(g.expiresAt - t) })),
       smokes: s.smokes.map((sm) => ({ id: sm.id, x: r2(sm.x), y: r2(sm.y), r: sm.r, endsIn: r2(sm.expiresAt - t) })),
       walls: s.walls.map((w) => ({
         id: w.id, x: r2(w.x), y: r2(w.y), w: w.w, h: w.h, owner: w.owner,
@@ -224,4 +239,16 @@ export class Room {
     for (const b of [...this.bots]) this.removeBot(b);
     this.onEmpty?.();
   }
+}
+
+function favWeapon(kills: Partial<Record<WeaponId, number>>): WeaponId | null {
+  let best: WeaponId | null = null;
+  let n = 0;
+  for (const [w, k] of Object.entries(kills) as [WeaponId, number][]) {
+    if (k > n) {
+      n = k;
+      best = w;
+    }
+  }
+  return best;
 }

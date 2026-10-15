@@ -5,3 +5,5 @@ export * from './map';
 export * from './protocol';
 export * from './sim';
 export * from './utilities';
+export * from './modes';
+export * from './cosmetics';

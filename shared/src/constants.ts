@@ -22,6 +22,11 @@ export const PUBLIC_ROOM = 'PUBLIC';
 /** The public lobby keeps at least this many players by topping up with bots. */
 export const PUBLIC_MIN_PLAYERS = 6;
 export const DROP_LIFETIME = 8;
+/** Every kill drops a heal where the victim fell. */
+export const HEAL_AMOUNT = 40;
+export const HEAL_LIFETIME = 12;
+/** Streak lengths that get a call-out. */
+export const STREAK_CALLS = [3, 5, 8, 12];
 
 /** Seconds other entities are rendered behind the newest snapshot. */
 export const INTERP_DELAY = 0.1;

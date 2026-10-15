@@ -3,15 +3,17 @@ import { createServer } from 'node:http';
 import { extname, join, normalize, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { WebSocketServer, type WebSocket } from 'ws';
-import { DEFAULT_MAP, MAPS, PUBLIC_MAP, PUBLIC_ROOM, isHeroId, isMapId, isPrimary, isSecondary, isUtilId, type ClientMsg, type Loadout } from '@gg/shared';
+import { DEFAULT_MAP, MAPS, PUBLIC_MAP, PUBLIC_ROOM, isHatId, isHeroId, isMapId, isModeId, isPrimary, isSecondary, isUtilId, type ClientMsg, type Loadout } from '@gg/shared';
 
-function loadoutFrom(msg: { hero: unknown; gun: unknown; secondary: unknown; utility: unknown }): Loadout | null {
+function loadoutFrom(msg: { hero: unknown; gun: unknown; secondary: unknown; utility: unknown; hat?: unknown }): Loadout | null {
   if (!isHeroId(msg.hero) || !isPrimary(msg.gun)) return null;
   return {
     hero: msg.hero,
     gun: msg.gun,
     secondary: isSecondary(msg.secondary) ? msg.secondary : 'pistol',
     utility: isUtilId(msg.utility) ? msg.utility : 'frag',
+    // Hats unlock by lifetime kills on the client; like guns, the server only checks the id.
+    hat: isHatId(msg.hat) ? msg.hat : 'none',
   };
 }
 import { Room } from './room';
@@ -87,7 +89,8 @@ wss.on('connection', (ws: WebSocket) => {
       } else if (msg.mode === 'create') {
         const code = randomCode();
         const map = isMapId(msg.map) && !MAPS[msg.map].publicOnly ? msg.map : DEFAULT_MAP;
-        const created = new Room(code, map);
+        // The public lobby stays free-for-all; private rooms pick their mode.
+        const created = new Room(code, map, false, isModeId(msg.gameMode) ? msg.gameMode : 'ffa');
         created.onEmpty = () => rooms.delete(code);
         rooms.set(code, created);
         r = created;

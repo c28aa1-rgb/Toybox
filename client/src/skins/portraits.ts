@@ -1,12 +1,12 @@
 import * as THREE from 'three';
-import { GUN_IDS, HERO_IDS, UTIL_IDS, type GunId, type HeroId, type UtilId } from '@gg/shared';
+import { GUN_IDS, HAT_IDS, HERO_IDS, UTIL_IDS, type GunId, type HatId, type HeroId, type UtilId } from '@gg/shared';
 import { createGunModel, createHeroSkin, createUtilModel } from './registry';
 
 /**
  * Renders each hero and gun once into a PNG data URL for the lobby cards.
  * Uses the same skin registry as the game, so new models show up here automatically.
  */
-export function renderPortraits(): { heroes: Record<HeroId, string>; guns: Record<GunId, string>; utils: Record<UtilId, string> } {
+export function renderPortraits(): { heroes: Record<HeroId, string>; guns: Record<GunId, string>; utils: Record<UtilId, string>; hats: Record<HatId, string> } {
   const size = 256;
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
   renderer.setSize(size, size);
@@ -51,6 +51,21 @@ export function renderPortraits(): { heroes: Record<HeroId, string>; guns: Recor
   };
   const utils = {} as Record<UtilId, string>;
   for (const id of UTIL_IDS) utils[id] = shoot(createUtilModel(id), 0.5);
+  // Hats are shown on the default hero so you can see how they sit.
+  const hats = {} as Record<HatId, string>;
+  for (const id of HAT_IDS) {
+    const skin = createHeroSkin('blink');
+    skin.setGun('pistol');
+    skin.setHat(id);
+    skin.root.rotation.y = -0.45;
+    scene.add(skin.root);
+    camera.position.set(0, 1.5, 3.6);
+    camera.lookAt(0, 1.05, 0);
+    renderer.render(scene, camera);
+    hats[id] = renderer.domElement.toDataURL('image/png');
+    scene.remove(skin.root);
+    skin.dispose();
+  }
 
   for (const id of GUN_IDS) {
     const g = createGunModel(id);
@@ -71,5 +86,5 @@ export function renderPortraits(): { heroes: Record<HeroId, string>; guns: Recor
 
   renderer.dispose();
   renderer.forceContextLoss();
-  return { heroes, guns, utils };
+  return { heroes, guns, utils, hats };
 }

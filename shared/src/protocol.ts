@@ -1,6 +1,8 @@
 import type { GunId } from './guns';
 import type { HeroId } from './heroes';
+import type { HatId } from './cosmetics';
 import type { MapId } from './map';
+import type { ModeId } from './modes';
 import type { UtilId } from './utilities';
 
 /** Anything that can score a kill: a gun or a thrown utility. */
@@ -34,16 +36,17 @@ export interface Loadout {
   gun: GunId;
   secondary: GunId;
   utility: UtilId;
+  hat: HatId;
 }
 
 // ---- client -> server ----
 
 export type ClientMsg =
   /** public: the always-on lobby. create: a new private room on `map`. join: a private room by code. */
-  | { type: 'join'; mode: 'public' | 'create' | 'join'; room?: string; map?: MapId; name: string; hero: HeroId; gun: GunId; secondary: GunId; utility: UtilId }
+  | { type: 'join'; mode: 'public' | 'create' | 'join'; room?: string; map?: MapId; gameMode?: ModeId; name: string; hero: HeroId; gun: GunId; secondary: GunId; utility: UtilId; hat: HatId }
   | { type: 'chat'; text: string }
   | { type: 'input'; frames: InputFrame[] }
-  | { type: 'loadout'; hero: HeroId; gun: GunId; secondary: GunId; utility: UtilId }
+  | { type: 'loadout'; hero: HeroId; gun: GunId; secondary: GunId; utility: UtilId; hat: HatId }
   | { type: 'bots'; count: number }
   | { type: 'ping'; t: number };
 
@@ -62,6 +65,18 @@ export interface PlayerSnap {
   utilCharges: number;
   /** Seconds of flash blindness left. */
   blindIn: number;
+  /** Seconds left on a Stinger slow. */
+  slowIn: number;
+  hat: HatId;
+  /** 0 red, 1 blue, -1 when there are no teams. */
+  team: number;
+  /** What counts toward winning in this mode: kills, hill points or ladder step. */
+  score: number;
+  streak: number;
+  bestStreak: number;
+  damage: number;
+  /** Weapon with the most kills this round. */
+  favWeapon: WeaponId | null;
   x: number;
   y: number;
   aim: number;
@@ -87,8 +102,8 @@ export interface BulletSnap {
 
 export interface PickupSnap {
   id: number;
-  kind: 'gun' | 'util';
-  item: WeaponId;
+  kind: 'gun' | 'util' | 'heal';
+  item: WeaponId | 'heal';
   x: number;
   y: number;
   expiresIn: number;
@@ -101,6 +116,28 @@ export interface ThrowableSnap {
   y: number;
   /** Height above the floor. */
   z: number;
+  /** Snap Trap is live. */
+  armed: boolean;
+  owner: string;
+}
+
+export interface GooSnap {
+  id: number;
+  x: number;
+  y: number;
+  r: number;
+  owner: string;
+  team: number;
+  endsIn: number;
+}
+
+export interface HillSnap {
+  x: number;
+  y: number;
+  r: number;
+  /** Player scoring right now, or null when empty or contested. */
+  holder: string | null;
+  contested: boolean;
 }
 
 export interface SmokeSnap {
@@ -156,6 +193,10 @@ export type GameEvent =
   | { t: 'flash'; x: number; y: number }
   | { t: 'smoke'; x: number; y: number }
   | { t: 'weaponSwap'; id: string }
+  | { t: 'heal'; id: string; x: number; y: number }
+  | { t: 'streak'; id: string; n: number }
+  | { t: 'goo'; x: number; y: number }
+  | { t: 'ladder'; id: string; gun: GunId }
   | { t: 'win'; id: string };
 
 export interface Snapshot {
@@ -165,7 +206,12 @@ export interface Snapshot {
   /** Last input seq processed for the receiving player. */
   ack: number;
   phase: 'playing' | 'ended';
+  /** A player id, or 'team:0' / 'team:1' in Team Brawl. */
   winner: string | null;
+  mode: ModeId;
+  target: number;
+  teamScores: [number, number];
+  hill: HillSnap | null;
   endsIn: number;
   players: PlayerSnap[];
   bullets: BulletSnap[];
@@ -175,11 +221,12 @@ export interface Snapshot {
   decoys: DecoySnap[];
   throwables: ThrowableSnap[];
   smokes: SmokeSnap[];
+  goos: GooSnap[];
   events: GameEvent[];
 }
 
 export type ServerMsg =
-  | { type: 'welcome'; id: string; room: string; host: boolean; map: MapId; isPublic: boolean }
+  | { type: 'welcome'; id: string; room: string; host: boolean; map: MapId; mode: ModeId; isPublic: boolean }
   | { type: 'chat'; id: string | null; name: string; text: string }
   | { type: 'error'; message: string }
   | { type: 'pong'; t: number }

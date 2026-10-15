@@ -8,10 +8,13 @@ import type { InputFrame } from './protocol';
 import {
   addPlayer, applyInput, circleOverlapsRect, createGame, hasLineOfSight, moveCircle, tick, type GameState, type PlayerState,
 } from './sim';
-import { KILLS_TO_WIN, PLAYER_RADIUS, SPAWN_SHIELD, TICK_DT } from './constants';
+import { HEAL_AMOUNT, KILLS_TO_WIN, MAX_HP, PLAYER_RADIUS, SPAWN_SHIELD, TICK_DT } from './constants';
+import { GUN_LADDER, MODES } from './modes';
+import { THROW } from './utilities';
+import type { ModeId } from './modes';
 
-function setup(): { s: GameState; a: PlayerState; b: PlayerState } {
-  const s = createGame(42);
+function setup(mode: ModeId = 'ffa'): { s: GameState; a: PlayerState; b: PlayerState } {
+  const s = createGame(42, 'playmat', mode);
   const a = addPlayer(s, { id: 'a', name: 'A', hero: 'blink', gun: 'smg', secondary: 'pistol', utility: 'frag' });
   const b = addPlayer(s, { id: 'b', name: 'B', hero: 'swap', gun: 'smg', secondary: 'pistol', utility: 'flash' });
   // Duel with sidearms so the damage numbers stay predictable.
@@ -78,8 +81,10 @@ describe('shooting', () => {
     a.fire = true;
     run(s, 0.5);
     expect(b.alive).toBe(false);
-    expect(s.pickups).toHaveLength(1);
-    expect([b.primary, b.secondary, b.utility]).toContain(s.pickups[0].item);
+    const items = s.pickups.filter((k) => k.kind !== 'heal');
+    expect(items).toHaveLength(1);
+    expect([b.primary, b.secondary, b.utility]).toContain(items[0].item);
+    expect(s.pickups.filter((k) => k.kind === 'heal')).toHaveLength(1);
   });
 
   it('ends the match at the kill limit', () => {
@@ -257,5 +262,159 @@ describe('abilities', () => {
     run(s, 2);
     expect(s.bullets.some((x) => x.fake) || b.hp === 100).toBe(true);
     expect(b.hp).toBe(100);
+  });
+});
+
+describe('heals and streaks', () => {
+  it('walking over a heal restores health only when hurt', () => {
+    const { s, a } = setup();
+    s.pickups.push({ id: 99, kind: 'heal', item: 'heal', x: a.x, y: a.y, expiresAt: 100 });
+    tick(s, TICK_DT);
+    expect(s.pickups).toHaveLength(1);
+    a.hp = 30;
+    tick(s, TICK_DT);
+    expect(a.hp).toBe(30 + HEAL_AMOUNT);
+    expect(s.pickups).toHaveLength(0);
+    a.hp = MAX_HP - 5;
+    s.pickups.push({ id: 100, kind: 'heal', item: 'heal', x: a.x, y: a.y, expiresAt: 100 });
+    tick(s, TICK_DT);
+    expect(a.hp).toBe(MAX_HP);
+  });
+
+  it('calls out a three-kill streak', () => {
+    const { s, a, b } = setup();
+    a.streak = 2;
+    b.hp = 1;
+    a.fire = true;
+    let called = false;
+    for (let t = 0; t < 0.5; t += TICK_DT) {
+      tick(s, TICK_DT);
+      if (s.events.some((e) => e.t === 'streak' && e.id === 'a' && e.n === 3)) called = true;
+    }
+    expect(called).toBe(true);
+    expect(a.bestStreak).toBe(3);
+  });
+});
+
+describe('modes', () => {
+  it('team brawl splits players and blocks friendly fire', () => {
+    const { s, a, b } = setup('teams');
+    expect(a.team).not.toBe(b.team);
+    b.team = a.team;
+    a.fire = true;
+    run(s, 0.5);
+    expect(b.hp).toBe(MAX_HP);
+  });
+
+  it('team kills add up to a team win', () => {
+    const { s, a, b } = setup('teams');
+    s.teamScores[a.team] = MODES.teams.target - 1;
+    b.hp = 1;
+    a.fire = true;
+    run(s, 0.5);
+    expect(s.phase).toBe('ended');
+    expect(s.winner).toBe(`team:${a.team}`);
+  });
+
+  it('gun ladder moves the killer to the next gun and wins on the last', () => {
+    const { s, a, b } = setup('ladder');
+    expect(a.primary).toBe(GUN_LADDER[0]);
+    a.gun = 'pistol';
+    b.hp = 1;
+    a.fire = true;
+    run(s, 0.4);
+    expect(a.score).toBe(1);
+    expect(a.gun).toBe(GUN_LADDER[1]);
+    expect(s.pickups.every((k) => k.kind === 'heal')).toBe(true);
+  });
+
+  it('gun ladder ends the round on a kill with the last gun', () => {
+    const { s, a, b } = setup('ladder');
+    a.score = GUN_LADDER.length - 1;
+    b.hp = 1;
+    a.fire = true;
+    run(s, 0.5);
+    expect(s.winner).toBe('a');
+  });
+
+  it('king of the toybox scores only while alone in the ring', () => {
+    const { s, a, b } = setup('hill');
+    const hill = s.hill!;
+    a.x = hill.x - 2.5; a.y = hill.y - 2.5;
+    b.x = 3; b.y = 3;
+    run(s, 2.05);
+    expect(a.score).toBe(2);
+    b.x = hill.x + 2.5; b.y = hill.y + 2.5;
+    run(s, 2);
+    expect(a.score).toBe(2);
+    expect(hill.contested).toBe(true);
+  });
+});
+
+describe('new weapons', () => {
+  it('tri-pop fires a three-round burst per trigger pull', () => {
+    const { s, a } = setup();
+    a.gun = 'burst';
+    a.fire = true;
+    tick(s, TICK_DT);
+    a.fire = false;
+    let shots = s.events.filter((e) => e.t === 'shot').length;
+    for (let i = 0; i < 10; i++) {
+      tick(s, TICK_DT);
+      shots += s.events.filter((e) => e.t === 'shot').length;
+    }
+    expect(shots).toBe(3);
+  });
+
+  it('bouncer rounds ricochet off walls', () => {
+    const { s, a, b } = setup();
+    b.x = 40; b.y = 30;
+    a.gun = 'bouncer';
+    a.x = 3; a.y = 14.2; a.aim = Math.PI; // straight into the left border
+    a.fire = true;
+    tick(s, TICK_DT);
+    a.fire = false;
+    run(s, 0.3);
+    const bullet = s.bullets.find((k) => k.owner === 'a');
+    expect(bullet).toBeDefined();
+    expect(bullet!.dx).toBeGreaterThan(0);
+  });
+
+  it('stinger hits slow the target', () => {
+    const { s, a, b } = setup();
+    a.gun = 'stinger';
+    a.fire = true;
+    run(s, 0.3);
+    expect(b.slowUntil).toBeGreaterThan(s.time);
+  });
+
+  it('goo slows enemies but not the thrower', () => {
+    const { s, a, b } = setup();
+    s.goos.push({ id: 1, owner: 'a', team: -1, x: 22, y: 13.5, r: 4, expiresAt: 10 });
+    const startA = a.x;
+    const startB = b.x;
+    for (let i = 1; i <= 15; i++) {
+      applyInput(s, a, frame(i, { mx: 1 }));
+      applyInput(s, b, frame(i, { mx: 1 }));
+    }
+    expect(b.x - startB).toBeLessThan((a.x - startA) * 0.7);
+  });
+
+  it('snap trap waits on the floor and goes off when an enemy walks close', () => {
+    const { s, a, b } = setup();
+    a.utility = 'trap';
+    a.utilCharges = 2;
+    a.aimDist = 4;
+    b.x = 40; b.y = 30;
+    a.wantThrow = true;
+    run(s, 3);
+    const trap = s.throwables.find((g) => g.util === 'trap');
+    expect(trap?.landed).toBe(true);
+    expect(s.throwables).toHaveLength(1);
+    b.x = trap!.x + 1; b.y = trap!.y;
+    run(s, 0.2);
+    expect(s.throwables).toHaveLength(0);
+    expect(b.hp).toBeLessThan(MAX_HP);
+    expect(THROW.trapTrigger).toBeGreaterThan(1);
   });
 });
