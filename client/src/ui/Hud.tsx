@@ -486,8 +486,8 @@ function DeathPanel({
       <p className="death__timer">Back in {Math.ceil(respawnIn)}</p>
       <p className="death__hint">Change your loadout for the next life:</p>
       <HeroShelf compact value={loadout.hero} portraits={portraits} onChange={(hero) => client.setLoadout({ ...loadout, hero })} />
-      <GunRack compact value={loadout.gun} kills={kills} portraits={portraits} onChange={(gun) => client.setLoadout({ ...loadout, gun })} />
-      <GunRack compact ids={SECONDARY_IDS} label="Secondary gun" value={loadout.secondary} kills={kills} portraits={portraits} onChange={(secondary) => client.setLoadout({ ...loadout, secondary })} />
+      <GunRack compact value={loadout.gun} portraits={portraits} onChange={(gun) => client.setLoadout({ ...loadout, gun })} />
+      <GunRack compact ids={SECONDARY_IDS} label="Secondary gun" value={loadout.secondary} portraits={portraits} onChange={(secondary) => client.setLoadout({ ...loadout, secondary })} />
       <UtilRack compact value={loadout.utility} portraits={portraits} onChange={(utility) => client.setLoadout({ ...loadout, utility })} />
       <HatRack compact value={loadout.hat} kills={kills} portraits={portraits} onChange={(hat) => client.setLoadout({ ...loadout, hat })} />
     </motion.div>

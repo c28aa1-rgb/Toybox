@@ -25,51 +25,49 @@ export interface GunDef {
   bounces?: number;
   /** Seconds a hit slows the target. */
   slow?: number;
-  /** Lifetime kills needed to pick this gun in the lobby. 0 = always available. */
-  unlockKills: number;
 }
 
 export const GUNS: Record<GunId, GunDef> = {
   pistol: {
     id: 'pistol', slot: 'secondary', name: 'Pea Shooter', blurb: 'Reliable. Hits where you point it.',
-    damage: 19, cooldown: 0.3, speed: 26, range: 15, pellets: 1, spread: 0.04, unlockKills: 0,
+    damage: 19, cooldown: 0.3, speed: 26, range: 15, pellets: 1, spread: 0.04,
   },
   minismg: {
     id: 'minismg', slot: 'secondary', name: 'Mini Buzz', blurb: 'Pocket sprayer. Fast and sloppy.',
-    damage: 7, cooldown: 0.075, speed: 26, range: 9, pellets: 1, spread: 0.22, unlockKills: 0,
+    damage: 7, cooldown: 0.075, speed: 26, range: 9, pellets: 1, spread: 0.22,
   },
   thumper: {
     id: 'thumper', slot: 'secondary', name: 'Thumper', blurb: 'Hand cannon. Slow, heavy, shoves people back.',
-    damage: 36, cooldown: 0.65, speed: 32, range: 12, pellets: 1, spread: 0.03, knockback: 1.6, unlockKills: 0,
+    damage: 36, cooldown: 0.65, speed: 32, range: 12, pellets: 1, spread: 0.03, knockback: 1.6,
   },
   bouncer: {
     id: 'bouncer', slot: 'secondary', name: 'Bouncer', blurb: 'Rubber rounds bounce off walls twice. Shoot around corners.',
-    damage: 17, cooldown: 0.34, speed: 24, range: 22, pellets: 1, spread: 0.04, bounces: 2, unlockKills: 0,
+    damage: 17, cooldown: 0.34, speed: 24, range: 22, pellets: 1, spread: 0.04, bounces: 2,
   },
   stinger: {
     id: 'stinger', slot: 'secondary', name: 'Stinger', blurb: 'Light darts. Every hit slows the target for a moment.',
-    damage: 11, cooldown: 0.2, speed: 30, range: 11, pellets: 1, spread: 0.08, slow: 0.9, unlockKills: 0,
+    damage: 11, cooldown: 0.2, speed: 30, range: 11, pellets: 1, spread: 0.08, slow: 0.9,
   },
   smg: {
     id: 'smg', slot: 'primary', name: 'Buzzbox', blurb: 'Sprays fast, loses accuracy at range.',
-    damage: 9, cooldown: 0.09, speed: 28, range: 11, pellets: 1, spread: 0.16, unlockKills: 0,
+    damage: 9, cooldown: 0.09, speed: 28, range: 11, pellets: 1, spread: 0.16,
   },
   burst: {
     id: 'burst', slot: 'primary', name: 'Tri-Pop', blurb: 'Three-round bursts. Accurate at mid range.',
-    damage: 15, cooldown: 0.5, speed: 34, range: 17, pellets: 1, spread: 0.05, burst: 3, burstGap: 0.07, unlockKills: 10,
+    damage: 15, cooldown: 0.5, speed: 34, range: 17, pellets: 1, spread: 0.05, burst: 3, burstGap: 0.07,
   },
   shotgun: {
     id: 'shotgun', slot: 'primary', name: 'Boomstick', blurb: 'Six pellets. Get close.',
-    damage: 11, cooldown: 0.85, speed: 22, range: 7.5, pellets: 6, spread: 0.42, knockback: 1.2, unlockKills: 5,
+    damage: 11, cooldown: 0.85, speed: 22, range: 7.5, pellets: 6, spread: 0.42, knockback: 1.2,
   },
   sniper: {
     id: 'sniper', slot: 'primary', name: 'Longshot', blurb: 'One slow, heavy round across the map.',
-    damage: 72, cooldown: 1.35, speed: 60, range: 50, pellets: 1, spread: 0, unlockKills: 15,
+    damage: 72, cooldown: 1.35, speed: 60, range: 50, pellets: 1, spread: 0,
   },
   rocket: {
     id: 'rocket', slot: 'primary', name: 'Party Popper', blurb: 'Slow rocket, big splash, sends people flying.',
     damage: 58, cooldown: 1.4, speed: 14, range: 18, pellets: 1, spread: 0,
-    splashRadius: 2.6, knockback: 7, unlockKills: 30,
+    splashRadius: 2.6, knockback: 7,
   },
 };
 

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { GUNS, HATS, HEROES, MAPS, MODES, MODE_IDS, PARTY_MAP_IDS, PUBLIC_MAP, SECONDARY_IDS, type GunId, type HeroId, type MapDef, type MapId, type ModeId, type HatId, type UtilId, UTILS } from '@gg/shared';
 import type { JoinOptions } from '../game/GameClient';
-import { isUnlocked, loadProfile, saveProfile } from '../unlocks';
+import { loadProfile, saveProfile } from '../unlocks';
 import type { Portraits } from './App';
 import { GunRack, HatRack, HeroShelf, UtilRack } from './Pickers';
 import { music } from '../game/audio';
@@ -15,7 +15,7 @@ export function Lobby({ portraits, onPlay }: { portraits: Portraits; onPlay: (o:
   const profile = loadProfile();
   const [name, setName] = useState(profile.name);
   const [hero, setHero] = useState<HeroId>(profile.hero);
-  const [gun, setGun] = useState<GunId>(isUnlocked(profile.gun, profile.kills) ? profile.gun : 'smg');
+  const [gun, setGun] = useState<GunId>(profile.gun);
   const [secondary, setSecondary] = useState<GunId>(profile.secondary);
   const [utility, setUtility] = useState<UtilId>(profile.utility);
   const [hat, setHat] = useState<HatId>(profile.hat);
@@ -284,8 +284,8 @@ function LoadoutPicker(props: {
           >
             <div className="slot-drawer__inner">
               {open === 'hero' && <HeroShelf value={props.hero} onChange={pick(props.setHero)} portraits={portraits} />}
-              {open === 'primary' && <GunRack value={props.gun} onChange={pick(props.setGun)} kills={kills} portraits={portraits} />}
-              {open === 'secondary' && <GunRack ids={SECONDARY_IDS} label="Secondary gun" value={props.secondary} onChange={pick(props.setSecondary)} kills={kills} portraits={portraits} />}
+              {open === 'primary' && <GunRack value={props.gun} onChange={pick(props.setGun)} portraits={portraits} />}
+              {open === 'secondary' && <GunRack ids={SECONDARY_IDS} label="Secondary gun" value={props.secondary} onChange={pick(props.setSecondary)} portraits={portraits} />}
               {open === 'utility' && <UtilRack value={props.utility} onChange={pick(props.setUtility)} portraits={portraits} />}
               {open === 'hat' && <HatRack value={props.hat} onChange={pick(props.setHat)} kills={kills} portraits={portraits} />}
             </div>

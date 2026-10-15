@@ -1,6 +1,5 @@
 import { motion } from 'framer-motion';
 import { GUNS, HATS, HAT_IDS, HEROES, HERO_IDS, PRIMARY_IDS, UTILS, UTIL_IDS, type GunId, type HatId, type HeroId, type UtilId } from '@gg/shared';
-import { isUnlocked } from '../unlocks';
 import type { Portraits } from './App';
 
 const spring = { type: 'spring', stiffness: 520, damping: 22 } as const;
@@ -56,13 +55,12 @@ export function HeroShelf({
 }
 
 export function GunRack({
-  value, onChange, kills, portraits, compact = false, ids = PRIMARY_IDS, label = 'Primary gun',
-}: { value: GunId; onChange: (g: GunId) => void; kills: number; portraits: Portraits; compact?: boolean; ids?: GunId[]; label?: string }) {
+  value, onChange, portraits, compact = false, ids = PRIMARY_IDS, label = 'Primary gun',
+}: { value: GunId; onChange: (g: GunId) => void; portraits: Portraits; compact?: boolean; ids?: GunId[]; label?: string }) {
   return (
     <div className={`rack${compact ? ' rack--compact' : ''}`} role="radiogroup" aria-label={label}>
       {ids.map((id) => {
         const g = GUNS[id];
-        const open = isUnlocked(id, kills);
         const selected = id === value;
         return (
           <motion.button
@@ -70,21 +68,15 @@ export function GunRack({
             type="button"
             role="radio"
             aria-checked={selected}
-            aria-disabled={!open}
-            className={`peg${selected ? ' is-selected' : ''}${open ? '' : ' is-locked'}`}
-            onClick={() => open && onChange(id)}
-            whileHover={open ? { y: -4, rotate: 2 } : { x: [0, -4, 4, -2, 0] }}
-            whileTap={open ? { scale: 0.95 } : undefined}
+            className={`peg${selected ? ' is-selected' : ''}`}
+            onClick={() => onChange(id)}
+            whileHover={{ y: -4, rotate: 2 }}
+            whileTap={{ scale: 0.95 }}
             transition={spring}
           >
             <img src={portraits.guns[id]} alt="" draggable={false} />
             <span className="peg__name">{g.name}</span>
-            {!compact && (
-              <span className="peg__meta">
-                {open ? g.blurb : `Unlocks at ${g.unlockKills} kills (you have ${kills})`}
-              </span>
-            )}
-            {!open && compact && <span className="peg__meta">{g.unlockKills} kills</span>}
+            {!compact && <span className="peg__meta">{g.blurb}</span>}
           </motion.button>
         );
       })}
@@ -146,7 +138,7 @@ export function HatRack({
           >
             <img src={portraits.hats[id]} alt="" draggable={false} />
             <span className="peg__name">{h.name}</span>
-            {!open && <span className="peg__meta">{compact ? `${h.unlockKills} kills` : `Unlocks at ${h.unlockKills} kills (you have ${kills})`}</span>}
+            {!open && <span className="peg__meta">{compact ? `${h.unlockKills} kills` : `Unlocks at ${h.unlockKills} kills`}</span>}
           </motion.button>
         );
       })}

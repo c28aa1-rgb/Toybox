@@ -1279,10 +1279,8 @@ export class GameClient {
   private recordKill(): void {
     const before = loadProfile().kills;
     const after = addKill().kills;
-    const unlocked = GUN_IDS.filter((g) => GUNS[g].unlockKills > before && GUNS[g].unlockKills <= after);
     const hats = HAT_IDS.filter((h) => HATS[h].unlockKills > before && HATS[h].unlockKills <= after);
-    if (unlocked.length) this.toast(`Unlocked the ${GUNS[unlocked[0]].name}. Pick it next time you respawn.`);
-    else if (hats.length) this.toast(`Unlocked the ${HATS[hats[0]].name}. Put it on from the lobby or when you respawn.`);
+    if (hats.length) this.toast(`Unlocked the ${HATS[hats[0]].name}. Put it on from the lobby or when you respawn.`);
   }
 
   private toast(text: string): void {

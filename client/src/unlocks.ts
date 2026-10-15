@@ -42,10 +42,6 @@ export function saveProfile(p: Profile): void {
   }
 }
 
-export function isUnlocked(gun: GunId, kills: number): boolean {
-  return kills >= GUNS[gun].unlockKills;
-}
-
 export function addKill(): Profile {
   const p = loadProfile();
   p.kills++;
