@@ -7,3 +7,4 @@ export * from './sim';
 export * from './utilities';
 export * from './modes';
 export * from './cosmetics';
+export * from './powers';

@@ -1,0 +1,14 @@
+{
+  "firestore": {
+    "database": "(default)",
+    "location": "us-east1",
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "auth": {
+    "authorizedDomains": ["localhost", "c28aa1-rgb.github.io"],
+    "providers": {
+      "anonymous": true
+    }
+  }
+}

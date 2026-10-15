@@ -1,11 +1,76 @@
 import { useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import { GUNS, MAX_HP, UTILS, type PlayerSnap } from '@gg/shared';
+import { ABILITY, GUNS, HEROES, MAX_HP, UTILS, type PlayerSnap, type UtilId } from '@gg/shared';
 import type { GameClient } from '../game/GameClient';
 import type { Portraits } from './App';
 import '../theme/combat.css';
 import { ACTIONS, bindingLabel, firstKey, useBindings, type Action } from '../game/bindings';
 import { ControlsButton } from './Controls';
+
+/**
+ * Hero ability ring. Cooldown abilities fill as the timer runs down, charge abilities fill as you deal
+ * damage, and passives show their own state (time until Chameleon vanishes, time to Echo's next ping).
+ */
+function AbilityGauge({ me, portraits }: { me: PlayerSnap; portraits: Portraits }) {
+  const reduced = useReducedMotion();
+  const hero = HEROES[me.hero];
+  const left = me.abilityReadyIn;
+  let fill: number;
+  let ready: boolean;
+  let label: string;
+  let count: string | null = null;
+  if (hero.kind === 'charge') {
+    fill = me.abilityCharge;
+    ready = fill >= 1;
+    label = me.overcharge > 0 ? `${me.overcharge} charged` : ready ? 'Ready' : `${Math.round(fill * 100)}%`;
+  } else if (me.hero === 'chameleon') {
+    fill = me.hidden ? 1 : Math.max(0, 1 - left / ABILITY.hideDelay);
+    ready = me.hidden;
+    label = me.hidden ? 'Hidden' : 'Stand still';
+  } else if (hero.kind === 'passive') {
+    fill = Math.max(0, Math.min(1, 1 - left / hero.cooldown));
+    ready = left <= 0.05;
+    label = 'Passive';
+    count = ready ? null : String(Math.ceil(left));
+  } else {
+    ready = left <= 0.05;
+    fill = ready ? 1 : Math.max(0, Math.min(1, 1 - left / hero.cooldown));
+    label = ready ? 'Ready' : hero.ability;
+    count = ready ? null : String(Math.ceil(left));
+  }
+  const pressable = hero.kind !== 'passive';
+  return (
+    <motion.div
+      key={ready ? 'ready' : 'cooling'}
+      className={`combat__ability${ready ? ' is-ready' : ''}`}
+      style={{ '--fill': fill, '--hero': hero.color } as React.CSSProperties}
+      initial={ready && !reduced ? { scale: 1.25 } : false}
+      animate={{ scale: 1 }}
+      transition={{ type: 'spring', stiffness: 500, damping: 12 }}
+      role="meter"
+      aria-label={`${hero.ability}: ${label}`}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={Math.round(fill * 100)}
+      title={`${hero.ability} · ${hero.description}`}
+    >
+      <span className="combat__ability-face">
+        <img src={portraits.heroes[me.hero]} alt="" />
+        {count && <b>{count}</b>}
+      </span>
+      {pressable && <kbd>{firstKey('ability')}</kbd>}
+      <small>{label}</small>
+    </motion.div>
+  );
+}
+
+/** How the equipped utility is used: drunk or set down on a press, or aimed and thrown on release. */
+function useHint(util: UtilId): string {
+  const def = UTILS[util];
+  if (def.heal) return `Press ${bindingLabel('grenade')} to drink`;
+  if (def.deploy) return `Press ${bindingLabel('grenade')} to set it down`;
+  return `Hold ${bindingLabel('grenade')}, release to throw · ${bindingLabel('cancelGrenade')} cancels`;
+}
 
 export function CombatHud({ me, portraits, client }: {
   me: PlayerSnap; portraits: Portraits; client: GameClient;
@@ -35,9 +100,11 @@ export function CombatHud({ me, portraits, client }: {
         )}
       </AnimatePresence>
 
+      <AbilityGauge me={me} portraits={portraits} />
+
       <div className="combat__strip">
         <div className={`combat__utility${me.utilCharges ? '' : ' is-empty'}`}
-          aria-label={`${UTILS[me.utility].name}: ${me.utilCharges} remaining`} title={`${UTILS[me.utility].name} · Hold ${bindingLabel('grenade')}, release to throw · ${bindingLabel('cancelGrenade')} cancels`}>
+          aria-label={`${UTILS[me.utility].name}: ${me.utilCharges} remaining`} title={`${UTILS[me.utility].name} · ${useHint(me.utility)}`}>
           <kbd>{firstKey('grenade')}</kbd>
           <img src={portraits.utils[me.utility]} alt="" />
           {/* Re-keyed on the count so a charge earned from a kill pops in. */}

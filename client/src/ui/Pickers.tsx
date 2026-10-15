@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { GUNS, HATS, HAT_IDS, HEROES, HERO_IDS, PRIMARY_IDS, UTILS, UTIL_IDS, type GunId, type HatId, type HeroId, type UtilId } from '@gg/shared';
+import { GUNS, HATS, HAT_IDS, HEROES, HERO_IDS, PRIMARY_IDS, UTILS, UTIL_IDS, abilityTag, type GunId, type HatId, type HeroId, type UtilId } from '@gg/shared';
 import type { Portraits } from './App';
 
 const spring = { type: 'spring', stiffness: 520, damping: 22 } as const;
@@ -33,7 +33,7 @@ export function HeroShelf({
             <span className="blister__name">{h.name}</span>
             {!compact && (
               <>
-                <span className="blister__ability">{h.ability} · {h.cooldown}s</span>
+                <span className="blister__ability">{abilityTag(h)}</span>
                 <span className="blister__desc">{h.description}</span>
               </>
             )}

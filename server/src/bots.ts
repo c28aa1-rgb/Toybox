@@ -1,5 +1,5 @@
 import {
-  GUNS, HERO_IDS, TICK_DT, UTILS, allWalls, hasLineOfSight, sameTeam,
+  ABILITY, GUNS, HERO_IDS, TICK_DT, UTILS, hasLineOfSight, isHidden, sameTeam,
   type GameState, type HeroId, type InputFrame, type PlayerState, type Rect,
 } from '@gg/shared';
 
@@ -47,7 +47,7 @@ export function botInput(state: GameState, p: PlayerState): InputFrame {
   };
   if (!p.alive || state.phase !== 'playing') return frame;
 
-  const walls = allWalls(state);
+  const walls = state.map.walls;
   const rng = state.rng;
 
   // Unstick: if barely moved for a second, pick a new heading.
@@ -67,6 +67,8 @@ export function botInput(state: GameState, p: PlayerState): InputFrame {
   for (const o of state.players.values()) {
     if (o.id === p.id || !o.alive || sameTeam(state, o.id, p.id)) continue;
     const d = Math.hypot(o.x - p.x, o.y - p.y);
+    // Bots can't see a hidden Chameleon unless they're almost on top of them.
+    if (isHidden(state, o) && d > ABILITY.hiddenSpotRange) continue;
     const los = hasLineOfSight(state, p.x, p.y, o.x, o.y);
     // Prefer visible targets; a hidden one counts as farther away.
     const score = los ? d : d + 15;
@@ -96,6 +98,8 @@ export function botInput(state: GameState, p: PlayerState): InputFrame {
   let moveX = 0;
   let moveY = 0;
 
+  // A power-up that has landed close by is worth a short detour.
+  const power = state.pickups.find((k) => k.kind === 'power' && state.time >= (k.readyAt ?? 0) && Math.hypot(k.x - p.x, k.y - p.y) < 10);
   // Hurt bots detour for a nearby heal; King of the Toybox bots head for the ring when nothing is in their face.
   const heal = p.hp < 60 ? state.pickups.find((k) => k.kind === 'heal' && Math.hypot(k.x - p.x, k.y - p.y) < 9) : undefined;
   const hill = state.hill;
@@ -104,6 +108,9 @@ export function botInput(state: GameState, p: PlayerState): InputFrame {
   if (heal && (!visible || p.hp < 35)) {
     moveX = heal.x - p.x;
     moveY = heal.y - p.y;
+  } else if (power && (!visible || Math.hypot(power.x - p.x, power.y - p.y) < 4)) {
+    moveX = power.x - p.x;
+    moveY = power.y - p.y;
   } else if (hill && offHill && (!visible || targetD > 7) && state.time >= m.wanderUntil) {
     moveX = hill.x - p.x;
     moveY = hill.y - p.y;
@@ -142,9 +149,8 @@ export function botInput(state: GameState, p: PlayerState): InputFrame {
       if (p.utilCharges > 0 && !UTILS[p.utility].heal && d > 4 && d < 12 && state.time >= p.throwReadyAt && rng() < 0.012) frame.throw = true;
       // Close in with the sidearm when the primary is a long gun.
       frame.slot = p.primary === 'sniper' && d < 6 ? 2 : p.slot === 'secondary' && d > 8 ? 1 : 0;
-      if (state.time >= p.abilityReadyAt && rng() < 0.025) {
-        frame.ability = shouldUseAbility(p, d);
-      }
+      // The sim ignores the press until a cooldown is up or a charge is full; passives need none.
+      if (rng() < 0.025) frame.ability = shouldUseAbility(p, d);
     }
     if (frame.pickup === false && upgrade && Math.hypot(upgrade.x - p.x, upgrade.y - p.y) < 1.2) frame.pickup = true;
   } else {
@@ -173,11 +179,11 @@ function shouldUseAbility(p: PlayerState, d: number): boolean {
     case 'blink':
     case 'decoy':
       return true;
-    case 'swap':
+    case 'volt':
       return d < 11;
-    case 'chrono':
-      return d < 8;
-    case 'builder':
-      return p.hp < 70;
+    case 'echo':
+      return d < 18;
+    case 'chameleon':
+      return false;
   }
 }

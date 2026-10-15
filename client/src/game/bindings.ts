@@ -4,7 +4,7 @@ export const ACTIONS = {
   up: 'Move up', down: 'Move down', left: 'Move left', right: 'Move right',
   fire: 'Shoot (hold)', scope: 'Scope (hold)', scopeToggle: 'Toggle scope',
   ability: 'Ability', pickup: 'Pick up', reload: 'Reload', swap: 'Swap weapons',
-  primary: 'Primary weapon', secondary: 'Secondary weapon', grenade: 'Aim grenade (hold, release to throw)',
+  primary: 'Primary weapon', secondary: 'Secondary weapon', grenade: 'Use utility (hold to aim throws)',
   cancelGrenade: 'Cancel grenade', chat: 'Open chat', respawn: 'Respawn', leave: 'Leave confirmation',
 };
 export type Action = keyof typeof ACTIONS;

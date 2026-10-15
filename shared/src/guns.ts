@@ -75,8 +75,8 @@ export const GUNS: Record<GunId, GunDef> = {
   },
   sniper: {
     magazine: 4, reloadTime: 2.1,
-    id: 'sniper', slot: 'primary', name: 'Longshot', blurb: 'Hits harder the farther it flies. One-shots from across the map.',
-    damage: 72, ramp: { near: 40, far: 100, fullAt: 0.8 }, cooldown: 1.35, speed: 60, range: 50, pellets: 1, spread: 0,
+    id: 'sniper', slot: 'primary', name: 'Longshot', blurb: 'Hits harder the farther it flies. One-shots at long range.',
+    damage: 72, ramp: { near: 40, far: 100, fullAt: 0.8 }, cooldown: 1.35, speed: 60, range: 34, pellets: 1, spread: 0,
   },
   rocket: {
     magazine: 2, reloadTime: 2.3,

@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import type { SmokeFog } from './smoke';
-import type { HillSnap, Loadout, MapId, ModeId, PlayerSnap, WeaponId } from '@gg/shared';
+import type { HillSnap, Loadout, MapId, MapVote, ModeId, PlayerSnap, WeaponId } from '@gg/shared';
 
 export interface FeedEntry {
   key: number;
@@ -46,6 +46,7 @@ export interface HudState {
   endsIn: number;
   feed: FeedEntry[];
   ping: number;
+  fps: number;
   killedBy: string | null;
   nearPickup: WeaponId | null;
   loadout: Loadout;
@@ -54,7 +55,7 @@ export interface HudState {
   teamScores: [number, number];
   hill: HillSnap | null;
   streak: StreakCall | null;
-  /** Seconds left on a slow from goo or a Stinger. */
+  /** Seconds left on a slow from a Stinger hit. */
   slowed: boolean;
   /** Seconds of flash blindness left for this player. */
   blind: number;
@@ -69,6 +70,13 @@ export interface HudState {
   chatOpen: boolean;
   banner: Banner | null;
   scoped: boolean;
+  /** The living player the camera follows while you are dead. */
+  spectating: PlayerSnap | null;
+  /** The connection dropped and we're trying to get back in. */
+  reconnecting: boolean;
+  /** Public lobby results screen: the next-map vote, and what we picked. */
+  vote: MapVote | null;
+  myVote: MapId | null;
 }
 
 type Listener = () => void;

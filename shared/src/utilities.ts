@@ -1,4 +1,4 @@
-export type UtilId = 'frag' | 'flash' | 'smoke' | 'goo' | 'juice';
+export type UtilId = 'frag' | 'flash' | 'smoke' | 'turret' | 'juice';
 
 export interface UtilDef {
   id: UtilId;
@@ -12,6 +12,8 @@ export interface UtilDef {
   charges: number;
   /** Used on the spot instead of thrown: restores this much health. */
   heal?: number;
+  /** Set down in front of you instead of thrown. */
+  deploy?: boolean;
 }
 
 export const UTILS: Record<UtilId, UtilDef> = {
@@ -24,12 +26,12 @@ export const UTILS: Record<UtilId, UtilDef> = {
     fuseAfterLanding: 0.25, radius: 10, damage: 0, knockback: 0, charges: 2,
   },
   smoke: {
-    id: 'smoke', name: 'Puff Can', blurb: 'Dense smoke for 7 s. Faint silhouettes, clearer near the edge.',
+    id: 'smoke', name: 'Puff Can', blurb: 'Thick smoke for 7 s. Nobody can see into, out of or through it.',
     fuseAfterLanding: 0.1, radius: 3.6, damage: 0, knockback: 0, charges: 2,
   },
-  goo: {
-    id: 'goo', name: 'Goo Bomb', blurb: 'Leaves a sticky puddle for 5 s. Enemies in it move at half speed.',
-    fuseAfterLanding: 0.15, radius: 3.4, damage: 0, knockback: 0, charges: 2,
+  turret: {
+    id: 'turret', name: 'Wind-Up Turret', blurb: 'Press G to set it down. Shoots the nearest enemy until it winds down.',
+    fuseAfterLanding: 0, radius: 0, damage: 8, knockback: 0, charges: 1, deploy: true,
   },
   juice: {
     id: 'juice', name: 'Juice Box', blurb: 'Press G to drink it. Heals 45 straight away.',
@@ -52,10 +54,31 @@ export const THROW = {
   wallHeight: 1.3,
   cooldown: 0.8,
   smokeDuration: 7,
-  gooDuration: 5,
 };
 
-/** Movement multiplier while slowed by goo or a Stinger hit. */
+/** Flash Pop blindness in seconds: `max` right next to it, `min` at the edge of its radius. The thrower gets half. */
+export const FLASH = { min: 1.5, max: 5 };
+
+/** Wind-Up Turret: one per player, shoots enemies it can see, slows down as the spring runs out. */
+export const TURRET = {
+  duration: 8,
+  hp: 60,
+  range: 11,
+  /** Seconds between shots at full wind; doubles over the last `windDown` seconds. */
+  cooldown: 0.3,
+  windDown: 2.5,
+  damage: 8,
+  spread: 0.07,
+  /** Radians per second the head turns toward its target. */
+  turnRate: 7,
+  /** Fires once the target is within this angle of the barrel. */
+  fireCone: 0.25,
+  radius: 0.45,
+  /** How far in front of you it is set down. */
+  placeDistance: 1.2,
+};
+
+/** Movement multiplier while slowed by a Stinger hit. */
 export const SLOW_FACTOR = 0.5;
 
 /** Flight time for a throw of `dist` metres; the client uses the same curve for its arc preview. */

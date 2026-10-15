@@ -6,8 +6,9 @@ import { GUNS, bulletDamage, type GunId } from './guns';
 import { ABILITY, HEROES, type HeroId } from './heroes';
 import { DEFAULT_MAP, MAPS, type MapDef, type MapId, type Rect } from './map';
 import type { GameEvent, InputFrame, Loadout, WeaponId } from './protocol';
-import { SLOW_FACTOR, THROW, UTILS, throwFlightTime, type UtilId } from './utilities';
+import { FLASH, SLOW_FACTOR, THROW, TURRET, UTILS, throwFlightTime, type UtilId } from './utilities';
 import { GUN_LADDER, MODES, type ModeId } from './modes';
+import { POWER, POWERS, POWER_IDS, type PowerId } from './powers';
 
 // ---------- state ----------
 
@@ -65,6 +66,16 @@ export interface PlayerState {
   wantPickup: boolean;
   /** Humans respawn only after asking; bots come back on their own. */
   wantRespawn: boolean;
+  /** Sim time each power-up wears off. */
+  powers: Record<PowerId, number>;
+  /** Charge abilities: damage dealt toward the next use (keeps through death). */
+  abilityCharge: number;
+  /** Hide and Seek: last time this player moved or gave themselves away, and whether they've vanished. */
+  stillSince: number;
+  hidden: boolean;
+  /** Overcharge: this many shots left that hit harder, if fired before `overchargeUntil`. */
+  overchargeShots: number;
+  overchargeUntil: number;
 }
 
 export interface Bullet {
@@ -78,31 +89,21 @@ export interface Bullet {
   travelled: number;
   fake: boolean;
   bounces: number;
+  /** Damage multiplier (Overcharge). */
+  mult?: number;
+  /** Fired by a Wind-Up Turret: fixed damage, and kills credit the turret. */
+  turret?: boolean;
 }
 
 export interface Pickup {
   id: number;
-  kind: 'gun' | 'util' | 'heal';
-  item: WeaponId | 'heal';
+  kind: 'gun' | 'util' | 'heal' | 'power';
+  item: WeaponId | 'heal' | PowerId;
   x: number;
   y: number;
   expiresAt: number;
-}
-
-export interface DynWall extends Rect {
-  id: number;
-  owner: string;
-  hp: number;
-  expiresAt: number;
-}
-
-export interface Bubble {
-  id: number;
-  owner: string;
-  x: number;
-  y: number;
-  r: number;
-  expiresAt: number;
+  /** Power-ups are marked before they land and can't be taken until this time. */
+  readyAt?: number;
 }
 
 export interface Decoy {
@@ -132,14 +133,16 @@ export interface Throwable {
   fuseAt: number;
 }
 
-export interface Goo {
+export interface Turret {
   id: number;
   owner: string;
   team: number;
   x: number;
   y: number;
-  r: number;
+  aim: number;
+  hp: number;
   expiresAt: number;
+  fireReadyAt: number;
 }
 
 export interface Hill {
@@ -171,16 +174,18 @@ export interface GameState {
   pickups: Pickup[];
   throwables: Throwable[];
   smokes: Smoke[];
-  goos: Goo[];
+  turrets: Turret[];
   mode: ModeId;
   teamScores: [number, number];
   hill: Hill | null;
-  walls: DynWall[];
-  bubbles: Bubble[];
   decoys: Decoy[];
   events: GameEvent[];
   map: MapDef;
   rng: () => number;
+  /** When the next power-up drops. */
+  nextPowerAt: number;
+  /** Map to switch to when the next round starts (public lobby vote). */
+  nextMap: MapId | null;
 }
 
 export function mulberry32(seed: number): () => number {
@@ -207,16 +212,16 @@ export function createGame(seed = Date.now(), mapId: MapId = DEFAULT_MAP, mode: 
     pickups: [],
     throwables: [],
     smokes: [],
-    goos: [],
+    turrets: [],
     mode,
     teamScores: [0, 0],
     hill: mode === 'hill' ? { x: map.w / 2, y: map.h / 2, r: Math.min(map.w, map.h) * 0.12, holder: null, contested: false, progress: 0 } : null,
-    walls: [],
-    bubbles: [],
     decoys: [],
     events: [],
     map,
     rng: mulberry32(seed),
+    nextPowerAt: POWER.firstAfter,
+    nextMap: null,
   };
 }
 
@@ -274,28 +279,6 @@ export function moveCircle(p: { x: number; y: number }, dx: number, dy: number, 
   }
 }
 
-export interface BubbleLike {
-  x: number;
-  y: number;
-  r: number;
-  owner: string;
-}
-
-/** Movement multiplier from enemy time bubbles. The owner is never slowed by their own bubble. */
-export function bubbleFactor(x: number, y: number, ownerId: string, bubbles: BubbleLike[], factor: number): number {
-  for (const b of bubbles) {
-    if (b.owner === ownerId) continue;
-    const dx = x - b.x;
-    const dy = y - b.y;
-    if (dx * dx + dy * dy < b.r * b.r) return factor;
-  }
-  return 1;
-}
-
-export function inAnyBubble(x: number, y: number, bubbles: BubbleLike[]): boolean {
-  return bubbles.some((b) => (x - b.x) ** 2 + (y - b.y) ** 2 < b.r * b.r);
-}
-
 /**
  * Shared movement step. The server runs it for every input frame; the client runs the same
  * function to predict its own player.
@@ -305,11 +288,10 @@ export function stepMovement(
   mx: number,
   my: number,
   dt: number,
-  ownerId: string,
   walls: Rect[],
-  bubbles: BubbleLike[],
   scoped = false,
   slowed = false,
+  boost = 1,
 ): void {
   const len = Math.hypot(mx, my);
   if (len > 1) {
@@ -317,17 +299,16 @@ export function stepMovement(
     my /= len;
   }
   if (len === 0) return;
-  const f = bubbleFactor(pos.x, pos.y, ownerId, bubbles, ABILITY.bubbleMoveFactor) * (scoped ? SCOPE_SPEED : 1) * (slowed ? SLOW_FACTOR : 1);
+  const f = (scoped ? SCOPE_SPEED : 1) * (slowed ? SLOW_FACTOR : 1) * boost;
   moveCircle(pos, mx * PLAYER_SPEED * f * dt, my * PLAYER_SPEED * f * dt, walls);
 }
 
-/** True when (x, y) sits in a goo puddle that `id` (on `team`) is not immune to. */
-export function inEnemyGoo(goos: { x: number; y: number; r: number; owner: string; team: number }[], x: number, y: number, id: string, team: number): boolean {
-  return goos.some((g) => g.owner !== id && (team < 0 || g.team !== team) && (x - g.x) ** 2 + (y - g.y) ** 2 < g.r * g.r);
+export function hasPower(state: GameState, p: PlayerState, power: PowerId): boolean {
+  return state.time < p.powers[power];
 }
 
 export function isSlowed(state: GameState, p: PlayerState): boolean {
-  return state.time < p.slowUntil || inEnemyGoo(state.goos, p.x, p.y, p.id, p.team);
+  return state.time < p.slowUntil;
 }
 
 export function sameTeam(state: GameState, a: string, b: string): boolean {
@@ -337,8 +318,23 @@ export function sameTeam(state: GameState, a: string, b: string): boolean {
   return !!pa && !!pb && pa.team === pb.team;
 }
 
-export function allWalls(state: GameState): Rect[] {
-  return state.walls.length ? [...state.map.walls, ...state.walls] : state.map.walls;
+export function isHidden(_state: GameState, p: PlayerState): boolean {
+  return p.alive && p.hidden;
+}
+
+/** Moving, shooting, throwing or getting hit restarts the Hide and Seek timer. */
+function reveal(state: GameState, p: PlayerState): void {
+  p.stillSince = state.time;
+  p.hidden = false;
+}
+
+/** For the HUD: seconds until the ability is ready (or next fires, for timed passives) and charge 0..1. */
+export function abilityStatus(state: GameState, p: PlayerState): { readyIn: number; charge: number } {
+  const def = HEROES[p.hero];
+  const t = state.time;
+  if (def.kind === 'charge') return { readyIn: 0, charge: Math.min(1, p.abilityCharge / (def.charge ?? 1)) };
+  if (p.hero === 'chameleon') return { readyIn: p.hidden ? 0 : Math.max(0, ABILITY.hideDelay - (t - p.stillSince)), charge: 0 };
+  return { readyIn: Math.max(0, p.abilityReadyAt - t), charge: 0 };
 }
 
 // ---------- players ----------
@@ -401,6 +397,12 @@ export function addPlayer(
     wantAbility: false,
     wantPickup: false,
     wantRespawn: false,
+    powers: { speed: 0, damage: 0, armor: 0 },
+    abilityCharge: 0,
+    stillSince: 0,
+    hidden: false,
+    overchargeShots: 0,
+    overchargeUntil: 0,
   };
   state.players.set(p.id, p);
   spawn(state, p);
@@ -410,8 +412,7 @@ export function addPlayer(
 export function removePlayer(state: GameState, id: string): void {
   state.players.delete(id);
   state.decoys = state.decoys.filter((d) => d.owner !== id);
-  state.walls = state.walls.filter((w) => w.owner !== id);
-  state.bubbles = state.bubbles.filter((b) => b.owner !== id);
+  state.turrets = state.turrets.filter((t) => t.owner !== id);
 }
 
 function spawn(state: GameState, p: PlayerState): void {
@@ -466,6 +467,11 @@ function spawn(state: GameState, p: PlayerState): void {
   p.wantAbility = false;
   p.wantPickup = false;
   p.wantRespawn = false;
+  p.powers = { speed: 0, damage: 0, armor: 0 };
+  p.stillSince = state.time;
+  p.hidden = false;
+  p.overchargeShots = 0;
+  p.overchargeUntil = 0;
 }
 
 export function setLoadout(state: GameState, p: PlayerState, loadout: Loadout): void {
@@ -484,7 +490,8 @@ export function applyInput(state: GameState, p: PlayerState, frame: InputFrame):
   const mx = clamp(frame.mx || 0, -1, 1);
   const my = clamp(frame.my || 0, -1, 1);
   p.scoped = !!frame.scope;
-  stepMovement(p, mx, my, dt, p.id, allWalls(state), state.bubbles, p.scoped, isSlowed(state, p));
+  if (mx !== 0 || my !== 0) reveal(state, p);
+  stepMovement(p, mx, my, dt, state.map.walls, p.scoped, isSlowed(state, p), hasPower(state, p, 'speed') ? POWER.speedFactor : 1);
   p.fire = !!frame.fire;
   if (frame.ability) p.wantAbility = true;
   if (frame.pickup) p.wantPickup = true;
@@ -495,7 +502,7 @@ export function applyInput(state: GameState, p: PlayerState, frame: InputFrame):
 
 /** Line of sight between two points: blocked by walls and by smoke clouds. */
 export function hasLineOfSight(state: GameState, x1: number, y1: number, x2: number, y2: number): boolean {
-  const walls = allWalls(state);
+  const walls = state.map.walls;
   const d = Math.hypot(x2 - x1, y2 - y1);
   const steps = Math.max(1, Math.ceil(d / 0.3));
   for (let i = 1; i < steps; i++) {
@@ -513,10 +520,17 @@ export function hasLineOfSight(state: GameState, x1: number, y1: number, x2: num
 function damagePlayer(state: GameState, target: PlayerState, dmg: number, by: string, gun: WeaponId): void {
   if (!target.alive || state.time < target.shieldUntil || state.phase !== 'playing') return;
   if (sameTeam(state, target.id, by)) return;
+  const attacker = state.players.get(by);
+  if (attacker && attacker.id !== target.id && hasPower(state, attacker, 'damage')) dmg *= POWER.damageFactor;
+  if (hasPower(state, target, 'armor')) dmg *= POWER.armorFactor;
+  reveal(state, target);
   const dealt = Math.min(dmg, Math.max(0, target.hp));
   target.hp -= dmg;
-  const attacker = state.players.get(by);
-  if (attacker && attacker.id !== target.id) attacker.damageDealt += dealt;
+  if (attacker && attacker.id !== target.id) {
+    attacker.damageDealt += dealt;
+    const need = HEROES[attacker.hero].charge;
+    if (need) attacker.abilityCharge = Math.min(need, attacker.abilityCharge + dealt);
+  }
   state.events.push({ t: 'hit', target: target.id, by, dmg: Math.round(dmg), x: r2(target.x), y: r2(target.y) });
   if (target.hp <= 0) killPlayer(state, target, by, gun);
 }
@@ -595,22 +609,14 @@ function endMatch(state: GameState, winner: string): void {
   state.events.push({ t: 'win', id: winner });
 }
 
-function damageWall(state: GameState, wall: DynWall, dmg: number): void {
-  wall.hp -= dmg;
-  if (wall.hp <= 0) {
-    state.walls = state.walls.filter((w) => w !== wall);
-    state.events.push({ t: 'wallBreak', x: r2(wall.x + wall.w / 2), y: r2(wall.y + wall.h / 2) });
-  }
-}
-
 function popDecoy(state: GameState, d: Decoy): void {
   state.decoys = state.decoys.filter((o) => o !== d);
   state.events.push({ t: 'decoyPop', x: r2(d.x), y: r2(d.y) });
 }
 
-function explodeGun(state: GameState, x: number, y: number, owner: string, gun: GunId): void {
+function explodeGun(state: GameState, x: number, y: number, owner: string, gun: GunId, mult = 1): void {
   const def = GUNS[gun];
-  explode(state, x, y, owner, gun, def.damage, def.splashRadius ?? 0, def.knockback ?? 0);
+  explode(state, x, y, owner, gun, def.damage * mult, def.splashRadius ?? 0, def.knockback ?? 0);
 }
 
 function explode(state: GameState, x: number, y: number, owner: string, gun: WeaponId, damage: number, radius: number, knockback: number): void {
@@ -632,9 +638,18 @@ function explode(state: GameState, x: number, y: number, owner: string, gun: Wea
   for (const d of [...state.decoys]) {
     if (d.owner !== owner && Math.hypot(d.x - x, d.y - y) < radius) popDecoy(state, d);
   }
-  for (const w of [...state.walls]) {
-    if (circleOverlapsRect(x, y, radius, w)) damageWall(state, w, def.damage * 0.75);
+  for (const t of [...state.turrets]) {
+    if (t.owner === owner || sameTeam(state, t.owner, owner)) continue;
+    const d = Math.hypot(t.x - x, t.y - y);
+    if (d < radius + TURRET.radius) damageTurret(state, t, def.damage * (1 - 0.5 * Math.min(1, d / radius)));
   }
+}
+
+function damageTurret(state: GameState, t: Turret, dmg: number): void {
+  t.hp -= dmg;
+  if (t.hp > 0) return;
+  state.turrets = state.turrets.filter((o) => o !== t);
+  state.events.push({ t: 'turretEnd', x: r2(t.x), y: r2(t.y), broken: true });
 }
 
 // ---------- actions ----------
@@ -661,6 +676,11 @@ function shoot(state: GameState, p: PlayerState): void {
   p.ammo[p.slot]--;
   const spread = def.spread * (p.scoped ? SCOPE_SPREAD : 1);
   p.shieldUntil = Math.min(p.shieldUntil, state.time);
+  reveal(state, p);
+  // Overcharge powers whole trigger pulls: every pellet of a charged shot hits harder.
+  const charged = p.overchargeShots > 0 && state.time < p.overchargeUntil;
+  if (charged) p.overchargeShots--;
+  const mult = charged ? ABILITY.overchargeMult : undefined;
   for (let i = 0; i < def.pellets; i++) {
     let a = p.aim;
     if (def.pellets > 1) {
@@ -673,10 +693,10 @@ function shoot(state: GameState, p: PlayerState): void {
     state.bullets.push({
       id: state.nextId++, owner: p.id, gun: p.gun,
       x: p.x + dx * (PLAYER_RADIUS + 0.15), y: p.y + dy * (PLAYER_RADIUS + 0.15),
-      dx, dy, travelled: 0, fake: false, bounces: def.bounces ?? 0,
+      dx, dy, travelled: 0, fake: false, bounces: def.bounces ?? 0, mult,
     });
   }
-  state.events.push({ t: 'shot', id: p.id, gun: p.gun, x: r2(p.x), y: r2(p.y), a: r2(p.aim) });
+  state.events.push({ t: 'shot', id: p.id, gun: p.gun, x: r2(p.x), y: r2(p.y), a: r2(p.aim), ...(charged ? { charged: true } : {}) });
   if (def.knockback && !def.splashRadius) {
     // Shotgun recoil.
     p.vx -= Math.cos(p.aim) * def.knockback * 2;
@@ -684,13 +704,8 @@ function shoot(state: GameState, p: PlayerState): void {
   }
 }
 
-function cursorPoint(p: PlayerState, maxDist: number): { x: number; y: number } {
-  const d = Math.min(p.aimDist, maxDist);
-  return { x: p.x + Math.cos(p.aim) * d, y: p.y + Math.sin(p.aim) * d };
-}
-
 function useAbility(state: GameState, p: PlayerState): boolean {
-  const walls = allWalls(state);
+  const walls = state.map.walls;
   switch (p.hero) {
     case 'blink': {
       const dx = Math.cos(p.aim);
@@ -711,49 +726,10 @@ function useAbility(state: GameState, p: PlayerState): boolean {
       p.y = lastY;
       return true;
     }
-    case 'swap': {
-      const c = cursorPoint(p, ABILITY.swapRange);
-      type Cand = { x: number; y: number; set: (x: number, y: number) => void; id: string };
-      const cands: Cand[] = [];
-      for (const o of state.players.values()) {
-        if (o.id === p.id || !o.alive) continue;
-        cands.push({ x: o.x, y: o.y, id: o.id, set: (x, y) => { o.x = x; o.y = y; } });
-      }
-      for (const d of state.decoys) {
-        if (d.owner === p.id) continue;
-        cands.push({ x: d.x, y: d.y, id: d.owner, set: (x, y) => { d.x = x; d.y = y; } });
-      }
-      let best: Cand | null = null;
-      let bestD = Infinity;
-      for (const cd of cands) {
-        if (Math.hypot(cd.x - p.x, cd.y - p.y) > ABILITY.swapRange) continue;
-        const d = Math.hypot(cd.x - c.x, cd.y - c.y);
-        if (d < bestD) {
-          bestD = d;
-          best = cd;
-        }
-      }
-      if (!best) return false;
-      if (inAnyBubble(best.x, best.y, state.bubbles)) {
-        state.events.push({ t: 'swapFail', id: p.id });
-        return false;
-      }
-      const px = p.x;
-      const py = p.y;
-      p.x = best.x;
-      p.y = best.y;
-      best.set(px, py);
-      state.events.push({ t: 'swap', id: p.id, target: best.id });
-      return true;
-    }
-    case 'chrono': {
-      const c = cursorPoint(p, ABILITY.bubbleMaxDistance);
-      state.bubbles = state.bubbles.filter((b) => b.owner !== p.id);
-      state.bubbles.push({
-        id: state.nextId++, owner: p.id, x: c.x, y: c.y, r: ABILITY.bubbleRadius,
-        expiresAt: state.time + ABILITY.bubbleDuration,
-      });
-      state.events.push({ t: 'bubble', id: p.id, x: r2(c.x), y: r2(c.y) });
+    case 'volt': {
+      p.overchargeShots = ABILITY.overchargeShots;
+      p.overchargeUntil = state.time + ABILITY.overchargeWindow;
+      state.events.push({ t: 'overcharge', id: p.id });
       return true;
     }
     case 'decoy': {
@@ -766,35 +742,34 @@ function useAbility(state: GameState, p: PlayerState): boolean {
       state.events.push({ t: 'decoy', id: p.id });
       return true;
     }
-    case 'builder': {
-      const dx = Math.cos(p.aim);
-      const dy = Math.sin(p.aim);
-      const cx = p.x + dx * ABILITY.wallDistance;
-      const cy = p.y + dy * ABILITY.wallDistance;
-      // Wall runs perpendicular to the dominant aim axis.
-      const vertical = Math.abs(dx) > Math.abs(dy);
-      const w = vertical ? ABILITY.wallThickness : ABILITY.wallLength;
-      const h = vertical ? ABILITY.wallLength : ABILITY.wallThickness;
-      const mine = state.walls.filter((wl) => wl.owner === p.id);
-      if (mine.length >= ABILITY.wallsPerPlayer) {
-        const oldest = mine[0];
-        state.walls = state.walls.filter((wl) => wl !== oldest);
-      }
-      state.walls.push({
-        id: state.nextId++, owner: p.id, x: cx - w / 2, y: cy - h / 2, w, h,
-        hp: ABILITY.wallHp, expiresAt: state.time + ABILITY.wallDuration,
-      });
-      state.events.push({ t: 'wall', id: p.id, x: r2(cx), y: r2(cy) });
+    // Passive abilities have nothing to press.
+    case 'echo': {
+      // Everyone the ping reaches shows up for the pinger's team, walls or not.
+      const hits = [...state.players.values()]
+        .filter((o) => o.alive && o.id !== p.id && !sameTeam(state, o.id, p.id) && Math.hypot(o.x - p.x, o.y - p.y) <= ABILITY.sonarRadius)
+        .map((o) => o.id);
+      state.events.push({ t: 'sonar', id: p.id, x: r2(p.x), y: r2(p.y), r: ABILITY.sonarRadius, hits });
       return true;
     }
+    // A passive has nothing to press.
+    case 'chameleon':
+      return false;
   }
+}
+
+/** Chameleon's passive: vanish after standing still. */
+function updatePassive(state: GameState, p: PlayerState): void {
+  if (p.hero !== 'chameleon') return;
+  const hide = state.time - p.stillSince >= ABILITY.hideDelay;
+  if (hide && !p.hidden) state.events.push({ t: 'hide', id: p.id, x: r2(p.x), y: r2(p.y) });
+  p.hidden = hide;
 }
 
 function tryPickup(state: GameState, p: PlayerState): void {
   let best: Pickup | null = null;
   let bestD = PICKUP_RADIUS;
   for (const k of state.pickups) {
-    if (k.kind === 'heal') continue;
+    if (k.kind === 'heal' || k.kind === 'power') continue;
     const d = Math.hypot(k.x - p.x, k.y - p.y);
     if (d < bestD) {
       bestD = d;
@@ -851,7 +826,16 @@ function throwUtil(state: GameState, p: PlayerState): void {
     p.hp = Math.min(MAX_HP, p.hp + heal);
     p.utilCharges--;
     p.throwReadyAt = state.time + THROW.cooldown;
+    reveal(state, p);
     state.events.push({ t: 'heal', id: p.id, x: r2(p.x), y: r2(p.y) });
+    return;
+  }
+  if (UTILS[p.utility].deploy) {
+    deployTurret(state, p);
+    reveal(state, p);
+    p.utilCharges--;
+    p.throwReadyAt = state.time + THROW.cooldown;
+    p.shieldUntil = Math.min(p.shieldUntil, state.time);
     return;
   }
   const dist = clamp(p.aimDist, THROW.minDistance, THROW.maxDistance);
@@ -869,11 +853,72 @@ function throwUtil(state: GameState, p: PlayerState): void {
   p.utilCharges--;
   p.throwReadyAt = state.time + THROW.cooldown;
   p.shieldUntil = Math.min(p.shieldUntil, state.time);
+  reveal(state, p);
   state.events.push({ t: 'throw', id: p.id, util: p.utility });
 }
 
+/** Set a turret down just in front of the player, or at their feet if that spot is blocked. One each. */
+function deployTurret(state: GameState, p: PlayerState): void {
+  const walls = state.map.walls;
+  const r = TURRET.radius;
+  let x = p.x + Math.cos(p.aim) * TURRET.placeDistance;
+  let y = p.y + Math.sin(p.aim) * TURRET.placeDistance;
+  const blocked = x < r || y < r || x > state.map.w - r || y > state.map.h - r || walls.some((w) => circleOverlapsRect(x, y, r, w));
+  if (blocked) {
+    x = p.x;
+    y = p.y;
+  }
+  for (const old of state.turrets.filter((t) => t.owner === p.id)) {
+    state.events.push({ t: 'turretEnd', x: r2(old.x), y: r2(old.y), broken: false });
+  }
+  state.turrets = state.turrets.filter((t) => t.owner !== p.id);
+  state.turrets.push({
+    id: state.nextId++, owner: p.id, team: p.team, x, y, aim: p.aim, hp: TURRET.hp,
+    expiresAt: state.time + TURRET.duration, fireReadyAt: state.time + 0.5,
+  });
+  state.events.push({ t: 'turret', id: p.id, x: r2(x), y: r2(y) });
+}
+
+/** Turn toward the nearest enemy in sight and fire once lined up. The spring slows it near the end. */
+function updateTurrets(state: GameState, dt: number): void {
+  for (const t of state.turrets) {
+    let target: PlayerState | null = null;
+    let best = TURRET.range;
+    for (const p of state.players.values()) {
+      if (!p.alive || p.id === t.owner || sameTeam(state, p.id, t.owner)) continue;
+      const d = Math.hypot(p.x - t.x, p.y - t.y);
+      // Hidden players slip past unless they walk right up to it.
+      if (isHidden(state, p) && d > ABILITY.hiddenSpotRange) continue;
+      if (d < best && hasLineOfSight(state, t.x, t.y, p.x, p.y)) {
+        best = d;
+        target = p;
+      }
+    }
+    if (!target) continue;
+    const want = Math.atan2(target.y - t.y, target.x - t.x);
+    let diff = want - t.aim;
+    while (diff > Math.PI) diff -= Math.PI * 2;
+    while (diff < -Math.PI) diff += Math.PI * 2;
+    const step = TURRET.turnRate * dt;
+    t.aim += Math.abs(diff) <= step ? diff : Math.sign(diff) * step;
+    if (Math.abs(diff) > TURRET.fireCone || state.time < t.fireReadyAt) continue;
+    const left = t.expiresAt - state.time;
+    const slow = left < TURRET.windDown ? 2 - left / TURRET.windDown : 1;
+    t.fireReadyAt = state.time + TURRET.cooldown * slow;
+    const a = t.aim + (state.rng() - 0.5) * TURRET.spread;
+    const dx = Math.cos(a);
+    const dy = Math.sin(a);
+    state.bullets.push({
+      id: state.nextId++, owner: t.owner, gun: 'pistol',
+      x: t.x + dx * (TURRET.radius + 0.2), y: t.y + dy * (TURRET.radius + 0.2),
+      dx, dy, travelled: 0, fake: false, bounces: 0, turret: true,
+    });
+    state.events.push({ t: 'shot', id: `turret:${t.id}`, gun: 'pistol', x: r2(t.x), y: r2(t.y), a: r2(t.aim) });
+  }
+}
+
 function updateThrowables(state: GameState, dt: number): void {
-  const walls = allWalls(state);
+  const walls = state.map.walls;
   const steps = 4;
   const h = dt / steps;
   const done: Throwable[] = [];
@@ -933,13 +978,9 @@ function detonate(state: GameState, g: Throwable): void {
       const d = Math.hypot(p.x - g.x, p.y - g.y);
       if (d > def.radius || !hasLineOfSight(state, g.x, g.y, p.x, p.y)) continue;
       if (sameTeam(state, p.id, g.owner)) continue;
-      const full = 0.6 + 2.6 * (1 - d / def.radius);
+      const full = FLASH.min + (FLASH.max - FLASH.min) * (1 - d / def.radius);
       p.blindUntil = Math.max(p.blindUntil, state.time + (p.id === g.owner ? full * 0.5 : full));
     }
-  } else if (g.util === 'goo') {
-    const owner = state.players.get(g.owner);
-    state.goos.push({ id: state.nextId++, owner: g.owner, team: owner?.team ?? -1, x: g.x, y: g.y, r: def.radius, expiresAt: state.time + THROW.gooDuration });
-    state.events.push({ t: 'goo', x: r2(g.x), y: r2(g.y) });
   } else {
     state.smokes.push({ id: state.nextId++, x: g.x, y: g.y, r: def.radius, expiresAt: state.time + THROW.smokeDuration });
     state.events.push({ t: 'smoke', x: r2(g.x), y: r2(g.y) });
@@ -957,7 +998,7 @@ export function tick(state: GameState, dt: number): void {
     return;
   }
 
-  const walls = allWalls(state);
+  const walls = state.map.walls;
 
   for (const p of state.players.values()) {
     if (!p.alive) {
@@ -973,11 +1014,15 @@ export function tick(state: GameState, dt: number): void {
     }
     if (p.wantAbility) {
       p.wantAbility = false;
-      if (state.time >= p.abilityReadyAt) {
+      const def = HEROES[p.hero];
+      if (def.kind === 'cooldown' && state.time >= p.abilityReadyAt) {
         const ok = useAbility(state, p);
-        p.abilityReadyAt = state.time + (ok ? HEROES[p.hero].cooldown : 0.5);
+        p.abilityReadyAt = state.time + (ok ? def.cooldown : 0.5);
+      } else if (def.kind === 'charge' && p.abilityCharge >= (def.charge ?? 0)) {
+        if (useAbility(state, p)) p.abilityCharge = 0;
       }
     }
+    updatePassive(state, p);
     if (p.wantPickup) {
       p.wantPickup = false;
       tryPickup(state, p);
@@ -1012,19 +1057,23 @@ export function tick(state: GameState, dt: number): void {
     }
     if (p.ammo[p.slot] === 0) startReload(state, p);
     collectHeals(state, p);
+    collectPowers(state, p);
   }
+  if (state.time >= state.nextPowerAt) dropPower(state);
   if (state.hill) updateHill(state, state.hill, dt);
 
   updateDecoys(state, dt, walls);
+  updateTurrets(state, dt);
   updateBullets(state, dt);
   updateThrowables(state, dt);
 
   const t = state.time;
-  state.walls = state.walls.filter((w) => w.expiresAt > t);
-  state.bubbles = state.bubbles.filter((b) => b.expiresAt > t);
   state.pickups = state.pickups.filter((k) => k.expiresAt > t);
   state.smokes = state.smokes.filter((sm) => sm.expiresAt > t);
-  state.goos = state.goos.filter((g) => g.expiresAt > t);
+  for (const tr of state.turrets) {
+    if (tr.expiresAt <= t) state.events.push({ t: 'turretEnd', x: r2(tr.x), y: r2(tr.y), broken: false });
+  }
+  state.turrets = state.turrets.filter((tr) => tr.expiresAt > t);
   for (const d of [...state.decoys]) if (d.expiresAt <= t) popDecoy(state, d);
 
 }
@@ -1037,6 +1086,43 @@ function collectHeals(state: GameState, p: PlayerState): void {
   state.pickups = state.pickups.filter((o) => o !== k);
   p.hp = Math.min(MAX_HP, p.hp + HEAL_AMOUNT);
   state.events.push({ t: 'heal', id: p.id, x: r2(k.x), y: r2(k.y) });
+}
+
+/** Power-ups are taken by walking over them once they have landed. */
+function collectPowers(state: GameState, p: PlayerState): void {
+  const k = state.pickups.find((k) => k.kind === 'power' && state.time >= (k.readyAt ?? 0) && Math.hypot(k.x - p.x, k.y - p.y) < PICKUP_RADIUS * 0.8);
+  if (!k) return;
+  const power = k.item as PowerId;
+  state.pickups = state.pickups.filter((o) => o !== k);
+  p.powers[power] = state.time + POWERS[power].duration;
+  state.events.push({ t: 'power', id: p.id, power, x: r2(k.x), y: r2(k.y) });
+}
+
+/** Mark a clear spot away from everyone; the power-up lands there after a short warning. */
+function dropPower(state: GameState): void {
+  state.nextPowerAt = state.time + POWER.every + state.rng() * POWER.jitter;
+  if (state.pickups.filter((k) => k.kind === 'power').length >= POWER.maxOnMap) return;
+  const spot = findDropSpot(state);
+  if (!spot) return;
+  const power = POWER_IDS[Math.floor(state.rng() * POWER_IDS.length)];
+  const readyAt = state.time + POWER.warnTime;
+  state.pickups.push({ id: state.nextId++, kind: 'power', item: power, x: spot.x, y: spot.y, readyAt, expiresAt: readyAt + POWER.lifetime });
+  state.events.push({ t: 'powerDrop', power, x: r2(spot.x), y: r2(spot.y) });
+}
+
+function findDropSpot(state: GameState): { x: number; y: number } | null {
+  const { w, h } = state.map;
+  const walls = state.map.walls;
+  const alive = [...state.players.values()].filter((p) => p.alive);
+  for (let i = 0; i < 40; i++) {
+    const x = 2 + state.rng() * (w - 4);
+    const y = 2 + state.rng() * (h - 4);
+    if (walls.some((wl) => circleOverlapsRect(x, y, 1.2, wl))) continue;
+    if (alive.some((p) => Math.hypot(p.x - x, p.y - y) < POWER.minPlayerDist)) continue;
+    if (state.pickups.some((k) => k.kind === 'power' && Math.hypot(k.x - x, k.y - y) < 6)) continue;
+    return { x, y };
+  }
+  return null;
 }
 
 /** King of the Toybox: one player alone in the ring banks a point per second. */
@@ -1062,10 +1148,9 @@ function updateHill(state: GameState, hill: Hill, dt: number): void {
 function updateDecoys(state: GameState, dt: number, walls: Rect[]): void {
   for (const d of state.decoys) {
     const before = { x: d.x, y: d.y };
-    const f = bubbleFactor(d.x, d.y, d.owner, state.bubbles, ABILITY.bubbleMoveFactor);
-    moveCircle(d, d.dirX * PLAYER_SPEED * f * dt, d.dirY * PLAYER_SPEED * f * dt, walls);
+    moveCircle(d, d.dirX * PLAYER_SPEED * dt, d.dirY * PLAYER_SPEED * dt, walls);
     const moved = Math.hypot(d.x - before.x, d.y - before.y);
-    if (moved < PLAYER_SPEED * f * dt * 0.3) {
+    if (moved < PLAYER_SPEED * dt * 0.3) {
       // Stuck on a wall: turn 90 degrees, alternating direction for variety.
       const turn = state.rng() < 0.5 ? 1 : -1;
       const nx = -d.dirY * turn;
@@ -1107,8 +1192,9 @@ function updateBullets(state: GameState, dt: number): void {
   const survivors: Bullet[] = [];
   outer: for (const b of state.bullets) {
     const def = GUNS[b.gun];
-    const f = bubbleFactor(b.x, b.y, b.owner, state.bubbles, ABILITY.bubbleBulletFactor);
-    const move = def.speed * f * dt;
+    const move = def.speed * dt;
+    const mult = b.mult ?? 1;
+    const hitDamage = () => (b.turret ? TURRET.damage : bulletDamage(b.gun, b.travelled)) * mult;
     const steps = Math.max(1, Math.ceil(move / 0.35));
     const stepLen = move / steps;
     for (let s = 0; s < steps; s++) {
@@ -1117,30 +1203,22 @@ function updateBullets(state: GameState, dt: number): void {
       b.travelled += stepLen;
 
       const hitMap = state.map.walls.some((w) => pointInRect(b.x, b.y, w, BULLET_RADIUS));
-      const wall = hitMap ? null : state.walls.find((w) => pointInRect(b.x, b.y, w, BULLET_RADIUS));
-      if ((hitMap || wall) && b.bounces > 0) {
+      if (hitMap && b.bounces > 0) {
         bounce(state, b, stepLen);
         continue;
       }
       if (hitMap) {
-        if (def.splashRadius && !b.fake) explodeGun(state, b.x - b.dx * 0.3, b.y - b.dy * 0.3, b.owner, b.gun);
-        continue outer;
-      }
-      if (wall) {
-        if (!b.fake) {
-          if (def.splashRadius) explodeGun(state, b.x - b.dx * 0.3, b.y - b.dy * 0.3, b.owner, b.gun);
-          else damageWall(state, wall, def.damage);
-        }
+        if (def.splashRadius && !b.fake) explodeGun(state, b.x - b.dx * 0.3, b.y - b.dy * 0.3, b.owner, b.gun, mult);
         continue outer;
       }
       for (const p of state.players.values()) {
         if (!p.alive || p.id === b.owner || sameTeam(state, p.id, b.owner)) continue;
         if ((p.x - b.x) ** 2 + (p.y - b.y) ** 2 < (PLAYER_RADIUS + BULLET_RADIUS) ** 2) {
           if (!b.fake) {
-            if (def.splashRadius) explodeGun(state, b.x, b.y, b.owner, b.gun);
+            if (def.splashRadius) explodeGun(state, b.x, b.y, b.owner, b.gun, mult);
             else {
               if (def.slow && state.time >= p.shieldUntil) p.slowUntil = Math.max(p.slowUntil, state.time + def.slow);
-              damagePlayer(state, p, bulletDamage(b.gun, b.travelled), b.owner, b.gun);
+              damagePlayer(state, p, hitDamage(), b.owner, b.turret ? 'turret' : b.gun);
               if (def.knockback) {
                 p.vx += b.dx * def.knockback;
                 p.vy += b.dy * def.knockback;
@@ -1154,17 +1232,27 @@ function updateBullets(state: GameState, dt: number): void {
         if (d.owner === b.owner) continue;
         if ((d.x - b.x) ** 2 + (d.y - b.y) ** 2 < (PLAYER_RADIUS + BULLET_RADIUS) ** 2) {
           if (!b.fake) {
-            if (def.splashRadius) explodeGun(state, b.x, b.y, b.owner, b.gun);
+            if (def.splashRadius) explodeGun(state, b.x, b.y, b.owner, b.gun, mult);
             else {
-              d.hp -= bulletDamage(b.gun, b.travelled);
+              d.hp -= hitDamage();
               if (d.hp <= 0) popDecoy(state, d);
             }
           }
           continue outer;
         }
       }
+      for (const t of state.turrets) {
+        if (t.owner === b.owner || sameTeam(state, t.owner, b.owner)) continue;
+        if ((t.x - b.x) ** 2 + (t.y - b.y) ** 2 < (TURRET.radius + BULLET_RADIUS) ** 2) {
+          if (!b.fake) {
+            if (def.splashRadius) explodeGun(state, b.x, b.y, b.owner, b.gun, mult);
+            else damageTurret(state, t, hitDamage());
+          }
+          continue outer;
+        }
+      }
       if (b.travelled >= def.range) {
-        if (def.splashRadius && !b.fake) explodeGun(state, b.x, b.y, b.owner, b.gun);
+        if (def.splashRadius && !b.fake) explodeGun(state, b.x, b.y, b.owner, b.gun, mult);
         continue outer;
       }
     }
@@ -1175,7 +1263,7 @@ function updateBullets(state: GameState, dt: number): void {
 
 /** Step back out of the wall and mirror whichever axis ran into it. */
 function bounce(state: GameState, b: Bullet, stepLen: number): void {
-  const walls = allWalls(state);
+  const walls = state.map.walls;
   const px = b.x - b.dx * stepLen;
   const py = b.y - b.dy * stepLen;
   const blockedX = walls.some((w) => pointInRect(b.x, py, w, BULLET_RADIUS));
@@ -1188,21 +1276,29 @@ function bounce(state: GameState, b: Bullet, stepLen: number): void {
 }
 
 export function resetMatch(state: GameState): void {
+  if (state.nextMap) {
+    state.map = MAPS[state.nextMap];
+    state.nextMap = null;
+    if (state.hill) {
+      state.hill.x = state.map.w / 2;
+      state.hill.y = state.map.h / 2;
+      state.hill.r = Math.min(state.map.w, state.map.h) * 0.12;
+    }
+  }
   state.phase = 'playing';
   state.winner = null;
   state.bullets = [];
   state.pickups = [];
   state.throwables = [];
   state.smokes = [];
-  state.goos = [];
+  state.turrets = [];
   state.teamScores = [0, 0];
+  state.nextPowerAt = state.time + POWER.firstAfter;
   if (state.hill) {
     state.hill.holder = null;
     state.hill.contested = false;
     state.hill.progress = 0;
   }
-  state.walls = [];
-  state.bubbles = [];
   state.decoys = [];
   for (const p of state.players.values()) {
     p.kills = 0;
@@ -1210,6 +1306,7 @@ export function resetMatch(state: GameState): void {
     p.score = 0;
     p.bestStreak = 0;
     p.damageDealt = 0;
+    p.abilityCharge = 0;
     p.weaponKills = {};
     p.alive = false;
   }

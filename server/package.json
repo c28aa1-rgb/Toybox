@@ -4,11 +4,12 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "GG_PORT=3001 tsx watch src/index.ts",
+    "dev": "GG_LOCAL_PROFILE_FALLBACK=1 GG_PORT=3001 tsx watch src/index.ts",
     "start": "tsx src/index.ts"
   },
   "dependencies": {
     "@gg/shared": "*",
+    "firebase-admin": "^14.5.0",
     "tsx": "^4.19.0",
     "ws": "^8.18.0"
   },

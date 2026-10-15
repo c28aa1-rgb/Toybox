@@ -1,0 +1,14 @@
+{
+  "admitted": true,
+  "reasons": [],
+  "provenance": {
+    "viewpoint": "reference",
+    "sourcePath": "/Users/c28aa1/Desktop/Gun Game/art/concepts/chameleon.png",
+    "width": 1254,
+    "height": 1254,
+    "foregroundCoverage": 0.3416,
+    "largestComponentFraction": 1.0,
+    "pHash": 12656005942311824258,
+    "duplicateOfHash": null
+  }
+}

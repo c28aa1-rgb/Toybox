@@ -1,10 +1,10 @@
 import * as THREE from 'three';
 import type { GunId, HeroId, UtilId } from '@gg/shared';
 import { createFlickerModel } from '../../../art/reconstructions/blink/src/createFlickerModel';
-import { createSwitchModel } from '../../../art/reconstructions/swap/src/createSwitchModel';
-import { createTockModel } from '../../../art/reconstructions/chrono/src/createTockModel';
+import { createVoltModel } from '../../../art/reconstructions/volt/src/createVoltModel';
+import { createChameleonModel } from '../../../art/reconstructions/chameleon/src/createChameleonModel';
 import { createMirageModel } from '../../../art/reconstructions/decoy/src/createMirageModel';
-import { createBrickModel } from '../../../art/reconstructions/builder/src/createBrickModel';
+import { createEchoModel } from '../../../art/reconstructions/echo/src/createEchoModel';
 import { createPeaShooterModel } from '../../../art/reconstructions/pistol/src/createPeaShooterModel';
 import { createBuzzboxModel } from '../../../art/reconstructions/smg/src/createBuzzboxModel';
 import { createBoomstickModel } from '../../../art/reconstructions/shotgun/src/createBoomstickModel';
@@ -18,9 +18,9 @@ import { createPuffCanModel } from '../../../art/reconstructions/smoke/src/creat
 import { createTriPopModel } from '../../../art/reconstructions/burst/src/createTriPopModel';
 import { createBouncerModel } from '../../../art/reconstructions/bouncer/src/createBouncerModel';
 import { createStingerModel } from '../../../art/reconstructions/stinger/src/createStingerModel';
-import { createGooBombModel } from '../../../art/reconstructions/goo/src/createGooBombModel';
 import { createJuiceBoxModel } from '../../../art/reconstructions/juice/src/createJuiceBoxModel';
 import { registerGunModel, registerHeroModel, registerUtilModel } from '../skins/registry';
+import { createTurretModel } from '../skins/turret';
 import { toonify } from './toonify';
 
 /**
@@ -29,10 +29,10 @@ import { toonify } from './toonify';
  */
 const FACTORIES: Record<HeroId, { make: () => THREE.Group; wobble: string | null }> = {
   blink: { make: () => createFlickerModel({ textureSize: 8 }), wobble: 'Antenna Stalk__pivot' },
-  swap: { make: () => createSwitchModel({ textureSize: 8 }), wobble: null },
-  chrono: { make: () => createTockModel({ textureSize: 8 }), wobble: 'Bell Stem__pivot' },
+  volt: { make: () => createVoltModel({ textureSize: 8 }), wobble: 'Plug__pivot' },
+  chameleon: { make: () => createChameleonModel({ textureSize: 8 }), wobble: 'Crest__pivot' },
   decoy: { make: () => createMirageModel({ textureSize: 8 }), wobble: 'Hat Crown__pivot' },
-  builder: { make: () => createBrickModel({ textureSize: 8 }), wobble: null },
+  echo: { make: () => createEchoModel({ textureSize: 8 }), wobble: 'Dish L__pivot' },
 };
 
 const templates = new Map<HeroId, THREE.Object3D>();
@@ -107,7 +107,7 @@ const UTIL_FACTORIES: Record<UtilId, () => THREE.Group> = {
   frag: () => createFizzBombModel({ textureSize: 8 }),
   flash: () => createFlashPopModel({ textureSize: 8 }),
   smoke: () => createPuffCanModel({ textureSize: 8 }),
-  goo: () => createGooBombModel({ textureSize: 8 }),
+  turret: () => createTurretModel(),
   juice: () => createJuiceBoxModel({ textureSize: 8 }),
 };
 

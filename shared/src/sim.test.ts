@@ -1,22 +1,23 @@
 import { describe, expect, it } from 'vitest';
 import { GUNS, bulletDamage } from './guns';
-import { ABILITY } from './heroes';
+import { ABILITY, HEROES } from './heroes';
 import { MAPS, MAP_IDS, mapProblems } from './map';
 
 const STATIC_WALLS = MAPS.playmat.walls;
 import type { InputFrame } from './protocol';
 import {
-  addPlayer, applyInput, circleOverlapsRect, createGame, hasLineOfSight, moveCircle, tick, type GameState, type PlayerState,
+  addPlayer, applyInput, circleOverlapsRect, createGame, hasLineOfSight, isHidden, moveCircle, tick, type GameState, type PlayerState,
 } from './sim';
 import { HEAL_AMOUNT, KILLS_TO_WIN, MAX_HP, PLAYER_RADIUS, SPAWN_SHIELD, TICK_DT } from './constants';
 import { GUN_LADDER, MODES } from './modes';
-import { THROW } from './utilities';
+import { THROW, TURRET } from './utilities';
 import type { ModeId } from './modes';
+import { POWER, POWERS } from './powers';
 
 function setup(mode: ModeId = 'ffa'): { s: GameState; a: PlayerState; b: PlayerState } {
   const s = createGame(42, 'playmat', mode);
   const a = addPlayer(s, { id: 'a', name: 'A', hero: 'blink', gun: 'smg', secondary: 'pistol', utility: 'frag' });
-  const b = addPlayer(s, { id: 'b', name: 'B', hero: 'swap', gun: 'smg', secondary: 'pistol', utility: 'flash' });
+  const b = addPlayer(s, { id: 'b', name: 'B', hero: 'volt', gun: 'smg', secondary: 'pistol', utility: 'flash' });
   // Duel with sidearms so the damage numbers stay predictable.
   for (const p of [a, b]) { p.slot = 'secondary'; p.gun = 'pistol'; }
   // Open floor, facing each other, shields off.
@@ -239,7 +240,7 @@ describe('loadout', () => {
 describe('utilities', () => {
   it('a throw arcs over a wall and lands past it', () => {
     const { s, a } = setup();
-    s.walls.push({ id: 77, owner: 'x', x: a.x + 3, y: a.y - 2, w: 0.7, h: 4, hp: 999, expiresAt: 99 });
+    s.map = { ...s.map, walls: [...s.map.walls, { x: a.x + 3, y: a.y - 2, w: 0.7, h: 4 }] };
     a.aim = 0;
     a.aimDist = 8;
     a.wantThrow = true;
@@ -301,66 +302,87 @@ describe('abilities', () => {
     expect(a.x - x0).toBeLessThanOrEqual(ABILITY.blinkDistance + 0.01);
   });
 
-  it('swap trades places with the target', () => {
+  it('overcharge only fires once charged by dealing damage, then doubles the next three shots', () => {
     const { s, a, b } = setup();
-    b.hero = 'swap';
-    b.aim = Math.PI;
-    b.aimDist = 6;
-    const ax = a.x;
-    const bx = b.x;
-    b.wantAbility = true;
+    a.hero = 'volt';
+    a.wantAbility = true;
     tick(s, TICK_DT);
-    expect(b.x).toBeCloseTo(ax, 1);
-    expect(a.x).toBeCloseTo(bx, 1);
+    expect(a.overchargeShots).toBe(0);
+    a.abilityCharge = HEROES.volt.charge!;
+    a.wantAbility = true;
+    tick(s, TICK_DT);
+    expect(a.overchargeShots).toBe(ABILITY.overchargeShots);
+    expect(a.abilityCharge).toBe(0);
+    a.fire = true;
+    run(s, 0.25);
+    expect(MAX_HP - b.hp).toBe(GUNS.pistol.damage * ABILITY.overchargeMult);
+    // Hits charge it back up.
+    expect(a.abilityCharge).toBeGreaterThan(0);
+    const seen = new Map<number, boolean>();
+    for (let t = 0; t < 1.5; t += TICK_DT) {
+      tick(s, TICK_DT);
+      for (const bl of s.bullets) if (bl.owner === 'a' && !seen.has(bl.id)) seen.set(bl.id, (bl.mult ?? 1) > 1);
+    }
+    expect([...seen.values()].filter(Boolean).length).toBe(ABILITY.overchargeShots - 1);
+    expect(a.overchargeShots).toBe(0);
   });
 
-  it('swap fails on a target inside a time bubble', () => {
-    const { s, a, b } = setup();
-    s.bubbles.push({ id: 1, owner: 'x', x: a.x, y: a.y, r: 3, expiresAt: 99 });
-    b.aim = Math.PI;
-    b.wantAbility = true;
-    const ax = a.x;
+  it('blink has a real cooldown', () => {
+    const { s, a } = setup();
+    a.aimDist = 20;
+    a.wantAbility = true;
     tick(s, TICK_DT);
-    expect(a.x).toBeCloseTo(ax, 3);
-    expect(s.events.some((e) => e.t === 'swapFail')).toBe(true);
+    const x1 = a.x;
+    a.wantAbility = true;
+    run(s, 5);
+    expect(a.x).toBe(x1);
+    expect(HEROES.blink.cooldown).toBeGreaterThanOrEqual(10);
   });
 
-  it('time bubble slows enemy bullets', () => {
-    const { s, a, b } = setup();
-    b.hero = 'chrono';
-    b.aim = Math.PI;
-    b.aimDist = 4;
-    b.wantAbility = true;
-    tick(s, TICK_DT);
-    expect(s.bubbles.length).toBe(1);
+  it('hide and seek: standing still hides you, moving or shooting reveals you, turrets ignore you unless close', () => {
+    const { s, a } = setup();
+    a.hero = 'chameleon';
+    a.stillSince = s.time;
+    run(s, ABILITY.hideDelay - 0.2);
+    expect(isHidden(s, a)).toBe(false);
+    run(s, 0.3);
+    expect(isHidden(s, a)).toBe(true);
+    s.turrets.push({ id: 5, owner: 'b', team: -1, x: a.x + 6, y: a.y, aim: Math.PI, hp: 60, expiresAt: 99, fireReadyAt: 0 });
+    run(s, 1);
+    expect(a.hp).toBe(MAX_HP);
+    s.turrets = [];
+    applyInput(s, a, frame(1, { mx: 1 }));
+    expect(isHidden(s, a)).toBe(false);
+    run(s, ABILITY.hideDelay + 0.1);
+    expect(isHidden(s, a)).toBe(true);
     a.fire = true;
     tick(s, TICK_DT);
-    const bullet = s.bullets[0];
-    const x0 = bullet.x;
-    a.fire = false;
-    tick(s, TICK_DT);
-    const moved = bullet.x - x0;
-    expect(moved).toBeLessThan(GUNS.pistol.speed * TICK_DT * 0.5);
+    expect(isHidden(s, a)).toBe(false);
   });
 
-  it('builder wall blocks bullets and can be destroyed', () => {
-    const { s, a, b } = setup();
-    b.hero = 'builder';
-    b.aim = Math.PI;
-    b.wantAbility = true;
+  it('sonar ping fires on demand with a cooldown and reports enemies in range, not teammates', () => {
+    const { s, a, b } = setup('teams');
+    const c = addPlayer(s, { id: 'c', name: 'C', hero: 'blink', gun: 'smg', secondary: 'pistol', utility: 'frag' });
+    a.hero = 'echo';
+    b.team = a.team === 0 ? 1 : 0;
+    c.team = a.team;
+    c.x = a.x + 2; c.y = a.y;
+    run(s, 2);
+    expect(s.events.some((e) => e.t === 'sonar')).toBe(false);
+    a.wantAbility = true;
     tick(s, TICK_DT);
-    expect(s.walls.length).toBe(1);
-    a.gun = 'sniper';
-    a.fire = true;
-    run(s, 0.6);
-    expect(b.hp).toBe(100);
-    run(s, 4);
-    expect(s.walls.length).toBe(0);
+    const ping = s.events.find((e) => e.t === 'sonar');
+    expect(ping && ping.t === 'sonar' && ping.hits).toEqual(['b']);
+    a.wantAbility = true;
+    tick(s, TICK_DT);
+    expect(s.events.some((e) => e.t === 'sonar')).toBe(false);
+    expect(a.abilityReadyAt).toBeCloseTo(s.time + HEROES.echo.cooldown - TICK_DT, 1);
   });
 
   it('decoy shoots blanks', () => {
     const { s, a, b } = setup();
     a.hero = 'decoy';
+    a.abilityCharge = HEROES.decoy.charge!;
     a.wantAbility = true;
     tick(s, TICK_DT);
     expect(s.decoys.length).toBe(1);
@@ -494,16 +516,56 @@ describe('new weapons', () => {
     expect(b.slowUntil).toBeGreaterThan(s.time);
   });
 
-  it('goo slows enemies but not the thrower', () => {
+  it('a wind-up turret is set down in front, shoots enemies, and credits kills to the turret', () => {
     const { s, a, b } = setup();
-    s.goos.push({ id: 1, owner: 'a', team: -1, x: 22, y: 13.5, r: 4, expiresAt: 10 });
-    const startA = a.x;
-    const startB = b.x;
-    for (let i = 1; i <= 15; i++) {
-      applyInput(s, a, frame(i, { mx: 1 }));
-      applyInput(s, b, frame(i, { mx: 1 }));
+    a.utility = 'turret';
+    a.utilCharges = 1;
+    a.wantThrow = true;
+    tick(s, TICK_DT);
+    expect(a.utilCharges).toBe(0);
+    expect(s.turrets).toHaveLength(1);
+    const t = s.turrets[0];
+    expect(t.x).toBeCloseTo(a.x + TURRET.placeDistance, 5);
+    // Get A out of the way so only the turret is fighting.
+    a.x = 19; a.y = 5;
+    b.hp = TURRET.damage * 2;
+    let killedBy: string | null = null;
+    for (let i = 0; i < 60 && b.alive; i++) {
+      tick(s, TICK_DT);
+      for (const e of s.events) if (e.t === 'kill') killedBy = e.gun;
     }
-    expect(b.x - startB).toBeLessThan((a.x - startA) * 0.7);
+    expect(b.alive).toBe(false);
+    expect(killedBy).toBe('turret');
+    expect(a.kills).toBe(1);
+  });
+
+  it('turrets wind down, break when shot, and only one stands per player', () => {
+    const { s, a, b } = setup();
+    a.utility = 'turret';
+    a.utilCharges = 2;
+    a.wantThrow = true;
+    tick(s, TICK_DT);
+    run(s, THROW.cooldown + 0.1);
+    a.wantThrow = true;
+    tick(s, TICK_DT);
+    expect(s.turrets).toHaveLength(1);
+
+    // B shoots it down with the pistol (19 a hit) before the 60 hp runs out.
+    const t = s.turrets[0];
+    b.x = t.x + 4; b.y = t.y; b.aim = Math.PI; b.fire = true;
+    b.shieldUntil = -1;
+    a.x = 19; a.y = 5;
+    run(s, 2);
+    expect(s.turrets).toHaveLength(0);
+
+    // A fresh one expires on its own after its duration.
+    const { s: s2, a: a2 } = setup();
+    a2.utility = 'turret';
+    a2.utilCharges = 1;
+    a2.wantThrow = true;
+    tick(s2, TICK_DT);
+    run(s2, TURRET.duration + 0.1);
+    expect(s2.turrets).toHaveLength(0);
   });
 
   it('juice box heals on the spot and is not wasted at full health', () => {
@@ -583,5 +645,66 @@ describe('utility refill', () => {
     a.fire = true;
     run(s, 0.5);
     expect(a.utilCharges).toBe(2);
+  });
+});
+
+describe('power-ups', () => {
+  it('marks a drop spot away from players, then lands it after the warning', () => {
+    const { s, a, b } = setup();
+    run(s, POWER.firstAfter + TICK_DT);
+    const drop = s.pickups.find((k) => k.kind === 'power');
+    expect(drop).toBeDefined();
+    for (const p of [a, b]) expect(Math.hypot(drop!.x - p.x, drop!.y - p.y)).toBeGreaterThanOrEqual(POWER.minPlayerDist);
+    expect(s.map.walls.some((w) => circleOverlapsRect(drop!.x, drop!.y, 1, w))).toBe(false);
+    expect(drop!.readyAt).toBeCloseTo(s.time + POWER.warnTime - TICK_DT, 1);
+    expect(s.nextPowerAt).toBeGreaterThanOrEqual(s.time + POWER.every - TICK_DT);
+  });
+
+  it("can't be taken before it lands, then grants the effect", () => {
+    const { s, a } = setup();
+    s.pickups.push({ id: 99, kind: 'power', item: 'armor', x: a.x, y: a.y, readyAt: s.time + 0.5, expiresAt: 100 });
+    tick(s, TICK_DT);
+    expect(s.pickups).toHaveLength(1);
+    run(s, 0.5);
+    expect(s.pickups.filter((k) => k.kind === 'power')).toHaveLength(0);
+    expect(a.powers.armor).toBeCloseTo(s.time + POWERS.armor.duration, 0);
+  });
+
+  it('Mega Pop hits harder and Pillow Armor takes half', () => {
+    const base = setup();
+    base.a.fire = true;
+    run(base.s, 0.4);
+    const normal = MAX_HP - base.b.hp;
+    expect(normal).toBeGreaterThan(0);
+
+    const boosted = setup();
+    boosted.a.powers.damage = 100;
+    boosted.a.fire = true;
+    run(boosted.s, 0.4);
+    expect(MAX_HP - boosted.b.hp).toBeCloseTo(normal * POWER.damageFactor, 5);
+
+    const armored = setup();
+    armored.b.powers.armor = 100;
+    armored.a.fire = true;
+    run(armored.s, 0.4);
+    expect(MAX_HP - armored.b.hp).toBeCloseTo(normal * POWER.armorFactor, 5);
+  });
+
+  it('Sugar Rush runs faster, and dying clears it', () => {
+    const plain = setup();
+    const rush = setup();
+    rush.a.powers.speed = 100;
+    for (const { s, a } of [plain, rush]) { a.x = 19; a.y = 13.5; applyInput(s, a, frame(1, { my: -1, dt: 0.05 })); }
+    expect(13.5 - rush.a.y).toBeCloseTo((13.5 - plain.a.y) * POWER.speedFactor, 3);
+
+    rush.b.hp = 1;
+    rush.b.powers.damage = 100;
+    rush.a.fire = true;
+    run(rush.s, 0.4);
+    expect(rush.b.alive).toBe(false);
+    rush.b.wantRespawn = true;
+    run(rush.s, 3.2);
+    expect(rush.b.alive).toBe(true);
+    expect(rush.b.powers.damage).toBe(0);
   });
 });

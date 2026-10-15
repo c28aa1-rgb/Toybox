@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { GUNS, HATS, HEROES, MAPS, MODES, MODE_IDS, PARTY_MAP_IDS, PUBLIC_MAP, SECONDARY_IDS, type GunId, type HeroId, type MapDef, type MapId, type ModeId, type HatId, type UtilId, UTILS } from '@gg/shared';
+import { GUNS, HATS, HEROES, abilityTag, MAPS, MODES, MODE_IDS, PARTY_MAP_IDS, SECONDARY_IDS, type GunId, type HeroId, type MapId, type ModeId, type HatId, type UtilId, UTILS } from '@gg/shared';
 import type { JoinOptions } from '../game/GameClient';
-import { loadProfile, saveProfile } from '../unlocks';
+import { fetchProfile, loadProfile, patchProfile } from '../unlocks';
 import type { Portraits } from './App';
 import { GunRack, HatRack, HeroShelf, UtilRack } from './Pickers';
+import { MiniMap } from './MapPreview';
 import { MusicToggle } from './MusicToggle';
 import { music } from '../game/audio';
 import { ACTIONS, bindingLabel, useBindings } from '../game/bindings';
@@ -16,7 +17,10 @@ function initialRoom(): string {
 
 export function Lobby({ portraits, onPlay }: { portraits: Portraits; onPlay: (o: JoinOptions) => void }) {
   useBindings();
-  const profile = loadProfile();
+  const [profile, setProfile] = useState(loadProfile);
+  const [profileReady, setProfileReady] = useState(false);
+  const [profileError, setProfileError] = useState('');
+  const [savingProfile, setSavingProfile] = useState(false);
   const [name, setName] = useState(profile.name);
   const [hero, setHero] = useState<HeroId>(profile.hero);
   const [gun, setGun] = useState<GunId>(profile.gun);
@@ -30,9 +34,32 @@ export function Lobby({ portraits, onPlay }: { portraits: Portraits; onPlay: (o:
   const invited = initialRoom() !== '';
   const [page, setPage] = useState<'home' | 'friends'>('home');
 
-  const go = (opts: Pick<JoinOptions, 'mode' | 'room' | 'map' | 'gameMode'>) => {
-    saveProfile({ ...loadProfile(), name: name.trim(), hero, gun, secondary, utility, hat });
-    onPlay({ ...opts, name: name.trim() || 'Player', hero, gun, secondary, utility, hat });
+  useEffect(() => {
+    fetchProfile().then((p) => {
+      setProfile(p);
+      setName(p.name);
+      setHero(p.hero);
+      setGun(p.gun);
+      setSecondary(p.secondary);
+      setUtility(p.utility);
+      setHat(p.hat);
+    }).catch((error: unknown) => {
+      setProfileError(error instanceof Error ? error.message : 'Could not load your profile.');
+    }).finally(() => setProfileReady(true));
+  }, []);
+
+  const go = async (opts: Pick<JoinOptions, 'mode' | 'room' | 'map' | 'gameMode'>) => {
+    setSavingProfile(true);
+    setProfileError('');
+    try {
+      const saved = await patchProfile({ name: name.trim() || 'Player', hero, gun, secondary, utility, hat });
+      setProfile(saved);
+      onPlay({ ...opts, ...saved });
+    } catch (error) {
+      setProfileError(error instanceof Error ? error.message : 'Could not save your profile.');
+    } finally {
+      setSavingProfile(false);
+    }
   };
   if (page === 'friends') {
     return (
@@ -84,9 +111,11 @@ export function Lobby({ portraits, onPlay }: { portraits: Portraits; onPlay: (o:
           ))}
         </div>
         <div className="lobby__friends">
+          {profileError && <p className="lobby__hint" role="alert">{profileError}</p>}
           <motion.button
             type="button"
             className="btn btn--primary"
+            disabled={!profileReady || savingProfile}
             onClick={() => go({ mode: 'create', map, gameMode })}
             whileTap={{ scaleX: 1.06, scaleY: 0.92 }}
           >
@@ -109,7 +138,7 @@ export function Lobby({ portraits, onPlay }: { portraits: Portraits; onPlay: (o:
                 onChange={(e) => setRoom(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
               />
             </label>
-            <motion.button type="submit" className="btn btn--ghost" disabled={room.trim().length < 3} whileTap={{ scaleX: 1.06, scaleY: 0.92 }}>
+            <motion.button type="submit" className="btn btn--ghost" disabled={!profileReady || savingProfile || room.trim().length < 3} whileTap={{ scaleX: 1.06, scaleY: 0.92 }}>
               Join room
             </motion.button>
           </form>
@@ -146,6 +175,7 @@ export function Lobby({ portraits, onPlay }: { portraits: Portraits; onPlay: (o:
           <input
             className="field__input"
             value={name}
+          disabled={!profileReady || savingProfile}
             maxLength={16}
             placeholder="Player"
             onChange={(e) => setName(e.target.value)}
@@ -154,14 +184,16 @@ export function Lobby({ portraits, onPlay }: { portraits: Portraits; onPlay: (o:
         <motion.button
           type="button"
           className="btn btn--primary btn--play"
+          disabled={!profileReady || savingProfile}
           onClick={() => (invited ? go({ mode: 'join', room }) : go({ mode: 'public' }))}
           whileHover={{ y: -3 }}
           whileTap={{ scaleX: 1.05, scaleY: 0.93, y: 4 }}
         >
           <span>{invited ? `Join ${room}` : 'Play'}</span>
-          <small>{invited ? 'Your friend\'s private room' : `${MAPS[PUBLIC_MAP].name} · public arena, always on`}</small>
+          <small>{invited ? 'Your friend\'s private room' : 'Public arena · always on · map picked by vote'}</small>
         </motion.button>
       </section>
+      {profileError && <p className="lobby__hint" role="alert">{profileError}</p>}
 
       <section className="lobby__section">
         <h2 className="section-title">Your loadout</h2>
@@ -193,17 +225,6 @@ export function Lobby({ portraits, onPlay }: { portraits: Portraits; onPlay: (o:
 }
 
 /** Top-down sketch of a map's walls, drawn from the same data the server uses. */
-function MiniMap({ map }: { map: MapDef }) {
-  return (
-    <svg className="minimap" viewBox={`0 0 ${map.w} ${map.h}`} aria-hidden>
-      <rect width={map.w} height={map.h} rx={1.5} className="minimap__floor" />
-      {map.walls.slice(4).map((w, i) => (
-        <rect key={i} x={w.x} y={w.y} width={w.w} height={w.h} rx={0.3} className="minimap__wall" />
-      ))}
-    </svg>
-  );
-}
-
 type SlotKey = 'hero' | 'primary' | 'secondary' | 'utility' | 'hat';
 
 /** Four boxes showing the current pick. Clicking one opens a drawer under the row with every option for that slot. */
@@ -215,7 +236,7 @@ function LoadoutPicker(props: {
   const { portraits, kills } = props;
   const [open, setOpen] = useState<SlotKey | null>(null);
   const slots: { key: SlotKey; label: string; name: string; detail: string; img: string; color?: string }[] = [
-    { key: 'hero', label: 'Hero', name: HEROES[props.hero].name, detail: `${HEROES[props.hero].ability} · ${HEROES[props.hero].cooldown}s`, img: portraits.heroes[props.hero], color: HEROES[props.hero].color },
+    { key: 'hero', label: 'Hero', name: HEROES[props.hero].name, detail: abilityTag(HEROES[props.hero]), img: portraits.heroes[props.hero], color: HEROES[props.hero].color },
     { key: 'primary', label: 'Primary', name: GUNS[props.gun].name, detail: GUNS[props.gun].blurb, img: portraits.guns[props.gun] },
     { key: 'secondary', label: 'Secondary', name: GUNS[props.secondary].name, detail: GUNS[props.secondary].blurb, img: portraits.guns[props.secondary] },
     { key: 'utility', label: 'Utility', name: UTILS[props.utility].name, detail: `${UTILS[props.utility].charges} per life`, img: portraits.utils[props.utility] },

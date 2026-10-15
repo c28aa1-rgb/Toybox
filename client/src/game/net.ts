@@ -1,16 +1,27 @@
 import { wsUrl } from './server';
-import type { ClientMsg, MapId, ModeId, ServerMsg, Snapshot } from '@gg/shared';
+import type { ClientMsg, MapId, ModeId, PlayerProfile, ServerMsg, Snapshot } from '@gg/shared';
 
 export interface NetHandlers {
   onWelcome(id: string, room: string, host: boolean, map: MapId, mode: ModeId, isPublic: boolean): void;
   onChat(id: string | null, name: string, text: string): void;
+  onProfile(profile: PlayerProfile): void;
   onSnapshot(snap: Snapshot): void;
   onError(message: string): void;
+  /** The socket opened: the first time, and again after every reconnect. Send `join` here. */
+  onOpen(): void;
+  /** An established connection dropped; Net is trying to get it back. */
+  onReconnecting(): void;
+  /** Gave up: the server is unreachable or refused us. */
   onClose(): void;
 }
 
+/** Close codes the server uses on purpose (auth, rate limit, joined elsewhere): reconnecting won't help. */
+const FINAL_CLOSE_CODES = new Set([1008, 4000]);
+
 const RETRIES = 12;
 const RETRY_MS = 5000;
+/** A live connection that drops gets retried sooner than a server that is still waking up. */
+const RECONNECT_MS = 1500;
 
 export class Net {
   private ws!: WebSocket;
@@ -22,7 +33,8 @@ export class Net {
   private attempts = 0;
   private retryTimer = 0;
   private disposed = false;
-  private openWaiters: Array<() => void> = [];
+  /** Set when the server refused us; the next close is final. */
+  private stopped = false;
 
   constructor(private handlers: NetHandlers) {
     this.connect();
@@ -34,27 +46,28 @@ export class Net {
     this.ws = ws;
     ws.onopen = () => {
       this.everOpened = true;
-      for (const fn of this.openWaiters.splice(0)) fn();
+      this.attempts = 0;
+      this.offset = null;
+      this.handlers.onOpen();
     };
     ws.onmessage = (e) => this.receive(e.data);
-    ws.onclose = () => {
+    ws.onclose = (e) => {
       if (this.disposed) return;
-      // A sleeping free host can refuse the first few connections while it boots; keep trying.
-      if (!this.everOpened && this.attempts < RETRIES) {
+      // A sleeping free host can refuse the first few connections while it boots, and wifi blips drop
+      // live ones; keep trying unless the server closed us on purpose.
+      if (!this.stopped && !FINAL_CLOSE_CODES.has(e.code) && this.attempts < RETRIES) {
         this.attempts++;
-        this.retryTimer = window.setTimeout(() => this.connect(), RETRY_MS);
+        if (this.everOpened) this.handlers.onReconnecting();
+        this.retryTimer = window.setTimeout(() => this.connect(), this.everOpened ? RECONNECT_MS : RETRY_MS);
         return;
       }
       this.handlers.onClose();
     };
-    ws.onerror = () => {
-      if (this.everOpened || this.attempts >= RETRIES) this.handlers.onError('Lost connection to the server.');
-    };
   }
 
-  whenOpen(fn: () => void): void {
-    if (this.ws.readyState === WebSocket.OPEN) fn();
-    else this.openWaiters.push(fn);
+  /** The server refused us: don't reconnect after the socket closes. */
+  stop(): void {
+    this.stopped = true;
   }
 
   send(msg: ClientMsg): void {
@@ -87,6 +100,9 @@ export class Net {
         break;
       case 'chat':
         this.handlers.onChat(msg.id, msg.name, msg.text);
+        break;
+      case 'profile':
+        this.handlers.onProfile(msg.profile);
         break;
       case 'error':
         this.handlers.onError(msg.message);

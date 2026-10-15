@@ -1,0 +1,191 @@
+{
+  "sourceImage": "/Users/c28aa1/Desktop/Gun Game/art/concepts/volt.png",
+  "zonesDir": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/detail-inventory",
+  "detailInventory": {
+    "scanMethod": "grid-3x3",
+    "targetMinDetails": 6,
+    "details": [
+      {
+        "id": "zone-r0c0",
+        "kind": "contour",
+        "description": "background only",
+        "region": {
+          "x": 0.0,
+          "y": 0.0,
+          "width": 0.3333,
+          "height": 0.3333,
+          "units": "normalized"
+        },
+        "scale": "macro",
+        "affects": "silhouette",
+        "mapsTo": {
+          "type": "none",
+          "ref": ""
+        },
+        "evidenceRef": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/detail-inventory/zone-r0c0.png",
+        "confidence": 0.9
+      },
+      {
+        "id": "zone-r0c1",
+        "kind": "contour",
+        "description": "silver plus-terminal cap on a flat yellow top",
+        "region": {
+          "x": 0.3333,
+          "y": 0.0,
+          "width": 0.3333,
+          "height": 0.3333,
+          "units": "normalized"
+        },
+        "scale": "meso",
+        "affects": "silhouette",
+        "mapsTo": {
+          "type": "component",
+          "ref": "cap-button"
+        },
+        "evidenceRef": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/detail-inventory/zone-r0c1.png",
+        "confidence": 0.85
+      },
+      {
+        "id": "zone-r0c2",
+        "kind": "contour",
+        "description": "right shoulder of the battery top",
+        "region": {
+          "x": 0.6667,
+          "y": 0.0,
+          "width": 0.3333,
+          "height": 0.3333,
+          "units": "normalized"
+        },
+        "scale": "macro",
+        "affects": "silhouette",
+        "mapsTo": {
+          "type": "component",
+          "ref": "body"
+        },
+        "evidenceRef": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/detail-inventory/zone-r0c2.png",
+        "confidence": 0.75
+      },
+      {
+        "id": "zone-r1c0",
+        "kind": "contour",
+        "description": "character-right eye; raised mitt",
+        "region": {
+          "x": 0.0,
+          "y": 0.3333,
+          "width": 0.3333,
+          "height": 0.3333,
+          "units": "normalized"
+        },
+        "scale": "meso",
+        "affects": "identity",
+        "mapsTo": {
+          "type": "component",
+          "ref": "eye-r"
+        },
+        "evidenceRef": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/detail-inventory/zone-r1c0.png",
+        "confidence": 0.85
+      },
+      {
+        "id": "zone-r1c1",
+        "kind": "decal",
+        "description": "two big eyes; top of the white lightning bolt",
+        "region": {
+          "x": 0.3333,
+          "y": 0.3333,
+          "width": 0.3333,
+          "height": 0.3333,
+          "units": "normalized"
+        },
+        "scale": "meso",
+        "affects": "identity",
+        "mapsTo": {
+          "type": "component",
+          "ref": "eye-l"
+        },
+        "evidenceRef": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/detail-inventory/zone-r1c1.png",
+        "confidence": 0.9
+      },
+      {
+        "id": "zone-r1c2",
+        "kind": "contour",
+        "description": "purple plug with two silver prongs at the end of the cable",
+        "region": {
+          "x": 0.6667,
+          "y": 0.3333,
+          "width": 0.3333,
+          "height": 0.3333,
+          "units": "normalized"
+        },
+        "scale": "meso",
+        "affects": "silhouette",
+        "mapsTo": {
+          "type": "component",
+          "ref": "plug"
+        },
+        "evidenceRef": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/detail-inventory/zone-r1c2.png",
+        "confidence": 0.85
+      },
+      {
+        "id": "zone-r2c0",
+        "kind": "contour",
+        "description": "character-right violet foot under the purple band",
+        "region": {
+          "x": 0.0,
+          "y": 0.6667,
+          "width": 0.3333,
+          "height": 0.3333,
+          "units": "normalized"
+        },
+        "scale": "macro",
+        "affects": "silhouette",
+        "mapsTo": {
+          "type": "component",
+          "ref": "foot-r"
+        },
+        "evidenceRef": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/detail-inventory/zone-r2c0.png",
+        "confidence": 0.85
+      },
+      {
+        "id": "zone-r2c1",
+        "kind": "decal",
+        "description": "white lightning bolt on the belly above the purple band",
+        "region": {
+          "x": 0.3333,
+          "y": 0.6667,
+          "width": 0.3333,
+          "height": 0.3333,
+          "units": "normalized"
+        },
+        "scale": "meso",
+        "affects": "identity",
+        "mapsTo": {
+          "type": "component",
+          "ref": "bolt"
+        },
+        "evidenceRef": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/detail-inventory/zone-r2c1.png",
+        "confidence": 0.9
+      },
+      {
+        "id": "zone-r2c2",
+        "kind": "contour",
+        "description": "hanging character-left mitt with the cream cable curling out behind it",
+        "region": {
+          "x": 0.6667,
+          "y": 0.6667,
+          "width": 0.3333,
+          "height": 0.3333,
+          "units": "normalized"
+        },
+        "scale": "macro",
+        "affects": "silhouette",
+        "mapsTo": {
+          "type": "component",
+          "ref": "cable-2"
+        },
+        "evidenceRef": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/detail-inventory/zone-r2c2.png",
+        "confidence": 0.8
+      }
+    ]
+  },
+  "authoringInstruction": "Open each zone crop under zonesDir and replace every detail stub's kind, description, scale, affects, mapsTo, and confidence with what is actually observed. Add more detail entries per zone if a single zone contains multiple distinct marks; do not leave stubs unfilled or unlinked (mapsTo must reference a real component.localFeatures or material.localOverrides entry)."
+}

@@ -5,7 +5,7 @@ export interface Rect {
   h: number;
 }
 
-export type MapId = 'playmat' | 'brickyard' | 'crossroads' | 'bigtop';
+export type MapId = 'playmat' | 'brickyard' | 'crossroads' | 'bigtop' | 'toyshelf' | 'ballpit' | 'trainyard';
 
 export interface MapDef {
   id: MapId;
@@ -15,7 +15,7 @@ export interface MapDef {
   h: number;
   walls: Rect[];
   spawns: { x: number; y: number }[];
-  /** Only the public lobby uses this map; it isn't offered for parties. */
+  /** Big enough for the public lobby; these rotate there by vote and aren't offered for parties. */
   publicOnly?: boolean;
 }
 
@@ -144,11 +144,63 @@ export const MAPS: Record<MapId, MapDef> = {
     ],
     extraSpawns: [{ x: 22, y: 13 }, { x: 54, y: 39 }, { x: 22, y: 39 }, { x: 54, y: 13 }],
   }),
+  toyshelf: makeMap({
+    id: 'toyshelf', name: 'Toy Shelf', blurb: 'Long shelves make long lanes. Cut across the gaps.', w: 72, h: 48, publicOnly: true,
+    center: [
+      { x: 33, y: 22.5, w: 6, h: 3 },
+    ],
+    quadrant: [
+      { x: 8, y: 7, w: 14, h: 1.2 },
+      { x: 26, y: 4, w: 1.2, h: 6 },
+      { x: 6, y: 14, w: 1.2, h: 5 },
+      { x: 14, y: 13, w: 10, h: 1.2 },
+      { x: 28, y: 13, w: 2.4, h: 2.4 },
+      { x: 20, y: 18.5, w: 1.2, h: 3.5 },
+      { x: 10, y: 19, w: 4, h: 1.2 },
+    ],
+    extraSpawns: [{ x: 18, y: 11 }, { x: 54, y: 37 }, { x: 18, y: 37 }, { x: 54, y: 11 }],
+  }),
+  ballpit: makeMap({
+    id: 'ballpit', name: 'Ball Pit', blurb: 'Open floor dotted with small blocks. Keep moving.', w: 68, h: 48, publicOnly: true,
+    center: [
+      { x: 32.5, y: 22.5, w: 3, h: 3 },
+    ],
+    quadrant: [
+      { x: 7, y: 7, w: 2, h: 2 },
+      { x: 14, y: 5, w: 2, h: 2 },
+      { x: 22, y: 8, w: 2, h: 2 },
+      { x: 29, y: 5, w: 2, h: 2 },
+      { x: 10, y: 13, w: 2, h: 2 },
+      { x: 18, y: 14, w: 2, h: 2 },
+      { x: 26, y: 15, w: 2, h: 2 },
+      { x: 6, y: 19, w: 2, h: 2 },
+      { x: 14, y: 20, w: 2, h: 2 },
+      { x: 30, y: 20, w: 2, h: 2 },
+    ],
+  }),
+  trainyard: makeMap({
+    id: 'trainyard', name: 'Train Yard', blurb: 'Rows of toy train cars. Flank down the tracks.', w: 76, h: 52, publicOnly: true,
+    center: [
+      { x: 35, y: 24.5, w: 6, h: 3 },
+    ],
+    quadrant: [
+      { x: 6, y: 6, w: 10, h: 2 },
+      { x: 19, y: 6, w: 10, h: 2 },
+      { x: 32, y: 4, w: 2, h: 6 },
+      { x: 10, y: 13, w: 2, h: 6 },
+      { x: 16, y: 14, w: 12, h: 2 },
+      { x: 31, y: 15, w: 3, h: 3 },
+      { x: 4, y: 21, w: 8, h: 1.5 },
+      { x: 20, y: 20, w: 2, h: 4 },
+    ],
+  }),
 };
 
 export const MAP_IDS = Object.keys(MAPS) as MapId[];
 export const PARTY_MAP_IDS = MAP_IDS.filter((id) => !MAPS[id].publicOnly);
 export const PUBLIC_MAP: MapId = 'bigtop';
+/** Maps the public lobby rotates through: the first round is random, then players vote. */
+export const PUBLIC_MAP_IDS = MAP_IDS.filter((id) => MAPS[id].publicOnly);
 export const DEFAULT_MAP: MapId = 'playmat';
 
 export function isMapId(v: unknown): v is MapId {

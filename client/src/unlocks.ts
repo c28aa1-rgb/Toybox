@@ -1,64 +1,53 @@
-import { GUNS, HATS, isHatId, isPrimary, isSecondary, isUtilId, type GunId, type HatId, type HeroId, type UtilId } from '@gg/shared';
+import { signInAnonymously } from 'firebase/auth';
+import type { Loadout, PlayerProfile } from '@gg/shared';
+import { firebaseAuth } from './firebase';
+import { apiUrl } from './game/server';
 
-export interface Profile {
-  name: string;
-  hero: HeroId;
-  gun: GunId;
-  secondary: GunId;
-  utility: UtilId;
-  hat: HatId;
-  kills: number;
-  deaths: number;
-  wins: number;
+const DEFAULT: PlayerProfile = {
+  name: '', hero: 'blink', gun: 'smg', secondary: 'pistol', utility: 'frag', hat: 'none',
+  kills: 0, deaths: 0, wins: 0, unlocks: ['none'],
+};
+let profile: PlayerProfile = { ...DEFAULT };
+
+export function loadProfile(): PlayerProfile {
+  return profile;
 }
 
-const KEY = 'gg.profile.v1';
+export function setProfile(p: PlayerProfile): void {
+  profile = p;
+}
 
-const DEFAULT: Profile = { name: '', hero: 'blink', gun: 'smg', secondary: 'pistol', utility: 'frag', hat: 'none', kills: 0, deaths: 0, wins: 0 };
-
-export function loadProfile(): Profile {
-  try {
-    const raw = localStorage.getItem(KEY);
-    if (raw) {
-      const p = { ...DEFAULT, ...JSON.parse(raw) } as Profile;
-      // Older profiles stored the pistol as the main gun; it is a sidearm now.
-      if (!isPrimary(p.gun)) p.gun = 'smg';
-      if (!isSecondary(p.secondary)) p.secondary = 'pistol';
-      if (!isUtilId(p.utility)) p.utility = 'frag';
-      if (!isHatId(p.hat) || HATS[p.hat].unlockKills > p.kills) p.hat = 'none';
-      return p;
+export async function playerToken(): Promise<string> {
+  if (import.meta.env.DEV) {
+    let id = localStorage.getItem('gg.local-dev-id');
+    if (!id) {
+      id = crypto.randomUUID();
+      localStorage.setItem('gg.local-dev-id', id);
     }
-  } catch {
-    // Storage can be blocked in private windows; fall back to defaults.
+    return `local:${id}`;
   }
-  return { ...DEFAULT };
+  await firebaseAuth.authStateReady();
+  const user = firebaseAuth.currentUser ?? (await signInAnonymously(firebaseAuth)).user;
+  return user.getIdToken();
 }
 
-export function saveProfile(p: Profile): void {
-  try {
-    localStorage.setItem(KEY, JSON.stringify(p));
-  } catch {
-    // Not fatal: unlocks just won't persist.
-  }
+async function requestProfile(method: 'GET' | 'PATCH', body?: { name?: string } & Partial<Loadout>): Promise<PlayerProfile> {
+  const token = await playerToken();
+  const response = await fetch(apiUrl('/api/profile'), {
+    method,
+    headers: { authorization: `Bearer ${token}`, ...(body ? { 'content-type': 'application/json' } : {}) },
+    ...(body ? { body: JSON.stringify(body) } : {}),
+  });
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.error ?? 'Could not load your player profile.');
+  profile = result as PlayerProfile;
+  return profile;
 }
 
-export function addKill(): Profile {
-  const p = loadProfile();
-  p.kills++;
-  saveProfile(p);
-  return p;
+export function fetchProfile(): Promise<PlayerProfile> {
+  return requestProfile('GET');
 }
 
-export function addDeath(): Profile {
-  const p = loadProfile();
-  p.deaths++;
-  saveProfile(p);
-  return p;
-}
-
-export function addWin(): Profile {
-  const p = loadProfile();
-  p.wins++;
-  saveProfile(p);
-  return p;
+export function patchProfile(patch: { name?: string } & Partial<Loadout>): Promise<PlayerProfile> {
+  return requestProfile('PATCH', patch);
 }

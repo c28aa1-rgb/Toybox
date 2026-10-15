@@ -8,7 +8,8 @@ export const RESPAWN_TIME = 3;
 export const SPAWN_SHIELD = 1.5;
 
 export const KILLS_TO_WIN = 15;
-export const MATCH_END_TIME = 6;
+/** The results screen; long enough to vote for the next map in the public lobby. */
+export const MATCH_END_TIME = 10;
 export const MAX_PLAYERS = 8;
 
 export const PICKUP_RADIUS = 1.4;

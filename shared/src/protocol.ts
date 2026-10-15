@@ -2,6 +2,7 @@ import type { GunId } from './guns';
 import type { HeroId } from './heroes';
 import type { HatId } from './cosmetics';
 import type { MapId } from './map';
+import type { PowerId } from './powers';
 import type { ModeId } from './modes';
 import type { UtilId } from './utilities';
 
@@ -42,15 +43,25 @@ export interface Loadout {
   hat: HatId;
 }
 
+export interface PlayerProfile extends Loadout {
+  name: string;
+  kills: number;
+  deaths: number;
+  wins: number;
+  unlocks: HatId[];
+}
+
 // ---- client -> server ----
 
 export type ClientMsg =
   /** public: the always-on lobby. create: a new private room on `map`. join: a private room by code. */
-  | { type: 'join'; mode: 'public' | 'create' | 'join'; room?: string; map?: MapId; gameMode?: ModeId; name: string; hero: HeroId; gun: GunId; secondary: GunId; utility: UtilId; hat: HatId }
+  | { type: 'join'; mode: 'public' | 'create' | 'join'; room?: string; map?: MapId; gameMode?: ModeId; idToken: string; name: string; hero: HeroId; gun: GunId; secondary: GunId; utility: UtilId; hat: HatId }
   | { type: 'chat'; text: string }
   | { type: 'input'; frames: InputFrame[] }
   | { type: 'loadout'; hero: HeroId; gun: GunId; secondary: GunId; utility: UtilId; hat: HatId }
   | { type: 'bots'; count: number }
+  /** Public lobby, on the results screen: vote for the next map. */
+  | { type: 'vote'; map: MapId }
   | { type: 'ping'; t: number };
 
 // ---- server -> client ----
@@ -95,6 +106,14 @@ export interface PlayerSnap {
   scoped: boolean;
   respawnIn: number;
   abilityReadyIn: number;
+  /** Charge abilities: how full, 0..1. */
+  abilityCharge: number;
+  /** Hide and Seek is active: enemies shouldn't draw this player. */
+  hidden: boolean;
+  /** Overcharged shots left (0 when none or expired). */
+  overcharge: number;
+  /** Seconds left on each active power-up. Missing keys are inactive. */
+  powers: Partial<Record<PowerId, number>>;
 }
 
 export interface BulletSnap {
@@ -103,15 +122,19 @@ export interface BulletSnap {
   x: number;
   y: number;
   fake: boolean;
+  /** An Overcharge shot: drawn bigger and brighter. */
+  charged?: boolean;
 }
 
 export interface PickupSnap {
   id: number;
-  kind: 'gun' | 'util' | 'heal';
-  item: WeaponId | 'heal';
+  kind: 'gun' | 'util' | 'heal' | 'power';
+  item: WeaponId | 'heal' | PowerId;
   x: number;
   y: number;
   expiresIn: number;
+  /** Power-ups only: seconds until it lands and can be taken. Absent once it is down. */
+  readyIn?: number;
 }
 
 export interface ThrowableSnap {
@@ -124,13 +147,15 @@ export interface ThrowableSnap {
   owner: string;
 }
 
-export interface GooSnap {
+export interface TurretSnap {
   id: number;
-  x: number;
-  y: number;
-  r: number;
   owner: string;
   team: number;
+  x: number;
+  y: number;
+  aim: number;
+  /** Health left, 0..1. */
+  hp: number;
   endsIn: number;
 }
 
@@ -151,25 +176,6 @@ export interface SmokeSnap {
   endsIn: number;
 }
 
-export interface WallSnap {
-  id: number;
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-  hp: number;
-  owner: string;
-}
-
-export interface BubbleSnap {
-  id: number;
-  x: number;
-  y: number;
-  r: number;
-  owner: string;
-  endsIn: number;
-}
-
 export interface DecoySnap {
   id: number;
   owner: string;
@@ -179,16 +185,15 @@ export interface DecoySnap {
 }
 
 export type GameEvent =
-  | { t: 'shot'; id: string; gun: GunId; x: number; y: number; a: number }
+  | { t: 'shot'; id: string; gun: GunId; x: number; y: number; a: number; charged?: boolean }
   | { t: 'hit'; target: string; by: string; dmg: number; x: number; y: number }
   | { t: 'kill'; killer: string; victim: string; gun: WeaponId }
   | { t: 'blink'; id: string; x1: number; y1: number; x2: number; y2: number }
-  | { t: 'swap'; id: string; target: string }
-  | { t: 'swapFail'; id: string }
-  | { t: 'bubble'; id: string; x: number; y: number }
+  | { t: 'overcharge'; id: string }
+  | { t: 'hide'; id: string; x: number; y: number }
+  /** `hits`: enemies the ping reached; the pinger's team sees them for ABILITY.sonarReveal seconds. */
+  | { t: 'sonar'; id: string; x: number; y: number; r: number; hits: string[] }
   | { t: 'decoy'; id: string }
-  | { t: 'wall'; id: string; x: number; y: number }
-  | { t: 'wallBreak'; x: number; y: number }
   | { t: 'decoyPop'; x: number; y: number }
   | { t: 'explode'; x: number; y: number; r: number }
   | { t: 'pickup'; id: string; item: WeaponId }
@@ -198,13 +203,25 @@ export type GameEvent =
   | { t: 'weaponSwap'; id: string }
   | { t: 'heal'; id: string; x: number; y: number }
   | { t: 'streak'; id: string; n: number }
-  | { t: 'goo'; x: number; y: number }
+  | { t: 'turret'; id: string; x: number; y: number }
+  | { t: 'turretEnd'; x: number; y: number; broken: boolean }
   | { t: 'ladder'; id: string; gun: GunId }
   | { t: 'refill'; id: string; util: UtilId }
+  | { t: 'powerDrop'; power: PowerId; x: number; y: number }
+  | { t: 'power'; id: string; power: PowerId; x: number; y: number }
   | { t: 'win'; id: string };
+
+export interface MapVote {
+  options: MapId[];
+  counts: number[];
+}
 
 export interface Snapshot {
   type: 'snap';
+  /** The map in play; it can change between rounds in the public lobby. */
+  map: MapId;
+  /** Next-map vote, shown on the results screen in the public lobby. */
+  vote: MapVote | null;
   /** Server sim time in seconds. */
   time: number;
   /** Last input seq processed for the receiving player. */
@@ -220,12 +237,10 @@ export interface Snapshot {
   players: PlayerSnap[];
   bullets: BulletSnap[];
   pickups: PickupSnap[];
-  walls: WallSnap[];
-  bubbles: BubbleSnap[];
   decoys: DecoySnap[];
   throwables: ThrowableSnap[];
   smokes: SmokeSnap[];
-  goos: GooSnap[];
+  turrets: TurretSnap[];
   events: GameEvent[];
 }
 
@@ -234,4 +249,5 @@ export type ServerMsg =
   | { type: 'chat'; id: string | null; name: string; text: string }
   | { type: 'error'; message: string }
   | { type: 'pong'; t: number }
+  | { type: 'profile'; profile: PlayerProfile }
   | Snapshot;

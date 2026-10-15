@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { CHAT_MAX, GUNS, HEROES, MAX_PLAYERS, MODES, SECONDARY_IDS, TEAM_COLORS, TEAM_NAMES, type Loadout, type PlayerSnap } from '@gg/shared';
+import { CHAT_MAX, GUNS, HEROES, MAPS, MAX_PLAYERS, MODES, SECONDARY_IDS, TEAM_COLORS, TEAM_NAMES, type Loadout, type PlayerSnap } from '@gg/shared';
 import type { Banner, ChatLine, HudState, StreakCall } from '../game/store';
 import { itemName, type GameClient } from '../game/GameClient';
 import { useHud } from '../game/store';
@@ -10,7 +10,10 @@ import type { Portraits } from './App';
 import { GunRack, HatRack, HeroShelf, UtilRack } from './Pickers';
 import { MusicToggle } from './MusicToggle';
 import { CombatHud } from './CombatHud';
+import { PowerChips } from './PowerChips';
+import { SpectateBar } from './SpectateBar';
 import { SmokeOverlay } from './SmokeOverlay';
+import { MiniMap } from './MapPreview';
 import { bindingLabel, listenActions, matches, useBindings } from '../game/bindings';
 
 const pop = { type: 'spring', stiffness: 500, damping: 24 } as const;
@@ -47,11 +50,15 @@ export function Hud({ client, portraits, onLeave }: { client: GameClient; portra
   if (!me) {
     return <div className="hud-center"><Connecting /></div>;
   }
+  const reconnecting = s.reconnecting && (
+    <div className="reconnecting" role="status">Connection lost. Reconnecting… your score is kept.</div>
+  );
 
   const leader = s.players[0];
 
   return (
     <div className="hud">
+      {reconnecting}
       <SmokeOverlay clouds={me.alive ? s.smoke : []} />
       <HurtVignette tick={s.hurtTick} />
 
@@ -85,12 +92,13 @@ export function Hud({ client, portraits, onLeave }: { client: GameClient; portra
             ))}
           </AnimatePresence>
         </ul>
-        <span className="ping">{s.ping} ms</span>
+        <span className="ping">{s.ping} ms · {s.fps} fps</span>
       </div>
 
       {me.alive && (
         <CombatHud me={me} portraits={portraits} client={client} />
       )}
+      {me.alive && <PowerChips powers={me.powers ?? {}} />}
 
       <AnimatePresence>
         {me.alive && s.nearPickup && (
@@ -126,6 +134,10 @@ export function Hud({ client, portraits, onLeave }: { client: GameClient; portra
       {me.alive && s.scoped && <div className="scope-tag">SCOPED · SLOWER, STEADIER AIM</div>}
 
       <AnimatePresence>
+        {!me.alive && s.phase === 'playing' && <SpectateBar key="spectate" target={s.spectating} client={client} />}
+      </AnimatePresence>
+
+      <AnimatePresence>
         {!me.alive && s.phase === 'playing' && (
           <DeathPanel
             key="death"
@@ -140,7 +152,7 @@ export function Hud({ client, portraits, onLeave }: { client: GameClient; portra
       </AnimatePresence>
 
       <AnimatePresence>
-        {s.phase === 'ended' && <EndPanel key="end" s={s} />}
+        {s.phase === 'ended' && <EndPanel key="end" s={s} client={client} />}
       </AnimatePresence>
 
       <AnimatePresence>
@@ -273,6 +285,7 @@ function Leaderboard({ players, myId, s, host, bots, onBots }: { players: Player
         })}
       </ol>
       {host && <BotStepper count={bots} humans={players.length - bots} onChange={onBots} />}
+      {s.isPublic && players.length - bots === 1 && <PublicBots on={bots > 0} onChange={onBots} />}
     </aside>
   );
 }
@@ -295,6 +308,18 @@ function LeaveConfirm({ onCancel, onLeave }: { onCancel: () => void; onLeave: ()
         </div>
       </motion.div>
     </motion.div>
+  );
+}
+
+/** Alone in the public lobby: bots stay off until you ask for them, and leave when someone else joins. */
+function PublicBots({ on, onChange }: { on: boolean; onChange: (n: number) => void }) {
+  return (
+    <div className={`public-bots${on ? ' is-on' : ''}`}>
+      <span>{on ? 'Bots are keeping you company' : 'Nobody else is here yet'}</span>
+      <button type="button" className="btn btn--primary" onClick={() => onChange(on ? 0 : 5)}>
+        {on ? 'Turn off bots' : 'Turn on bots'}
+      </button>
+    </div>
   );
 }
 
@@ -392,8 +417,8 @@ function StreakCallout({ call }: { call: StreakCall | null }) {
 
 
 function FlashOverlay({ blind }: { blind: number }) {
-  // Full white while more than a second is left, then fades out.
-  const opacity = Math.min(1, blind / 1.0);
+  // Full white while plenty is left, then a slow fade over the last two seconds.
+  const opacity = Math.min(1, blind / 2);
   return <div className="flash-overlay" style={{ opacity }} aria-hidden />;
 }
 
@@ -461,6 +486,9 @@ function RespawnButton({ respawnIn, client }: { respawnIn: number; client: GameC
   );
 }
 
+/** The death panel starts collapsed so the spectate view stays clear; this remembers if you open it. */
+const LOADOUT_PANEL_KEY = 'gg.deathLoadout';
+
 function DeathPanel({
   killer, respawnIn, client, portraits, loadout, onLeave,
 }: {
@@ -472,27 +500,47 @@ function DeathPanel({
   onLeave: () => void;
 }) {
   const kills = loadProfile().kills;
+  const [open, setOpen] = useState(() => {
+    try {
+      return localStorage.getItem(LOADOUT_PANEL_KEY) === 'open';
+    } catch {
+      return false;
+    }
+  });
+  const toggle = () => {
+    setOpen(!open);
+    try {
+      localStorage.setItem(LOADOUT_PANEL_KEY, open ? 'closed' : 'open');
+    } catch { /* The panel still toggles without storage. */ }
+  };
   return (
     <motion.div
-      className="death"
+      className={`death${open ? '' : ' is-collapsed'}`}
       initial={{ y: 40, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       exit={{ y: 20, opacity: 0 }}
       transition={pop}
     >
       <div className="death__head">
-        <h2 className="death__title">{killer ? `${killer} got you` : 'You went down'}</h2>
-        <RespawnButton respawnIn={respawnIn} client={client} />
+        <h2 className="death__title" title={killer ? `${killer} got you` : undefined}>
+          {killer ? <><span className="death__killer">{killer}</span> got you</> : 'You went down'}
+        </h2>
+        <div className="death__actions">
+          <button type="button" className="btn btn--ghost" onClick={onLeave}>Leave match</button>
+          <button type="button" className="btn btn--ghost death__toggle" aria-expanded={open} aria-controls="death-loadout" onClick={toggle}>
+            {open ? 'Hide loadout' : 'Change loadout'}
+          </button>
+          <RespawnButton respawnIn={respawnIn} client={client} />
+        </div>
       </div>
-      <div className="death__body">
+      {open && <div className="death__body" id="death-loadout">
       <p className="death__hint">Change your loadout for the next life:</p>
       <HeroShelf compact value={loadout.hero} portraits={portraits} onChange={(hero) => client.setLoadout({ ...loadout, hero })} />
       <GunRack compact value={loadout.gun} portraits={portraits} onChange={(gun) => client.setLoadout({ ...loadout, gun })} />
       <GunRack compact ids={SECONDARY_IDS} label="Secondary gun" value={loadout.secondary} portraits={portraits} onChange={(secondary) => client.setLoadout({ ...loadout, secondary })} />
       <UtilRack compact value={loadout.utility} portraits={portraits} onChange={(utility) => client.setLoadout({ ...loadout, utility })} />
       <HatRack compact value={loadout.hat} kills={kills} portraits={portraits} onChange={(hat) => client.setLoadout({ ...loadout, hat })} />
-      </div>
-      <footer className="death__footer"><button type="button" className="btn btn--ghost" onClick={onLeave}>Leave match</button></footer>
+      </div>}
     </motion.div>
   );
 }
@@ -520,7 +568,38 @@ function awards(players: PlayerSnap[]): Award[] {
   return out;
 }
 
-function EndPanel({ s }: { s: HudState }) {
+/** Public lobby results screen: pick the next map. Ties are broken at random; no votes picks one at random. */
+function MapVote({ vote, mine, client }: { vote: NonNullable<HudState['vote']>; mine: HudState['myVote']; client: GameClient }) {
+  const total = vote.counts.reduce((a, b) => a + b, 0);
+  return (
+    <section className="vote" aria-label="Vote for the next map">
+      <h3 className="vote__title">Vote for the next map</h3>
+      <div className="vote__options" role="radiogroup">
+        {vote.options.map((id, i) => (
+          <motion.button
+            key={id}
+            type="button"
+            role="radio"
+            aria-checked={mine === id}
+            className={`mapcard vote__card${mine === id ? ' is-selected' : ''}`}
+            onClick={() => client.voteMap(id)}
+            whileHover={{ y: -3 }}
+            whileTap={{ scale: 0.97 }}
+          >
+            <MiniMap map={MAPS[id]} />
+            <span className="mapcard__name">{MAPS[id].name}</span>
+            <span className="vote__count">
+              <i style={{ transform: `scaleX(${total ? vote.counts[i] / total : 0})` }} />
+              <b>{vote.counts[i]} {vote.counts[i] === 1 ? 'vote' : 'votes'}</b>
+            </span>
+          </motion.button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function EndPanel({ s, client }: { s: HudState; client: GameClient }) {
   const teamWin = s.winner?.startsWith('team:') ? Number(s.winner.slice(5)) : null;
   const winner = s.players.find((p) => p.id === s.winner);
   const me = s.me;
@@ -563,6 +642,7 @@ function EndPanel({ s }: { s: HudState }) {
             ))}
           </div>
         )}
+        {s.vote && <MapVote vote={s.vote} mine={s.myVote} client={client} />}
         <Scoreboard players={s.players} myId={s.myId} s={s} inline />
       </motion.div>
     </motion.div>

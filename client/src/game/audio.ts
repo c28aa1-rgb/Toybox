@@ -101,23 +101,46 @@ export class Sfx {
       this.tone(f, f, 0.16, 'square', 0.1, i * 0.07);
     });
   }
-  splat(near: number): void {
-    this.noise(0.3, 0.35 * (0.2 + near), 500, 0.6);
-    this.tone(180, 70, 0.25, 'sine', 0.2 * near);
+  /** Ratchet clicks while the turret is wound up. */
+  windUp(near: number): void {
+    for (let i = 0; i < 5; i++) this.tone(1400 + i * 120, 900, 0.03, 'square', 0.07 * near, i * 0.05);
+  }
+  /** A clunk when a turret is shot apart, a sprong when its spring simply runs out. */
+  windDown(near: number, broken: boolean): void {
+    if (broken) {
+      this.noise(0.2, 0.3 * near, 900, 1);
+      this.tone(300, 80, 0.25, 'square', 0.12 * near);
+    } else {
+      this.tone(600, 180, 0.35, 'triangle', 0.12 * near);
+    }
   }
   death(): void { this.tone(400, 60, 0.6, 'sawtooth', 0.15); }
   explode(near: number): void { this.noise(0.6, 0.6 * (0.2 + near * 0.8), 300, 0.5); this.tone(110, 35, 0.5, 'sine', 0.35 * near); }
   blink(): void { this.tone(400, 1600, 0.16, 'sine', 0.16); }
-  swap(): void { this.tone(500, 1000, 0.1, 'triangle', 0.15); this.tone(1000, 500, 0.12, 'triangle', 0.15, 0.1); }
-  fail(): void { this.tone(200, 150, 0.15, 'square', 0.1); }
-  bubble(): void { this.tone(300, 900, 0.4, 'sine', 0.15); }
-  wall(): void { this.noise(0.15, 0.3, 400); this.tone(140, 90, 0.15, 'square', 0.12); }
+  /** Overcharge: a rising electric whine. */
+  overcharge(): void { this.tone(220, 1320, 0.35, 'sawtooth', 0.08); this.tone(1320, 1760, 0.12, 'square', 0.05, 0.3); }
+  /** Hide and Seek: a soft whoosh as you fade out. */
+  hide(): void { this.noise(0.3, 0.08, 2400, 1); this.tone(900, 300, 0.3, 'sine', 0.06); }
+  /** Sonar Ping: a classic submarine ping, plus a blip per enemy found. */
+  sonar(found: number): void {
+    this.tone(1200, 1180, 0.6, 'sine', 0.12);
+    for (let i = 0; i < Math.min(found, 5); i++) this.tone(1800, 1800, 0.05, 'square', 0.05, 0.35 + i * 0.08);
+  }
+  /** Someone else's sonar found you. */
+  pinged(): void { this.tone(1200, 1180, 0.4, 'sine', 0.07); this.tone(500, 400, 0.2, 'triangle', 0.08, 0.15); }
   pop(): void { this.tone(800, 200, 0.12, 'triangle', 0.14); }
   throwWhoosh(): void { this.noise(0.18, 0.12, 1800, 2); this.tone(500, 260, 0.16, 'sine', 0.06); }
   flashBang(near: number): void { this.tone(3200, 2400, 0.6, 'sine', 0.2 * near); this.noise(0.25, 0.4 * near, 4000); }
   smokeHiss(near: number): void { this.noise(0.9, 0.25 * (0.3 + near), 5000, 0.5); }
   weaponSwap(): void { this.tone(600, 900, 0.05, 'square', 0.06); this.tone(900, 700, 0.05, 'square', 0.05, 0.06); }
   pickup(): void { this.tone(700, 1400, 0.1, 'square', 0.1); }
+  /** A falling whistle while a power-up drops in. */
+  powerDrop(near: number): void { this.tone(1800, 500, 1.4, 'sine', 0.05 + 0.08 * near); }
+  powerLand(near: number): void {
+    this.tone(220, 90, 0.18, 'triangle', 0.18 * near);
+    [988, 1319, 1568].forEach((f, i) => this.tone(f, f * 1.01, 0.1, 'sine', 0.08 * near, 0.05 + i * 0.04));
+  }
+  powerUp(): void { [523, 659, 784, 1046, 1319].forEach((f, i) => this.tone(f, f * 1.03, 0.12, 'square', 0.07, i * 0.045)); }
   win(): void {
     [523, 659, 784, 1046].forEach((f, i) => this.tone(f, f, 0.18, 'triangle', 0.18, i * 0.12));
   }

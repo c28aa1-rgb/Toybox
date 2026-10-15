@@ -10,6 +10,10 @@ export function wsUrl(): string {
   return `${proto}://${location.host}/ws`;
 }
 
+export function apiUrl(path: string): string {
+  return REMOTE ? `${REMOTE}${path}` : path;
+}
+
 /** Free hosts sleep when idle. Poke the server as soon as the page loads so it is awake by the time someone hits Play. */
 export function wakeServer(): void {
   if (!REMOTE) return;

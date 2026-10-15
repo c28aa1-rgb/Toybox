@@ -1,0 +1,780 @@
+{
+  "schemaVersion": 1,
+  "status": "active",
+  "profile": "character",
+  "currentStep": "build-current-pass",
+  "currentPass": "material-pass",
+  "checklist": [
+    {
+      "id": "image-analysis",
+      "scope": "setup",
+      "status": "done",
+      "evidence": [
+        "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/analysis.md"
+      ],
+      "reason": "",
+      "command": "Read grimoire/intake/image_analysis.md and analyze {reference}"
+    },
+    {
+      "id": "reference-suitability",
+      "scope": "setup",
+      "status": "done",
+      "evidence": [
+        "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/suitability.md"
+      ],
+      "reason": "",
+      "command": "Read grimoire/intake/validation_rubric.md and record a pass, conditional, or reject verdict for {reference}"
+    },
+    {
+      "id": "reference-admission",
+      "scope": "setup",
+      "status": "done",
+      "evidence": [
+        "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/admission.json"
+      ],
+      "reason": "",
+      "command": "python3 forge/stage1_intake/check_reference_admission.py {reference} --out admission.json --probe-out probe.json"
+    },
+    {
+      "id": "character-contract-read",
+      "scope": "setup",
+      "status": "done",
+      "evidence": [
+        "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/character-contract.md"
+      ],
+      "reason": "",
+      "command": "Read grimoire/character/reconstruction.md and grimoire/character/likeness_maximization.md completely"
+    },
+    {
+      "id": "character-landmarks",
+      "scope": "setup",
+      "status": "done",
+      "evidence": [
+        "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/anatomy.json",
+        "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/landmarks.png"
+      ],
+      "reason": "",
+      "command": "python3 forge/stage1_intake/extract_landmarks.py {reference} --out anatomy.json --overlay landmarks.png"
+    },
+    {
+      "id": "local-spec-search",
+      "scope": "setup",
+      "status": "done",
+      "evidence": [
+        "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/assessment.json"
+      ],
+      "reason": "",
+      "command": "Run the local evidence search before authoring the assessment"
+    },
+    {
+      "id": "pre-spec-assessment",
+      "scope": "setup",
+      "status": "done",
+      "evidence": [
+        "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/assessment.json"
+      ],
+      "reason": "",
+      "command": "python3 forge/stage2_spec/new_pre_spec_assessment.py \"<name>\" --image {reference} --domain character --out assessment.json"
+    },
+    {
+      "id": "detail-inventory",
+      "scope": "setup",
+      "status": "done",
+      "evidence": [
+        "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/di.json"
+      ],
+      "reason": "",
+      "command": "python3 forge/stage1_intake/build_detail_inventory.py {reference} --mode grid-3x3 --out-dir detail-inventory --out di.json"
+    },
+    {
+      "id": "projection-route",
+      "scope": "setup",
+      "status": "skipped",
+      "evidence": [
+        "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/projection-route.md"
+      ],
+      "reason": "flat-colour toy; solid albedo per region",
+      "command": "Record whether projection is required; if required run solve_camera_pose.py, delight_albedo.py, and bake_projected_texture.py, otherwise skip with a reason"
+    },
+    {
+      "id": "spec-authoring",
+      "scope": "setup",
+      "status": "done",
+      "evidence": [
+        "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/object-sculpt-spec.json",
+        "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/parts.py"
+      ],
+      "reason": "",
+      "command": "python3 forge/stage2_spec/new_sculpt_spec.py \"<name>\" --image {reference} --assessment assessment.json --augmentation spec-augmentation.json --domain character --out object-sculpt-spec.json"
+    },
+    {
+      "id": "material-evidence",
+      "scope": "setup",
+      "status": "skipped",
+      "evidence": [
+        "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/albedo-samples.json"
+      ],
+      "reason": "every material is declared textureless with evidence; region medians in albedo-samples.json",
+      "command": "python3 forge/stage1_intake/material_region_analysis.py --manifest material-regions.json --out-dir material-evidence --out material-analysis.json (single-crop route: analyze_texture.py + extract_pbr_evidence.py per verified crop; otherwise skip with a reason)"
+    },
+    {
+      "id": "material-spec-wiring",
+      "scope": "setup",
+      "status": "skipped",
+      "evidence": [
+        "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/object-sculpt-spec.json"
+      ],
+      "reason": "albedos wired by spec_builder.py from parts.py",
+      "command": "python3 forge/stage2_spec/apply_material_analysis.py {spec} material-analysis.json --in-place"
+    },
+    {
+      "id": "strict-validation",
+      "scope": "setup",
+      "status": "done",
+      "evidence": [
+        "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/strict-validation.txt"
+      ],
+      "reason": "",
+      "command": "python3 forge/stage2_spec/validate_sculpt_spec.py {spec} --strict-quality"
+    },
+    {
+      "id": "build-current-pass",
+      "scope": "pass",
+      "status": "pending",
+      "evidence": [],
+      "reason": "",
+      "command": "python3 forge/stage3_build/generate_threejs_factory.py {spec} --out src/createObjectModel.ts --pass-id {pass_id}"
+    },
+    {
+      "id": "render-capture",
+      "scope": "pass",
+      "status": "pending",
+      "evidence": [],
+      "reason": "",
+      "command": "Render {pass_id} and capture the fixed review view plus meaningful orbit views"
+    },
+    {
+      "id": "review-contract-read",
+      "scope": "pass",
+      "status": "pending",
+      "evidence": [],
+      "reason": "",
+      "command": "Read grimoire/review/gates_reference.md and grimoire/review/self_correction.md completely"
+    },
+    {
+      "id": "tier1-diagnostics",
+      "scope": "pass",
+      "status": "pending",
+      "evidence": [],
+      "reason": "",
+      "command": "python3 forge/stage4_review/diagnose_render.py --reference {reference} --render <shot> --spec {spec} --pass-id {pass_id} --in-place"
+    },
+    {
+      "id": "multi-angle-review",
+      "scope": "pass",
+      "status": "pending",
+      "evidence": [],
+      "reason": "",
+      "command": "python3 forge/stage4_review/diagnose_render_multi_angle.py --reference <fixed-shot> --orbit <orbit-shot> --orbit <orbit-shot>"
+    },
+    {
+      "id": "pass-gate-check",
+      "scope": "pass",
+      "status": "pending",
+      "evidence": [],
+      "reason": "",
+      "command": "python3 forge/stage3_build/orchestrate_passes.py check {spec} --pass-id {pass_id}"
+    },
+    {
+      "id": "ai-review-recorded",
+      "scope": "pass",
+      "status": "pending",
+      "evidence": [],
+      "reason": "",
+      "command": "Create the comparison sheet, inspect it with agent vision, and append exactly one review action"
+    },
+    {
+      "id": "pipeline-sync",
+      "scope": "pass",
+      "status": "pending",
+      "evidence": [],
+      "reason": "",
+      "command": "python3 forge/stage3_build/orchestrate_passes.py sync {spec} --in-place"
+    },
+    {
+      "id": "part-coverage",
+      "scope": "final",
+      "status": "pending",
+      "evidence": [],
+      "reason": "",
+      "command": "python3 forge/stage4_review/check_part_coverage.py --spec {spec} --manifest parts.json"
+    },
+    {
+      "id": "action-ready",
+      "scope": "final",
+      "status": "pending",
+      "evidence": [],
+      "reason": "",
+      "command": "Verify explodable/clickable hierarchy, pivots, sockets, and root.userData.sculptRuntime"
+    },
+    {
+      "id": "emission-target",
+      "scope": "final",
+      "status": "pending",
+      "evidence": [],
+      "reason": "",
+      "command": "python3 forge/stage3_build/emit_target.py --spec {spec} --workspace . [--target <kind> [--plugin <id>]]"
+    },
+    {
+      "id": "plugin-gates",
+      "scope": "final",
+      "status": "pending",
+      "evidence": [],
+      "reason": "",
+      "command": "python3 forge/stage3_build/run_gates.py --workspace ."
+    }
+  ],
+  "loops": {
+    "perPass": {
+      "blockout": 2
+    },
+    "total": 2,
+    "maxPerPass": 5,
+    "maxTotal": 15
+  },
+  "artifacts": {
+    "reference": "/Users/c28aa1/Desktop/Gun Game/art/concepts/volt.png",
+    "spec": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/object-sculpt-spec.json"
+  },
+  "passHistory": [
+    {
+      "passId": "blockout",
+      "iteration": "refine",
+      "checklist": [
+        {
+          "id": "build-current-pass",
+          "scope": "pass",
+          "status": "pending",
+          "evidence": [],
+          "reason": "",
+          "command": "python3 forge/stage3_build/generate_threejs_factory.py {spec} --out src/createObjectModel.ts --pass-id {pass_id}"
+        },
+        {
+          "id": "render-capture",
+          "scope": "pass",
+          "status": "pending",
+          "evidence": [],
+          "reason": "",
+          "command": "Render {pass_id} and capture the fixed review view plus meaningful orbit views"
+        },
+        {
+          "id": "review-contract-read",
+          "scope": "pass",
+          "status": "pending",
+          "evidence": [],
+          "reason": "",
+          "command": "Read grimoire/review/gates_reference.md and grimoire/review/self_correction.md completely"
+        },
+        {
+          "id": "tier1-diagnostics",
+          "scope": "pass",
+          "status": "pending",
+          "evidence": [],
+          "reason": "",
+          "command": "python3 forge/stage4_review/diagnose_render.py --reference {reference} --render <shot> --spec {spec} --pass-id {pass_id} --in-place"
+        },
+        {
+          "id": "multi-angle-review",
+          "scope": "pass",
+          "status": "pending",
+          "evidence": [],
+          "reason": "",
+          "command": "python3 forge/stage4_review/diagnose_render_multi_angle.py --reference <fixed-shot> --orbit <orbit-shot> --orbit <orbit-shot>"
+        },
+        {
+          "id": "pass-gate-check",
+          "scope": "pass",
+          "status": "pending",
+          "evidence": [],
+          "reason": "",
+          "command": "python3 forge/stage3_build/orchestrate_passes.py check {spec} --pass-id {pass_id}"
+        },
+        {
+          "id": "ai-review-recorded",
+          "scope": "pass",
+          "status": "pending",
+          "evidence": [],
+          "reason": "",
+          "command": "Create the comparison sheet, inspect it with agent vision, and append exactly one review action"
+        },
+        {
+          "id": "pipeline-sync",
+          "scope": "pass",
+          "status": "pending",
+          "evidence": [],
+          "reason": "",
+          "command": "python3 forge/stage3_build/orchestrate_passes.py sync {spec} --in-place"
+        }
+      ]
+    },
+    {
+      "passId": "blockout",
+      "iteration": "refine",
+      "checklist": [
+        {
+          "id": "build-current-pass",
+          "scope": "pass",
+          "status": "done",
+          "evidence": [
+            "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/src/createVoltModel.ts"
+          ],
+          "reason": "",
+          "command": "python3 forge/stage3_build/generate_threejs_factory.py {spec} --out src/createObjectModel.ts --pass-id {pass_id}"
+        },
+        {
+          "id": "render-capture",
+          "scope": "pass",
+          "status": "done",
+          "evidence": [
+            "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/renders/blockout/ref.png",
+            "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/renders/blockout/front.png",
+            "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/renders/blockout/right.png",
+            "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/renders/blockout/rear.png",
+            "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/renders/blockout/left.png"
+          ],
+          "reason": "",
+          "command": "Render {pass_id} and capture the fixed review view plus meaningful orbit views"
+        },
+        {
+          "id": "review-contract-read",
+          "scope": "pass",
+          "status": "done",
+          "evidence": [
+            "/Users/c28aa1/.claude/skills/img2threejs/grimoire/review/gates_reference.md",
+            "/Users/c28aa1/.claude/skills/img2threejs/grimoire/review/self_correction.md"
+          ],
+          "reason": "",
+          "command": "Read grimoire/review/gates_reference.md and grimoire/review/self_correction.md completely"
+        },
+        {
+          "id": "tier1-diagnostics",
+          "scope": "pass",
+          "status": "done",
+          "evidence": [
+            "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/renders/blockout/tier1.json"
+          ],
+          "reason": "",
+          "command": "python3 forge/stage4_review/diagnose_render.py --reference {reference} --render <shot> --spec {spec} --pass-id {pass_id} --in-place"
+        },
+        {
+          "id": "multi-angle-review",
+          "scope": "pass",
+          "status": "done",
+          "evidence": [
+            "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/renders/blockout/multi-angle.json"
+          ],
+          "reason": "",
+          "command": "python3 forge/stage4_review/diagnose_render_multi_angle.py --reference <fixed-shot> --orbit <orbit-shot> --orbit <orbit-shot>"
+        },
+        {
+          "id": "pass-gate-check",
+          "scope": "pass",
+          "status": "done",
+          "evidence": [
+            "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/renders/blockout/pass-check.txt"
+          ],
+          "reason": "",
+          "command": "python3 forge/stage3_build/orchestrate_passes.py check {spec} --pass-id {pass_id}"
+        },
+        {
+          "id": "ai-review-recorded",
+          "scope": "pass",
+          "status": "done",
+          "evidence": [
+            "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/renders/blockout/cmp-2.png",
+            "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/renders/blockout/features-2.json"
+          ],
+          "reason": "",
+          "command": "Create the comparison sheet, inspect it with agent vision, and append exactly one review action"
+        },
+        {
+          "id": "pipeline-sync",
+          "scope": "pass",
+          "status": "done",
+          "evidence": [
+            "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/object-sculpt-spec.json"
+          ],
+          "reason": "",
+          "command": "python3 forge/stage3_build/orchestrate_passes.py sync {spec} --in-place"
+        }
+      ]
+    },
+    {
+      "passId": "blockout",
+      "checklist": [
+        {
+          "id": "build-current-pass",
+          "scope": "pass",
+          "status": "done",
+          "evidence": [
+            "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/src/createVoltModel.ts"
+          ],
+          "reason": "",
+          "command": "python3 forge/stage3_build/generate_threejs_factory.py {spec} --out src/createObjectModel.ts --pass-id {pass_id}"
+        },
+        {
+          "id": "render-capture",
+          "scope": "pass",
+          "status": "done",
+          "evidence": [
+            "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/renders/blockout/ref.png",
+            "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/renders/blockout/front.png",
+            "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/renders/blockout/right.png",
+            "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/renders/blockout/rear.png",
+            "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/renders/blockout/left.png"
+          ],
+          "reason": "",
+          "command": "Render {pass_id} and capture the fixed review view plus meaningful orbit views"
+        },
+        {
+          "id": "review-contract-read",
+          "scope": "pass",
+          "status": "done",
+          "evidence": [
+            "/Users/c28aa1/.claude/skills/img2threejs/grimoire/review/gates_reference.md",
+            "/Users/c28aa1/.claude/skills/img2threejs/grimoire/review/self_correction.md"
+          ],
+          "reason": "",
+          "command": "Read grimoire/review/gates_reference.md and grimoire/review/self_correction.md completely"
+        },
+        {
+          "id": "tier1-diagnostics",
+          "scope": "pass",
+          "status": "done",
+          "evidence": [
+            "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/renders/blockout/tier1.json"
+          ],
+          "reason": "",
+          "command": "python3 forge/stage4_review/diagnose_render.py --reference {reference} --render <shot> --spec {spec} --pass-id {pass_id} --in-place"
+        },
+        {
+          "id": "multi-angle-review",
+          "scope": "pass",
+          "status": "done",
+          "evidence": [
+            "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/renders/blockout/multi-angle.json"
+          ],
+          "reason": "",
+          "command": "python3 forge/stage4_review/diagnose_render_multi_angle.py --reference <fixed-shot> --orbit <orbit-shot> --orbit <orbit-shot>"
+        },
+        {
+          "id": "pass-gate-check",
+          "scope": "pass",
+          "status": "done",
+          "evidence": [
+            "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/renders/blockout/pass-check.txt"
+          ],
+          "reason": "",
+          "command": "python3 forge/stage3_build/orchestrate_passes.py check {spec} --pass-id {pass_id}"
+        },
+        {
+          "id": "ai-review-recorded",
+          "scope": "pass",
+          "status": "done",
+          "evidence": [
+            "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/renders/blockout/cmp-3.png",
+            "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/renders/blockout/features-3.json"
+          ],
+          "reason": "",
+          "command": "Create the comparison sheet, inspect it with agent vision, and append exactly one review action"
+        },
+        {
+          "id": "pipeline-sync",
+          "scope": "pass",
+          "status": "done",
+          "evidence": [
+            "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/object-sculpt-spec.json"
+          ],
+          "reason": "",
+          "command": "python3 forge/stage3_build/orchestrate_passes.py sync {spec} --in-place"
+        }
+      ]
+    },
+    {
+      "passId": "structural-pass",
+      "checklist": [
+        {
+          "id": "build-current-pass",
+          "scope": "pass",
+          "status": "done",
+          "evidence": [
+            "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/src/createVoltModel.ts"
+          ],
+          "reason": "",
+          "command": "python3 forge/stage3_build/generate_threejs_factory.py {spec} --out src/createObjectModel.ts --pass-id {pass_id}"
+        },
+        {
+          "id": "render-capture",
+          "scope": "pass",
+          "status": "done",
+          "evidence": [
+            "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/renders/structural-pass/ref.png",
+            "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/renders/structural-pass/front.png",
+            "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/renders/structural-pass/right.png",
+            "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/renders/structural-pass/rear.png",
+            "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/renders/structural-pass/left.png"
+          ],
+          "reason": "",
+          "command": "Render {pass_id} and capture the fixed review view plus meaningful orbit views"
+        },
+        {
+          "id": "review-contract-read",
+          "scope": "pass",
+          "status": "done",
+          "evidence": [
+            "/Users/c28aa1/.claude/skills/img2threejs/grimoire/review/gates_reference.md",
+            "/Users/c28aa1/.claude/skills/img2threejs/grimoire/review/self_correction.md"
+          ],
+          "reason": "",
+          "command": "Read grimoire/review/gates_reference.md and grimoire/review/self_correction.md completely"
+        },
+        {
+          "id": "tier1-diagnostics",
+          "scope": "pass",
+          "status": "done",
+          "evidence": [
+            "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/renders/structural-pass/tier1.json"
+          ],
+          "reason": "",
+          "command": "python3 forge/stage4_review/diagnose_render.py --reference {reference} --render <shot> --spec {spec} --pass-id {pass_id} --in-place"
+        },
+        {
+          "id": "multi-angle-review",
+          "scope": "pass",
+          "status": "done",
+          "evidence": [
+            "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/renders/structural-pass/multi-angle.json"
+          ],
+          "reason": "",
+          "command": "python3 forge/stage4_review/diagnose_render_multi_angle.py --reference <fixed-shot> --orbit <orbit-shot> --orbit <orbit-shot>"
+        },
+        {
+          "id": "pass-gate-check",
+          "scope": "pass",
+          "status": "done",
+          "evidence": [
+            "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/renders/structural-pass/pass-check.txt"
+          ],
+          "reason": "",
+          "command": "python3 forge/stage3_build/orchestrate_passes.py check {spec} --pass-id {pass_id}"
+        },
+        {
+          "id": "ai-review-recorded",
+          "scope": "pass",
+          "status": "done",
+          "evidence": [
+            "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/renders/structural-pass/cmp-25.png",
+            "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/renders/structural-pass/features-25.json"
+          ],
+          "reason": "",
+          "command": "Create the comparison sheet, inspect it with agent vision, and append exactly one review action"
+        },
+        {
+          "id": "pipeline-sync",
+          "scope": "pass",
+          "status": "done",
+          "evidence": [
+            "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/object-sculpt-spec.json"
+          ],
+          "reason": "",
+          "command": "python3 forge/stage3_build/orchestrate_passes.py sync {spec} --in-place"
+        }
+      ]
+    },
+    {
+      "passId": "proportion-lock",
+      "checklist": [
+        {
+          "id": "build-current-pass",
+          "scope": "pass",
+          "status": "done",
+          "evidence": [
+            "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/src/createVoltModel.ts"
+          ],
+          "reason": "",
+          "command": "python3 forge/stage3_build/generate_threejs_factory.py {spec} --out src/createObjectModel.ts --pass-id {pass_id}"
+        },
+        {
+          "id": "render-capture",
+          "scope": "pass",
+          "status": "done",
+          "evidence": [
+            "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/renders/proportion-lock/ref.png",
+            "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/renders/proportion-lock/front.png",
+            "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/renders/proportion-lock/right.png",
+            "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/renders/proportion-lock/rear.png",
+            "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/renders/proportion-lock/left.png"
+          ],
+          "reason": "",
+          "command": "Render {pass_id} and capture the fixed review view plus meaningful orbit views"
+        },
+        {
+          "id": "review-contract-read",
+          "scope": "pass",
+          "status": "done",
+          "evidence": [
+            "/Users/c28aa1/.claude/skills/img2threejs/grimoire/review/gates_reference.md",
+            "/Users/c28aa1/.claude/skills/img2threejs/grimoire/review/self_correction.md"
+          ],
+          "reason": "",
+          "command": "Read grimoire/review/gates_reference.md and grimoire/review/self_correction.md completely"
+        },
+        {
+          "id": "tier1-diagnostics",
+          "scope": "pass",
+          "status": "done",
+          "evidence": [
+            "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/renders/proportion-lock/tier1.json"
+          ],
+          "reason": "",
+          "command": "python3 forge/stage4_review/diagnose_render.py --reference {reference} --render <shot> --spec {spec} --pass-id {pass_id} --in-place"
+        },
+        {
+          "id": "multi-angle-review",
+          "scope": "pass",
+          "status": "done",
+          "evidence": [
+            "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/renders/proportion-lock/multi-angle.json"
+          ],
+          "reason": "",
+          "command": "python3 forge/stage4_review/diagnose_render_multi_angle.py --reference <fixed-shot> --orbit <orbit-shot> --orbit <orbit-shot>"
+        },
+        {
+          "id": "pass-gate-check",
+          "scope": "pass",
+          "status": "done",
+          "evidence": [
+            "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/renders/proportion-lock/pass-check.txt"
+          ],
+          "reason": "",
+          "command": "python3 forge/stage3_build/orchestrate_passes.py check {spec} --pass-id {pass_id}"
+        },
+        {
+          "id": "ai-review-recorded",
+          "scope": "pass",
+          "status": "done",
+          "evidence": [
+            "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/renders/proportion-lock/cmp-25.png",
+            "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/renders/proportion-lock/features-25.json"
+          ],
+          "reason": "",
+          "command": "Create the comparison sheet, inspect it with agent vision, and append exactly one review action"
+        },
+        {
+          "id": "pipeline-sync",
+          "scope": "pass",
+          "status": "done",
+          "evidence": [
+            "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/object-sculpt-spec.json"
+          ],
+          "reason": "",
+          "command": "python3 forge/stage3_build/orchestrate_passes.py sync {spec} --in-place"
+        }
+      ]
+    },
+    {
+      "passId": "feature-placement",
+      "checklist": [
+        {
+          "id": "build-current-pass",
+          "scope": "pass",
+          "status": "done",
+          "evidence": [
+            "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/src/createVoltModel.ts"
+          ],
+          "reason": "",
+          "command": "python3 forge/stage3_build/generate_threejs_factory.py {spec} --out src/createObjectModel.ts --pass-id {pass_id}"
+        },
+        {
+          "id": "render-capture",
+          "scope": "pass",
+          "status": "done",
+          "evidence": [
+            "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/renders/feature-placement/ref.png",
+            "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/renders/feature-placement/front.png",
+            "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/renders/feature-placement/right.png",
+            "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/renders/feature-placement/rear.png",
+            "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/renders/feature-placement/left.png"
+          ],
+          "reason": "",
+          "command": "Render {pass_id} and capture the fixed review view plus meaningful orbit views"
+        },
+        {
+          "id": "review-contract-read",
+          "scope": "pass",
+          "status": "done",
+          "evidence": [
+            "/Users/c28aa1/.claude/skills/img2threejs/grimoire/review/gates_reference.md",
+            "/Users/c28aa1/.claude/skills/img2threejs/grimoire/review/self_correction.md"
+          ],
+          "reason": "",
+          "command": "Read grimoire/review/gates_reference.md and grimoire/review/self_correction.md completely"
+        },
+        {
+          "id": "tier1-diagnostics",
+          "scope": "pass",
+          "status": "done",
+          "evidence": [
+            "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/renders/feature-placement/tier1.json"
+          ],
+          "reason": "",
+          "command": "python3 forge/stage4_review/diagnose_render.py --reference {reference} --render <shot> --spec {spec} --pass-id {pass_id} --in-place"
+        },
+        {
+          "id": "multi-angle-review",
+          "scope": "pass",
+          "status": "done",
+          "evidence": [
+            "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/renders/feature-placement/multi-angle.json"
+          ],
+          "reason": "",
+          "command": "python3 forge/stage4_review/diagnose_render_multi_angle.py --reference <fixed-shot> --orbit <orbit-shot> --orbit <orbit-shot>"
+        },
+        {
+          "id": "pass-gate-check",
+          "scope": "pass",
+          "status": "done",
+          "evidence": [
+            "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/renders/feature-placement/pass-check.txt"
+          ],
+          "reason": "",
+          "command": "python3 forge/stage3_build/orchestrate_passes.py check {spec} --pass-id {pass_id}"
+        },
+        {
+          "id": "ai-review-recorded",
+          "scope": "pass",
+          "status": "done",
+          "evidence": [
+            "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/renders/feature-placement/cmp-25.png",
+            "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/renders/feature-placement/features-25.json"
+          ],
+          "reason": "",
+          "command": "Create the comparison sheet, inspect it with agent vision, and append exactly one review action"
+        },
+        {
+          "id": "pipeline-sync",
+          "scope": "pass",
+          "status": "done",
+          "evidence": [
+            "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/volt/object-sculpt-spec.json"
+          ],
+          "reason": "",
+          "command": "python3 forge/stage3_build/orchestrate_passes.py sync {spec} --in-place"
+        }
+      ]
+    }
+  ],
+  "reviewCursor": 6,
+  "iterationAction": "new-pass",
+  "stopReason": ""
+}

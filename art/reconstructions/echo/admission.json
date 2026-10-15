@@ -1,0 +1,14 @@
+{
+  "admitted": true,
+  "reasons": [],
+  "provenance": {
+    "viewpoint": "reference",
+    "sourcePath": "/Users/c28aa1/Desktop/Gun Game/art/concepts/echo.png",
+    "width": 1254,
+    "height": 1254,
+    "foregroundCoverage": 0.3692,
+    "largestComponentFraction": 1.0,
+    "pHash": 18354288538069548197,
+    "duplicateOfHash": null
+  }
+}

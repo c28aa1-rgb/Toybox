@@ -1,0 +1,67 @@
+{
+  "silhouetteBBoxNormalized": [
+    0.184,
+    0.141,
+    0.883,
+    0.906
+  ],
+  "silhouetteAspectWH": 0.913,
+  "regions": {
+    "body-plastic": {
+      "region_px": [
+        760,
+        600,
+        25,
+        40
+      ],
+      "median_rgb": [
+        248,
+        214,
+        57
+      ],
+      "hex": "#F8D639"
+    },
+    "band-violet": {
+      "region_px": [
+        620,
+        920,
+        40,
+        30
+      ],
+      "median_rgb": [
+        86,
+        52,
+        108
+      ],
+      "hex": "#56346C"
+    },
+    "cap-silver": {
+      "region_px": [
+        640,
+        215,
+        30,
+        15
+      ],
+      "median_rgb": [
+        160,
+        153,
+        157
+      ],
+      "hex": "#A0999D"
+    },
+    "bolt-white": {
+      "region_px": [
+        555,
+        705,
+        20,
+        30
+      ],
+      "median_rgb": [
+        245,
+        238,
+        227
+      ],
+      "hex": "#F5EEE3"
+    }
+  }
+}

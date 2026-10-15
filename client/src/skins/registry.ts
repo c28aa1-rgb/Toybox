@@ -77,18 +77,16 @@ function placeholderHero(hero: HeroId): { body: THREE.Group; gunSocket: THREE.Ob
       body.add(stalk, tip);
       break;
     }
-    case 'swap': {
-      const band = mesh(new THREE.TorusGeometry(0.49, 0.06, 8, 24), toon('#4FB3FF'), [0, 0.86, 0], [Math.PI / 2, 0, 0]);
-      const arrowA = mesh(new THREE.ConeGeometry(0.12, 0.25, 8), toon('#4FB3FF'), [0.3, 1.38, 0], [0, 0, -Math.PI / 2]);
-      const arrowB = mesh(new THREE.ConeGeometry(0.12, 0.25, 8), toon('#FFFFFF'), [-0.3, 1.38, 0], [0, 0, Math.PI / 2]);
-      body.add(band, arrowA, arrowB);
+    case 'volt': {
+      const cap = mesh(new THREE.CylinderGeometry(0.14, 0.14, 0.12, 16), toon('#D5D9DE'), [0, 1.42, 0]);
+      const bolt = mesh(new THREE.BoxGeometry(0.08, 0.3, 0.04), toon('#FFFFFF'), [0, 0.62, 0.44], [0, 0, 0.4]);
+      body.add(cap, bolt);
       break;
     }
-    case 'chrono': {
-      const face = mesh(new THREE.CylinderGeometry(0.22, 0.22, 0.06, 20), toon('#FFFFFF'), [0, 0.62, 0.42], [Math.PI / 2, 0, 0]);
-      const hand = mesh(new THREE.BoxGeometry(0.03, 0.16, 0.02), toon(INK), [0, 0.68, 0.46]);
-      const bell = mesh(new THREE.SphereGeometry(0.13, 12, 8), toon('#FFE45C'), [0, 1.4, 0]);
-      body.add(face, hand, bell);
+    case 'chameleon': {
+      const crest = mesh(new THREE.ConeGeometry(0.12, 0.28, 10), toon('#3DDBB4'), [0, 1.42, -0.05]);
+      const tail = mesh(new THREE.TorusGeometry(0.2, 0.07, 8, 20), toon('#3DDBB4'), [0.5, 0.6, -0.15], [0, 0.9, 0]);
+      body.add(crest, tail);
       break;
     }
     case 'decoy': {
@@ -98,10 +96,11 @@ function placeholderHero(hero: HeroId): { body: THREE.Group; gunSocket: THREE.Ob
       body.add(mask, hatBrim, hatTop);
       break;
     }
-    case 'builder': {
-      const helmet = mesh(new THREE.SphereGeometry(0.42, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2), toon('#FFE45C'), [0, 1.18, 0]);
-      const brim = mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.04, 20), toon('#FFE45C'), [0, 1.18, 0.05]);
-      body.add(helmet, brim);
+    case 'echo': {
+      for (const side of [-1, 1]) {
+        const dish = mesh(new THREE.CylinderGeometry(0.28, 0.2, 0.08, 20), toon('#FF8A1F'), [side * 0.42, 1.36, 0], [Math.PI / 2, 0, -side * 0.35]);
+        body.add(dish);
+      }
       break;
     }
   }
@@ -174,7 +173,7 @@ function placeholderGun(gun: GunId): THREE.Group {
 
 function placeholderUtil(util: UtilId): THREE.Group {
   const g = new THREE.Group();
-  const colors: Record<UtilId, string> = { frag: '#3DDBB4', flash: '#FFE45C', smoke: '#B48CFF', goo: '#8BE05A', juice: '#FF5F6D' };
+  const colors: Record<UtilId, string> = { frag: '#3DDBB4', flash: '#FFE45C', smoke: '#B48CFF', turret: '#FF8A1F', juice: '#FF5F6D' };
   if (util === 'juice') {
     g.add(mesh(new RoundedBoxGeometry(0.2, 0.28, 0.14, 2, 0.04), toon(colors.juice), [0, 0.14, 0]));
     g.add(mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.16), toon('#FFFFFF'), [0.05, 0.34, 0], [0, 0, -0.3]));
