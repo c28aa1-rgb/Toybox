@@ -110,7 +110,7 @@ export function Lobby({ portraits, onPlay }: { portraits: Portraits; onPlay: (o:
         </p>
         <dl className="lobby__stats">
           <div><dt>Kills</dt><dd>{profile.kills}</dd></div>
-          <div><dt>Wins</dt><dd>{profile.wins}</dd></div>
+          <div><dt>Deaths</dt><dd>{profile.deaths}</dd></div>
         </dl>
       </header>
 

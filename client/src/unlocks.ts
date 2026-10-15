@@ -7,12 +7,13 @@ export interface Profile {
   secondary: GunId;
   utility: UtilId;
   kills: number;
+  deaths: number;
   wins: number;
 }
 
 const KEY = 'gg.profile.v1';
 
-const DEFAULT: Profile = { name: '', hero: 'blink', gun: 'smg', secondary: 'pistol', utility: 'frag', kills: 0, wins: 0 };
+const DEFAULT: Profile = { name: '', hero: 'blink', gun: 'smg', secondary: 'pistol', utility: 'frag', kills: 0, deaths: 0, wins: 0 };
 
 export function loadProfile(): Profile {
   try {
@@ -46,6 +47,13 @@ export function isUnlocked(gun: GunId, kills: number): boolean {
 export function addKill(): Profile {
   const p = loadProfile();
   p.kills++;
+  saveProfile(p);
+  return p;
+}
+
+export function addDeath(): Profile {
+  const p = loadProfile();
+  p.deaths++;
   saveProfile(p);
   return p;
 }

@@ -7,7 +7,7 @@ import {
   type Rect, type Snapshot,
 } from '@gg/shared';
 import { createGunModel, createHeroSkin, createUtilModel, type HeroSkin } from '../skins/registry';
-import { addKill, addWin, loadProfile, saveProfile } from '../unlocks';
+import { addDeath, addKill, addWin, loadProfile, saveProfile } from '../unlocks';
 import { Sfx } from './audio';
 import { Particles, Rings, Shake, Shatter } from './fx';
 import { Input } from './input';
@@ -975,6 +975,7 @@ export class GameClient {
           victimView.laserGlow.visible = false;
           victimView.laserDot.visible = false;
         }
+        if (ev.victim === me) addDeath();
         if (ev.killer === me && ev.victim !== me) {
           this.hud.set({ banner: { key: ++this.bannerKey, kind: 'eliminated', name: this.nameOf(ev.victim) } });
         } else if (ev.victim === me && ev.killer !== me) {
