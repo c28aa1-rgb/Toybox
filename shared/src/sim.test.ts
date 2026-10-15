@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { GUNS } from './guns';
+import { GUNS, bulletDamage } from './guns';
 import { ABILITY } from './heroes';
 import { MAPS, MAP_IDS, mapProblems } from './map';
 
@@ -416,5 +416,14 @@ describe('new weapons', () => {
     expect(s.throwables).toHaveLength(0);
     expect(b.hp).toBeLessThan(MAX_HP);
     expect(THROW.trapTrigger).toBeGreaterThan(1);
+  });
+});
+
+describe('longshot', () => {
+  it('deals more damage the farther the round flies, and kills near max range', () => {
+    expect(bulletDamage('sniper', 2)).toBeLessThan(50);
+    expect(bulletDamage('sniper', GUNS.sniper.range * 0.5)).toBeGreaterThan(70);
+    expect(bulletDamage('sniper', GUNS.sniper.range * 0.85)).toBeGreaterThanOrEqual(MAX_HP);
+    expect(bulletDamage('smg', 30)).toBe(GUNS.smg.damage);
   });
 });

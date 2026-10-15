@@ -25,6 +25,8 @@ export interface GunDef {
   bounces?: number;
   /** Seconds a hit slows the target. */
   slow?: number;
+  /** Damage grows with distance travelled: `near` at the muzzle up to `far` once the round has flown `fullAt` of its range. */
+  ramp?: { near: number; far: number; fullAt: number };
 }
 
 export const GUNS: Record<GunId, GunDef> = {
@@ -61,8 +63,8 @@ export const GUNS: Record<GunId, GunDef> = {
     damage: 11, cooldown: 0.85, speed: 22, range: 7.5, pellets: 6, spread: 0.42, knockback: 1.2,
   },
   sniper: {
-    id: 'sniper', slot: 'primary', name: 'Longshot', blurb: 'One slow, heavy round across the map.',
-    damage: 72, cooldown: 1.35, speed: 60, range: 50, pellets: 1, spread: 0,
+    id: 'sniper', slot: 'primary', name: 'Longshot', blurb: 'Hits harder the farther it flies. One-shots from across the map.',
+    damage: 72, ramp: { near: 40, far: 100, fullAt: 0.8 }, cooldown: 1.35, speed: 60, range: 50, pellets: 1, spread: 0,
   },
   rocket: {
     id: 'rocket', slot: 'primary', name: 'Party Popper', blurb: 'Slow rocket, big splash, sends people flying.',
@@ -70,6 +72,14 @@ export const GUNS: Record<GunId, GunDef> = {
     splashRadius: 2.6, knockback: 7,
   },
 };
+
+/** Damage for a round that has flown `travelled` metres. Only guns with a ramp change with distance. */
+export function bulletDamage(gun: GunId, travelled: number): number {
+  const def = GUNS[gun];
+  if (!def.ramp) return def.damage;
+  const k = Math.min(1, travelled / (def.range * def.ramp.fullAt));
+  return def.ramp.near + (def.ramp.far - def.ramp.near) * k;
+}
 
 export const GUN_IDS = Object.keys(GUNS) as GunId[];
 export const PRIMARY_IDS = GUN_IDS.filter((g) => GUNS[g].slot === 'primary');

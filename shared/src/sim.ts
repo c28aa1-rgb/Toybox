@@ -2,7 +2,7 @@ import {
   DROP_LIFETIME, HEAL_AMOUNT, HEAL_LIFETIME, MATCH_END_TIME, MAX_HP, STREAK_CALLS,
   MAX_INPUT_DT, PICKUP_RADIUS, PLAYER_RADIUS, PLAYER_SPEED, RESPAWN_TIME, SCOPE_SPEED, SCOPE_SPREAD, SPAWN_SHIELD,
 } from './constants';
-import { GUNS, type GunId } from './guns';
+import { GUNS, bulletDamage, type GunId } from './guns';
 import { ABILITY, HEROES, type HeroId } from './heroes';
 import { DEFAULT_MAP, MAPS, type MapDef, type MapId, type Rect } from './map';
 import type { GameEvent, InputFrame, Loadout, WeaponId } from './protocol';
@@ -1097,7 +1097,7 @@ function updateBullets(state: GameState, dt: number): void {
             if (def.splashRadius) explodeGun(state, b.x, b.y, b.owner, b.gun);
             else {
               if (def.slow && state.time >= p.shieldUntil) p.slowUntil = Math.max(p.slowUntil, state.time + def.slow);
-              damagePlayer(state, p, def.damage, b.owner, b.gun);
+              damagePlayer(state, p, bulletDamage(b.gun, b.travelled), b.owner, b.gun);
               if (def.knockback) {
                 p.vx += b.dx * def.knockback;
                 p.vy += b.dy * def.knockback;
@@ -1113,7 +1113,7 @@ function updateBullets(state: GameState, dt: number): void {
           if (!b.fake) {
             if (def.splashRadius) explodeGun(state, b.x, b.y, b.owner, b.gun);
             else {
-              d.hp -= def.damage;
+              d.hp -= bulletDamage(b.gun, b.travelled);
               if (d.hp <= 0) popDecoy(state, d);
             }
           }
