@@ -256,6 +256,13 @@ export class GameClient {
     this.hud.set({ chatOpen: open });
   }
 
+  /** Ask to come back once the respawn timer is done. Stays queued until the server spawns us. */
+  respawn(): void {
+    this.respawnQueued = true;
+  }
+
+  private respawnQueued = false;
+
   setBots(count: number): void {
     this.net.send({ type: 'bots', count });
     this.botsWanted = { count, at: performance.now() };
@@ -407,7 +414,9 @@ export class GameClient {
       pickup: !typing && this.input.takePickup(),
       slot: 0,
       throw: !typing && this.input.takeThrow(),
+      respawn: this.respawnQueued,
     };
+    if (me.alive) this.respawnQueued = false;
     const want = typing ? null : this.input.takeSlot();
     if (want === 'toggle') frame.slot = me.slot === 'primary' ? 2 : 1;
     else if (want) frame.slot = want;

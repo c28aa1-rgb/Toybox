@@ -28,6 +28,8 @@ export interface InputFrame {
   slot: 0 | 1 | 2;
   /** Edge-triggered: throw the utility toward the cursor. */
   throw: boolean;
+  /** Dead players stay down until they ask to come back (Enter or the button). */
+  respawn?: boolean;
 }
 
 export interface Loadout {

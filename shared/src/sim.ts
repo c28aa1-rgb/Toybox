@@ -60,6 +60,8 @@ export interface PlayerState {
   scoped: boolean;
   wantAbility: boolean;
   wantPickup: boolean;
+  /** Humans respawn only after asking; bots come back on their own. */
+  wantRespawn: boolean;
 }
 
 export interface Bullet {
@@ -395,6 +397,7 @@ export function addPlayer(
     scoped: false,
     wantAbility: false,
     wantPickup: false,
+    wantRespawn: false,
   };
   state.players.set(p.id, p);
   spawn(state, p);
@@ -456,6 +459,7 @@ function spawn(state: GameState, p: PlayerState): void {
   p.fire = false;
   p.wantAbility = false;
   p.wantPickup = false;
+  p.wantRespawn = false;
 }
 
 export function setLoadout(state: GameState, p: PlayerState, loadout: Loadout): void {
@@ -468,6 +472,7 @@ export function applyInput(state: GameState, p: PlayerState, frame: InputFrame):
   p.lastSeq = frame.seq;
   if (Number.isFinite(frame.aim)) p.aim = frame.aim;
   if (Number.isFinite(frame.aimDist)) p.aimDist = clamp(frame.aimDist, 0, 40);
+  if (frame.respawn && !p.alive) p.wantRespawn = true;
   if (!p.alive || state.phase !== 'playing') return;
   const dt = clamp(Number.isFinite(frame.dt) ? frame.dt : 0, 0, MAX_INPUT_DT);
   const mx = clamp(frame.mx || 0, -1, 1);
@@ -517,6 +522,7 @@ function killPlayer(state: GameState, victim: PlayerState, killerId: string, gun
   victim.respawnAt = state.time + RESPAWN_TIME;
   victim.deaths++;
   victim.streak = 0;
+  victim.wantRespawn = false;
   state.events.push({ t: 'kill', killer: killerId, victim: victim.id, gun });
   // Gun Ladder hands out fixed guns, so nothing drops there.
   if (state.mode !== 'ladder') {
@@ -928,7 +934,7 @@ export function tick(state: GameState, dt: number): void {
 
   for (const p of state.players.values()) {
     if (!p.alive) {
-      if (state.time >= p.respawnAt) spawn(state, p);
+      if (state.time >= p.respawnAt && (p.bot || p.wantRespawn)) spawn(state, p);
       continue;
     }
     if (p.vx !== 0 || p.vy !== 0) {

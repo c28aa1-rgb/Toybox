@@ -101,7 +101,16 @@ export function Hud({ client, portraits, onLeave }: { client: GameClient; portra
         <span>In smoke</span>
       </div>
       <FlashOverlay blind={s.blind} />
-      <Chat lines={s.chat} open={s.chatOpen} client={client} />
+      <Chat
+        lines={s.chat}
+        open={s.chatOpen}
+        client={client}
+        onEnter={() => {
+          if (me.alive || s.phase !== 'playing' || me.respawnIn > 0.05) return false;
+          client.respawn();
+          return true;
+        }}
+      />
       {me.alive && s.scoped && <div className="scope-tag">SCOPED · SLOWER, STEADIER AIM</div>}
 
       <AnimatePresence>
@@ -166,7 +175,7 @@ function EliminationBanner({ banner }: { banner: Banner | null }) {
 
 const CHAT_VISIBLE_MS = 9000;
 
-function Chat({ lines, open, client }: { lines: ChatLine[]; open: boolean; client: GameClient }) {
+function Chat({ lines, open, client, onEnter }: { lines: ChatLine[]; open: boolean; client: GameClient; onEnter: () => boolean }) {
   const [draft, setDraft] = useState('');
   const [, force] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -177,12 +186,12 @@ function Chat({ lines, open, client }: { lines: ChatLine[]; open: boolean; clien
       const typing = (e.target as HTMLElement | null)?.tagName === 'INPUT';
       if (e.key === 'Enter' && !open && !typing) {
         e.preventDefault();
-        client.setChatOpen(true);
+        if (!onEnter()) client.setChatOpen(true);
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [open, client]);
+  }, [open, client, onEnter]);
 
   useEffect(() => {
     if (open) inputRef.current?.focus();
@@ -347,9 +356,9 @@ function StreakCallout({ call }: { call: StreakCall | null }) {
         <motion.div
           key={shown.key}
           className={`streak${shown.mine ? ' is-mine' : ''}`}
-          initial={{ scale: 0.4, rotate: -12, opacity: 0, x: '-50%' }}
-          animate={{ scale: 1, rotate: -4, opacity: 1, x: '-50%' }}
-          exit={{ scale: 0.8, opacity: 0, x: '-50%' }}
+          initial={{ x: 60, scale: 0.6, rotate: 8, opacity: 0 }}
+          animate={{ x: 0, scale: 1, rotate: 2, opacity: 1 }}
+          exit={{ x: 30, opacity: 0 }}
           transition={{ type: 'spring', stiffness: 600, damping: 14 }}
         >
           <b>{words[shown.n] ?? 'Streak'}</b>
@@ -464,6 +473,27 @@ function HurtVignette({ tick }: { tick: number }) {
   );
 }
 
+function RespawnButton({ respawnIn, client }: { respawnIn: number; client: GameClient }) {
+  const ready = respawnIn <= 0.05;
+  const [asked, setAsked] = useState(false);
+  return (
+    <motion.button
+      type="button"
+      className={`btn btn--primary respawn${ready ? ' is-ready' : ''}`}
+      disabled={!ready || asked}
+      onClick={() => {
+        client.respawn();
+        setAsked(true);
+      }}
+      animate={ready && !asked ? { scale: [1, 1.06, 1] } : { scale: 1 }}
+      transition={ready ? { duration: 0.9, repeat: Infinity, ease: 'easeInOut' } : pop}
+      whileTap={ready ? { scaleX: 1.06, scaleY: 0.92 } : undefined}
+    >
+      {asked ? 'Respawning…' : ready ? <>Respawn <kbd>Enter</kbd></> : `Respawn in ${Math.ceil(respawnIn)}`}
+    </motion.button>
+  );
+}
+
 function DeathPanel({
   killer, respawnIn, client, portraits, loadout,
 }: {
@@ -482,14 +512,18 @@ function DeathPanel({
       exit={{ y: 20, opacity: 0 }}
       transition={pop}
     >
-      <h2 className="death__title">{killer ? `${killer} got you` : 'You went down'}</h2>
-      <p className="death__timer">Back in {Math.ceil(respawnIn)}</p>
+      <div className="death__head">
+        <h2 className="death__title">{killer ? `${killer} got you` : 'You went down'}</h2>
+        <RespawnButton respawnIn={respawnIn} client={client} />
+      </div>
+      <div className="death__body">
       <p className="death__hint">Change your loadout for the next life:</p>
       <HeroShelf compact value={loadout.hero} portraits={portraits} onChange={(hero) => client.setLoadout({ ...loadout, hero })} />
       <GunRack compact value={loadout.gun} portraits={portraits} onChange={(gun) => client.setLoadout({ ...loadout, gun })} />
       <GunRack compact ids={SECONDARY_IDS} label="Secondary gun" value={loadout.secondary} portraits={portraits} onChange={(secondary) => client.setLoadout({ ...loadout, secondary })} />
       <UtilRack compact value={loadout.utility} portraits={portraits} onChange={(utility) => client.setLoadout({ ...loadout, utility })} />
       <HatRack compact value={loadout.hat} kills={kills} portraits={portraits} onChange={(hat) => client.setLoadout({ ...loadout, hat })} />
+      </div>
     </motion.div>
   );
 }

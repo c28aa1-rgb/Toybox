@@ -427,3 +427,33 @@ describe('longshot', () => {
     expect(bulletDamage('smg', 30)).toBe(GUNS.smg.damage);
   });
 });
+
+describe('respawn', () => {
+  it('a dead human waits for the respawn request', () => {
+    const { s, a, b } = setup();
+    b.hp = 1;
+    a.fire = true;
+    run(s, 0.4);
+    a.fire = false;
+    expect(b.alive).toBe(false);
+    run(s, 4);
+    expect(b.alive).toBe(false);
+    applyInput(s, b, frame(500, { respawn: true }));
+    tick(s, TICK_DT);
+    expect(b.alive).toBe(true);
+  });
+
+  it('asking early still waits out the timer', () => {
+    const { s, a, b } = setup();
+    b.bot = false;
+    b.hp = 1;
+    a.fire = true;
+    run(s, 0.4);
+    a.fire = false;
+    applyInput(s, b, frame(600, { respawn: true }));
+    run(s, 1);
+    expect(b.alive).toBe(false);
+    run(s, 2.5);
+    expect(b.alive).toBe(true);
+  });
+});

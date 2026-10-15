@@ -442,9 +442,11 @@ kbd {
   cursor: none;
 }
 
+/* Own stacking context: CSS2DRenderer gives every tag a z-index, which would otherwise sit above the HUD. */
 .game-labels {
   position: absolute;
   inset: 0;
+  z-index: 0;
   pointer-events: none;
 }
 
@@ -522,6 +524,7 @@ kbd {
 .hud {
   position: absolute;
   inset: 0;
+  z-index: 1;
   pointer-events: none;
 }
 
@@ -913,6 +916,9 @@ kbd {
   position: absolute;
   left: 50%;
   bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100% - 120px);
   width: min(760px, 94vw);
   margin-left: calc(min(760px, 94vw) / -2);
   padding: 18px 20px;
@@ -1563,23 +1569,23 @@ kbd {
 
 .streak {
   position: absolute;
-  left: 50%;
-  top: 34%;
+  right: 16px;
+  top: 230px;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  padding: 8px 22px 10px;
+  align-items: flex-end;
+  padding: 6px 16px 8px;
   border: var(--outline);
-  border-radius: var(--radius);
+  border-radius: var(--radius-sm);
   background: var(--cream);
   color: var(--ink);
-  box-shadow: var(--lift);
+  box-shadow: var(--lift-sm);
   pointer-events: none;
 }
-.streak b { font-family: var(--font-display); font-weight: 400; font-size: 26px; color: var(--grape); }
+.streak b { font-family: var(--font-display); font-weight: 400; font-size: 20px; color: var(--grape); }
 .streak small { font-weight: 700; font-size: 13px; }
 .streak.is-mine { background: var(--lemon); }
-.streak.is-mine b { font-size: 34px; color: var(--tangerine); -webkit-text-stroke: 2px var(--ink); paint-order: stroke fill; }
+.streak.is-mine b { font-size: 24px; color: var(--tangerine); -webkit-text-stroke: 2px var(--ink); paint-order: stroke fill; }
 
 .awards {
   display: flex;
@@ -1616,4 +1622,34 @@ kbd {
 }
 @media (min-width: 761px) and (max-width: 1000px) {
   .slots { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+.respawn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin: 6px 0 12px;
+  padding: 10px 26px;
+  font-size: 20px;
+}
+.respawn kbd { font-size: 13px; }
+.respawn:disabled { opacity: 0.6; cursor: default; }
+
+/* Title and respawn stay put; the loadout pickers scroll under them on short screens. */
+.death__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid rgba(255, 244, 224, 0.15);
+}
+.death__head .respawn { margin: 0; }
+.death__body {
+  overflow-y: auto;
+  padding-top: 10px;
+  pointer-events: auto;
+}
+@media (max-width: 600px) {
+  .death__head { flex-direction: column; }
 }
