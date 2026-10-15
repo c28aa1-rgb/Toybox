@@ -5,7 +5,9 @@ import { App } from './ui/App';
 import { registerGunModels, registerHeroModels, registerUtilModels } from './models';
 import './theme/tokens.css';
 import './theme/app.css';
+import { wakeServer } from './game/server';
 
+wakeServer();
 registerHeroModels();
 registerGunModels();
 registerUtilModels();

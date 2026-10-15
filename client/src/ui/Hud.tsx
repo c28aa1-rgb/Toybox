@@ -1,18 +1,37 @@
 import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { CHAT_MAX, GUNS, HEROES, MAPS, MAX_PLAYERS, MODES, SECONDARY_IDS, TEAM_COLORS, TEAM_NAMES, UTILS, type Loadout, type PlayerSnap } from '@gg/shared';
+import { CHAT_MAX, GUNS, HEROES, MAX_PLAYERS, MODES, SECONDARY_IDS, TEAM_COLORS, TEAM_NAMES, type Loadout, type PlayerSnap } from '@gg/shared';
 import type { Banner, ChatLine, HudState, StreakCall } from '../game/store';
 import { itemName, type GameClient } from '../game/GameClient';
 import { useHud } from '../game/store';
+import { isRemoteServer } from '../game/server';
 import { loadProfile } from '../unlocks';
 import type { Portraits } from './App';
 import { GunRack, HatRack, HeroShelf, UtilRack } from './Pickers';
+import { MusicToggle } from './MusicToggle';
+import { CombatHud } from './CombatHud';
+import { SmokeOverlay } from './SmokeOverlay';
+import { bindingLabel, listenActions, matches, useBindings } from '../game/bindings';
 
 const pop = { type: 'spring', stiffness: 500, damping: 24 } as const;
 
 export function Hud({ client, portraits, onLeave }: { client: GameClient; portraits: Portraits; onLeave: () => void }) {
+  useBindings();
   const s = useHud(client.hud);
   const me = s.me;
+  const [leaveOpen, setLeaveOpen] = useState(false);
+
+  useEffect(() => listenActions((code, e) => {
+      if (matches('leave', code)) {
+        e.preventDefault();
+        client.setMenuOpen(true);
+        setLeaveOpen(true);
+      }
+  }), [client]);
+  useEffect(() => {
+    client.setMenuOpen(leaveOpen);
+    return () => client.setMenuOpen(false);
+  }, [client, leaveOpen]);
 
   if (s.error && !s.connected) {
     return (
@@ -26,20 +45,18 @@ export function Hud({ client, portraits, onLeave }: { client: GameClient; portra
     );
   }
   if (!me) {
-    return <div className="hud-center"><p className="connecting">Joining room…</p></div>;
+    return <div className="hud-center"><Connecting /></div>;
   }
 
   const leader = s.players[0];
-  const hero = HEROES[me.hero];
 
   return (
     <div className="hud">
+      <SmokeOverlay clouds={me.alive ? s.smoke : []} />
       <HurtVignette tick={s.hurtTick} />
 
       <div className="hud__tl">
-        {s.isPublic ? <PublicTag name={s.map ? MAPS[s.map].name : ''} count={s.players.filter((p) => !p.bot).length} /> : <RoomTag code={s.room} />}
-        {s.host && <BotStepper count={s.bots} humans={s.players.length - s.bots} onChange={(n) => client.setBots(n)} />}
-        <button type="button" className="btn btn--ghost btn--small" onClick={onLeave}>Leave</button>
+        <Leaderboard players={s.players} myId={s.myId} s={s} host={s.host} bots={s.bots} onBots={(n) => client.setBots(n)} />
       </div>
 
       <div className="hud__tc">
@@ -48,6 +65,7 @@ export function Hud({ client, portraits, onLeave }: { client: GameClient; portra
       </div>
 
       <div className="hud__tr">
+        <MusicToggle />
         <ul className="feed">
           <AnimatePresence initial={false}>
             {s.feed.map((f) => (
@@ -71,11 +89,7 @@ export function Hud({ client, portraits, onLeave }: { client: GameClient; portra
       </div>
 
       {me.alive && (
-        <div className="hud__bottom">
-          <HealthPill hp={me.hp} />
-          <AbilityButton name={hero.ability} color={hero.color} readyIn={me.abilityReadyIn} cooldown={hero.cooldown} />
-          <Loadout me={me} portraits={portraits} />
-        </div>
+        <CombatHud me={me} portraits={portraits} client={client} />
       )}
 
       <AnimatePresence>
@@ -87,7 +101,7 @@ export function Hud({ client, portraits, onLeave }: { client: GameClient; portra
             exit={{ y: 8, opacity: 0 }}
             transition={pop}
           >
-            <kbd>E</kbd> Swap to {itemName(s.nearPickup)}
+            <kbd>{bindingLabel('pickup')}</kbd> Swap to {itemName(s.nearPickup)}
           </motion.div>
         )}
       </AnimatePresence>
@@ -97,14 +111,12 @@ export function Hud({ client, portraits, onLeave }: { client: GameClient; portra
       {me.alive && s.slowed && <div className="slow-tag">Slowed</div>}
       <EliminationBanner banner={s.banner} />
       <div className={`scope-vignette${me.alive && s.scoped ? ' is-on' : ''}`} aria-hidden />
-      <div className={`smoke-overlay${me.alive && s.smoked ? ' is-on' : ''}`} aria-hidden>
-        <span>In smoke</span>
-      </div>
       <FlashOverlay blind={s.blind} />
       <Chat
         lines={s.chat}
         open={s.chatOpen}
         client={client}
+        blocked={leaveOpen}
         onEnter={() => {
           if (me.alive || s.phase !== 'playing' || me.respawnIn > 0.05) return false;
           client.respawn();
@@ -122,6 +134,7 @@ export function Hud({ client, portraits, onLeave }: { client: GameClient; portra
             client={client}
             portraits={portraits}
             loadout={s.loadout}
+            onLeave={onLeave}
           />
         )}
       </AnimatePresence>
@@ -130,18 +143,9 @@ export function Hud({ client, portraits, onLeave }: { client: GameClient; portra
         {s.phase === 'ended' && <EndPanel key="end" s={s} />}
       </AnimatePresence>
 
-      {s.scoreboard && s.phase === 'playing' && <Scoreboard players={s.players} myId={s.myId} s={s} />}
-    </div>
-  );
-}
-
-function PublicTag({ name, count }: { name: string; count: number }) {
-  return (
-    <div className="roomtag roomtag--public">
-      <span className="roomtag__hole" aria-hidden />
-      <span className="roomtag__label">Public</span>
-      <span className="roomtag__code">{name}</span>
-      <span className="roomtag__hint">{count} {count === 1 ? 'player' : 'players'} online here</span>
+      <AnimatePresence>
+        {leaveOpen && <LeaveConfirm key="leave" onCancel={() => setLeaveOpen(false)} onLeave={onLeave} />}
+      </AnimatePresence>
     </div>
   );
 }
@@ -175,23 +179,19 @@ function EliminationBanner({ banner }: { banner: Banner | null }) {
 
 const CHAT_VISIBLE_MS = 9000;
 
-function Chat({ lines, open, client, onEnter }: { lines: ChatLine[]; open: boolean; client: GameClient; onEnter: () => boolean }) {
+function Chat({ lines, open, client, onEnter, blocked }: { lines: ChatLine[]; open: boolean; client: GameClient; onEnter: () => boolean; blocked: boolean }) {
+  useBindings();
   const [draft, setDraft] = useState('');
   const [, force] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Enter opens chat from the game; Escape closes it.
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      const typing = (e.target as HTMLElement | null)?.tagName === 'INPUT';
-      if (e.key === 'Enter' && !open && !typing) {
+  useEffect(() => listenActions((code, e) => {
+      if (!blocked && !open && (matches('chat', code) || matches('respawn', code))) {
         e.preventDefault();
-        if (!onEnter()) client.setChatOpen(true);
+        if (matches('respawn', code) && onEnter()) return;
+        if (matches('chat', code)) client.setChatOpen(true);
       }
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [open, client, onEnter]);
+  }), [open, client, onEnter, blocked]);
 
   useEffect(() => {
     if (open) inputRef.current?.focus();
@@ -248,32 +248,53 @@ function Chat({ lines, open, client, onEnter }: { lines: ChatLine[]; open: boole
           />
         </form>
       ) : (
-        <span className="chat__hint">Enter to chat</span>
+        <span className="chat__hint">{bindingLabel('chat')} to chat</span>
       )}
     </div>
   );
 }
 
-function RoomTag({ code }: { code: string }) {
-  const [copied, setCopied] = useState(false);
-  const copy = async () => {
-    const url = new URL(location.href);
-    url.searchParams.set('room', code);
-    try {
-      await navigator.clipboard.writeText(url.toString());
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    } catch {
-      setCopied(false);
-    }
-  };
+function Leaderboard({ players, myId, s, host, bots, onBots }: { players: PlayerSnap[]; myId: string | null; s: HudState; host: boolean; bots: number; onBots: (n: number) => void }) {
+  const label = s.mode === 'hill' ? 'Points' : s.mode === 'ladder' ? 'Guns' : 'Kills';
+  const myPlace = players.findIndex((p) => p.id === myId);
+  const rows = [...players.slice(0, 5), ...(myPlace >= 5 ? [players[myPlace]] : [])];
+  const scoreOf = (p: PlayerSnap) => s.mode === 'hill' || s.mode === 'ladder' ? p.score : p.kills;
   return (
-    <button type="button" className="roomtag" onClick={copy} title="Copy invite link">
-      <span className="roomtag__hole" aria-hidden />
-      <span className="roomtag__label">Room</span>
-      <span className="roomtag__code">{code}</span>
-      <span className="roomtag__hint">{copied ? 'Link copied' : 'Copy invite link'}</span>
-    </button>
+    <aside className="leaderboard" aria-label="Match standings">
+      <div className="leaderboard__head"><b>Standings</b><span>{label}</span></div>
+      <ol className="leaderboard__rows">
+        {rows.map((p, i) => {
+          const place = players.indexOf(p) + 1;
+          return <li key={p.id} className={`${p.id === myId ? 'is-me' : ''}${place > 5 && i > 0 ? ' is-separated' : ''}`}>
+            <span className="leaderboard__place">{place}</span>
+            <span className="leaderboard__name">{p.id === myId ? 'You' : p.name}</span>
+            <b>{scoreOf(p)}</b>
+          </li>;
+        })}
+      </ol>
+      {host && <BotStepper count={bots} humans={players.length - bots} onChange={onBots} />}
+    </aside>
+  );
+}
+
+function LeaveConfirm({ onCancel, onLeave }: { onCancel: () => void; onLeave: () => void }) {
+  const [seconds, setSeconds] = useState(4);
+  useEffect(() => {
+    if (!seconds) return;
+    const timer = window.setTimeout(() => setSeconds((n) => n - 1), 1000);
+    return () => window.clearTimeout(timer);
+  }, [seconds]);
+  return (
+    <motion.div className="leave-confirm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+      <motion.div className="leave-confirm__card" initial={{ y: 16, scale: 0.96 }} animate={{ y: 0, scale: 1 }} exit={{ y: 8, scale: 0.98 }} transition={pop}>
+        <h2>Leave this match?</h2>
+        <p>Your place in the round will be lost.</p>
+        <div>
+          <button type="button" className="btn btn--ghost" onClick={onCancel}>Stay</button>
+          <button type="button" className="btn btn--primary" onClick={onLeave} disabled={seconds > 0}>{seconds > 0 ? `Leave in ${seconds}` : 'Leave match'}</button>
+        </div>
+      </motion.div>
+    </motion.div>
   );
 }
 
@@ -369,61 +390,6 @@ function StreakCallout({ call }: { call: StreakCall | null }) {
   );
 }
 
-function HealthPill({ hp }: { hp: number }) {
-  return (
-    <div className={`health${hp <= 35 ? ' is-low' : ''}`}>
-      <motion.span className="health__fill" animate={{ width: `${hp}%` }} transition={{ type: 'spring', stiffness: 300, damping: 30 }} />
-      <span className="health__num">{hp}</span>
-    </div>
-  );
-}
-
-function AbilityButton({ name, color, readyIn, cooldown }: { name: string; color: string; readyIn: number; cooldown: number }) {
-  const ready = readyIn <= 0.05;
-  const pct = ready ? 1 : 1 - readyIn / cooldown;
-  return (
-    <motion.div
-      className={`ability${ready ? ' is-ready' : ''}`}
-      style={{ '--hero': color, '--pct': pct } as React.CSSProperties}
-      animate={ready ? { scale: [1, 1.12, 1] } : { scale: 1 }}
-      transition={{ duration: 0.3, ease: [0.34, 1.56, 0.64, 1] }}
-    >
-      <span className="ability__ring" aria-hidden />
-      <span className="ability__name">{name}</span>
-      <span className="ability__key">{ready ? 'Space' : readyIn.toFixed(1)}</span>
-    </motion.div>
-  );
-}
-
-/** Primary and secondary with the one in hand raised, plus the utility and its charges. */
-function Loadout({ me, portraits }: { me: PlayerSnap; portraits: Portraits }) {
-  const slots: { key: string; slot: 'primary' | 'secondary'; gun: keyof typeof GUNS }[] = [
-    { key: '1', slot: 'primary', gun: me.primary },
-    { key: '2', slot: 'secondary', gun: me.secondary },
-  ];
-  return (
-    <div className="loadout">
-      {slots.map((s) => (
-        <motion.div
-          key={s.slot}
-          className={`loadout__gun${me.slot === s.slot ? ' is-active' : ''}`}
-          animate={{ y: me.slot === s.slot ? -8 : 0, scale: me.slot === s.slot ? 1 : 0.88 }}
-          transition={pop}
-        >
-          <kbd>{s.key}</kbd>
-          <img src={portraits.guns[s.gun]} alt="" />
-          <span>{GUNS[s.gun].name}</span>
-        </motion.div>
-      ))}
-      <div className={`loadout__util${me.utilCharges ? '' : ' is-empty'}`}>
-        <kbd>G</kbd>
-        <img src={portraits.utils[me.utility]} alt="" />
-        <span>{UTILS[me.utility].name}</span>
-        <b>×{me.utilCharges}</b>
-      </div>
-    </div>
-  );
-}
 
 function FlashOverlay({ blind }: { blind: number }) {
   // Full white while more than a second is left, then fades out.
@@ -474,6 +440,7 @@ function HurtVignette({ tick }: { tick: number }) {
 }
 
 function RespawnButton({ respawnIn, client }: { respawnIn: number; client: GameClient }) {
+  useBindings();
   const ready = respawnIn <= 0.05;
   const [asked, setAsked] = useState(false);
   return (
@@ -489,19 +456,20 @@ function RespawnButton({ respawnIn, client }: { respawnIn: number; client: GameC
       transition={ready ? { duration: 0.9, repeat: Infinity, ease: 'easeInOut' } : pop}
       whileTap={ready ? { scaleX: 1.06, scaleY: 0.92 } : undefined}
     >
-      {asked ? 'Respawning…' : ready ? <>Respawn <kbd>Enter</kbd></> : `Respawn in ${Math.ceil(respawnIn)}`}
+      {asked ? 'Respawning…' : ready ? <>Respawn <kbd>{bindingLabel('respawn')}</kbd></> : `Respawn in ${Math.ceil(respawnIn)}`}
     </motion.button>
   );
 }
 
 function DeathPanel({
-  killer, respawnIn, client, portraits, loadout,
+  killer, respawnIn, client, portraits, loadout, onLeave,
 }: {
   killer: string | null;
   respawnIn: number;
   client: GameClient;
   portraits: Portraits;
   loadout: Loadout;
+  onLeave: () => void;
 }) {
   const kills = loadProfile().kills;
   return (
@@ -524,6 +492,7 @@ function DeathPanel({
       <UtilRack compact value={loadout.utility} portraits={portraits} onChange={(utility) => client.setLoadout({ ...loadout, utility })} />
       <HatRack compact value={loadout.hat} kills={kills} portraits={portraits} onChange={(hat) => client.setLoadout({ ...loadout, hat })} />
       </div>
+      <footer className="death__footer"><button type="button" className="btn btn--ghost" onClick={onLeave}>Leave match</button></footer>
     </motion.div>
   );
 }
@@ -601,30 +570,56 @@ function EndPanel({ s }: { s: HudState }) {
 }
 
 function Scoreboard({ players, myId, s, inline = false }: { players: PlayerSnap[]; myId: string | null; s: HudState; inline?: boolean }) {
-  const scoreLabel = s.mode === 'hill' ? 'Points' : s.mode === 'ladder' ? 'Gun' : null;
+  const scoreLabel = s.mode === 'hill' ? 'Points' : s.mode === 'ladder' ? 'Guns' : 'Kills';
+  const visiblePlayers = inline ? players : [
+    ...players.slice(0, 5),
+    ...(players.findIndex((p) => p.id === myId) >= 5 ? [players.find((p) => p.id === myId)!] : []),
+  ];
   return (
     <div className={inline ? 'scores scores--inline' : 'scores'}>
+      {!inline && <h2 className="scores__title">Match standings</h2>}
       <table>
         <thead>
           <tr>
-            <th>Player</th><th>Hero</th>
-            {scoreLabel && <th>{scoreLabel}</th>}
-            <th>Kills</th><th>Deaths</th><th>Damage</th>
+            {!inline && <th>Place</th>}
+            <th>Player</th><th>Hero</th><th>{scoreLabel}</th>
+            {s.mode !== 'ffa' && s.mode !== 'teams' && <th>Kills</th>}
+            <th>Deaths</th><th>Damage</th>
           </tr>
         </thead>
         <tbody>
-          {players.map((p) => (
-            <tr key={p.id} className={p.id === myId ? 'is-me' : ''} style={p.team >= 0 ? ({ '--team': TEAM_COLORS[p.team] } as React.CSSProperties) : undefined}>
+          {visiblePlayers.map((p) => {
+            const place = players.indexOf(p) + 1;
+            return <tr key={p.id} className={`${p.id === myId ? 'is-me' : ''}${!inline && place > 5 ? ' is-separated' : ''}`} style={p.team >= 0 ? ({ '--team': TEAM_COLORS[p.team] } as React.CSSProperties) : undefined}>
+              {!inline && <td className="scores__place">{place}</td>}
               <td className={p.team >= 0 ? 'has-team' : ''}>{p.id === myId ? `${p.name} (you)` : p.name}</td>
               <td style={{ color: HEROES[p.hero].color }}>{HEROES[p.hero].name}</td>
-              {scoreLabel && <td>{p.score}</td>}
-              <td>{p.kills}</td>
+              <td>{s.mode === 'ffa' || s.mode === 'teams' ? p.kills : p.score}</td>
+              {s.mode !== 'ffa' && s.mode !== 'teams' && <td>{p.kills}</td>}
               <td>{p.deaths}</td>
               <td>{p.damage}</td>
-            </tr>
-          ))}
+            </tr>;
+          })}
         </tbody>
       </table>
+      {!inline && players.length > 5 && players.findIndex((p) => p.id === myId) >= 5 && <p className="scores__hint">Top five, then your place</p>}
+    </div>
+  );
+}
+
+/** Free hosting puts the server to sleep when idle, so the first join can take up to a minute. */
+function Connecting() {
+  const [slow, setSlow] = useState(false);
+  useEffect(() => {
+    const t = window.setTimeout(() => setSlow(true), 4000);
+    return () => clearTimeout(t);
+  }, []);
+  return (
+    <div className="connecting-wrap">
+      <p className="connecting">{slow && isRemoteServer ? 'Waking up the server…' : 'Joining room…'}</p>
+      {slow && isRemoteServer && (
+        <p className="connecting__sub">The game server naps when nobody is playing. This can take up to a minute the first time, then it's instant.</p>
+      )}
     </div>
   );
 }

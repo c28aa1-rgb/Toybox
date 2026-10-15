@@ -1,5 +1,5 @@
 import { createReadStream, existsSync, statSync } from 'node:fs';
-import { createServer } from 'node:http';
+import { createServer, type IncomingMessage } from 'node:http';
 import { extname, join, normalize, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { WebSocketServer, type WebSocket } from 'ws';
@@ -27,8 +27,26 @@ const MIME: Record<string, string> = {
   '.png': 'image/png', '.json': 'application/json', '.woff2': 'font/woff2',
 };
 
+// Browsers allowed to open a socket (the GitHub Pages site). Comma-separated; empty allows any origin.
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS ?? '').split(',').map((o) => o.trim().replace(/\/+$/, '')).filter(Boolean);
+const MAX_CONNECTIONS_PER_IP = 8;
+const MAX_MESSAGES_PER_SEC = 120; // inputs arrive ~30/s; this leaves room for bursts and chat
+const connectionsByIp = new Map<string, number>();
+
+function clientIp(req: IncomingMessage): string {
+  const fwd = req.headers['x-forwarded-for'];
+  const first = (Array.isArray(fwd) ? fwd[0] : fwd)?.split(',')[0]?.trim();
+  return first || req.socket.remoteAddress || 'unknown';
+}
+
 // In production the server also hosts the built client. In dev, Vite serves it and proxies /ws here.
 const http = createServer((req, res) => {
+  if (req.url === '/health') {
+    // Render's health check, and the page's wake-up poke (no-cors, so no CORS headers are needed).
+    res.writeHead(200, { 'content-type': 'text/plain', 'cache-control': 'no-store' });
+    res.end('ok');
+    return;
+  }
   if (!existsSync(DIST)) {
     res.writeHead(200, { 'content-type': 'text/plain' });
     res.end('Toybox Brawl server is running. Open the Vite dev server for the client.');
@@ -63,13 +81,40 @@ function cleanName(raw: unknown): string {
   return name || 'Player';
 }
 
-const wss = new WebSocketServer({ server: http, path: '/ws' });
+const wss = new WebSocketServer({
+  server: http,
+  path: '/ws',
+  maxPayload: 16 * 1024,
+  verifyClient: ({ origin, req }, done) => {
+    if (ALLOWED_ORIGINS.length && origin && !ALLOWED_ORIGINS.includes(origin.replace(/\/+$/, ''))) {
+      done(false, 403, 'Origin not allowed');
+    } else if ((connectionsByIp.get(clientIp(req)) ?? 0) >= MAX_CONNECTIONS_PER_IP) {
+      done(false, 429, 'Too many connections');
+    } else {
+      done(true);
+    }
+  },
+});
 
-wss.on('connection', (ws: WebSocket) => {
+wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
   let room: Room | null = null;
   let playerId: string | null = null;
 
+  const ip = clientIp(req);
+  connectionsByIp.set(ip, (connectionsByIp.get(ip) ?? 0) + 1);
+  let windowStart = Date.now();
+  let windowCount = 0;
+
   ws.on('message', (data) => {
+    const now = Date.now();
+    if (now - windowStart >= 1000) {
+      windowStart = now;
+      windowCount = 0;
+    }
+    if (++windowCount > MAX_MESSAGES_PER_SEC) {
+      ws.close(1008, 'Rate limit');
+      return;
+    }
     let msg: ClientMsg;
     try {
       msg = JSON.parse(String(data));
@@ -138,6 +183,9 @@ wss.on('connection', (ws: WebSocket) => {
   });
 
   ws.on('close', () => {
+    const left = (connectionsByIp.get(ip) ?? 1) - 1;
+    if (left <= 0) connectionsByIp.delete(ip);
+    else connectionsByIp.set(ip, left);
     if (room && playerId) room.leave(playerId);
   });
 });

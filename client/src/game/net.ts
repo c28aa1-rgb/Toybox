@@ -1,3 +1,4 @@
+import { wsUrl } from './server';
 import type { ClientMsg, MapId, ModeId, ServerMsg, Snapshot } from '@gg/shared';
 
 export interface NetHandlers {
@@ -8,25 +9,52 @@ export interface NetHandlers {
   onClose(): void;
 }
 
+const RETRIES = 12;
+const RETRY_MS = 5000;
+
 export class Net {
-  private ws: WebSocket;
+  private ws!: WebSocket;
   /** Estimated (serverTime - localTime) in seconds. */
   private offset: number | null = null;
   rtt = 0;
   private pingTimer: number;
+  private everOpened = false;
+  private attempts = 0;
+  private retryTimer = 0;
+  private disposed = false;
+  private openWaiters: Array<() => void> = [];
 
   constructor(private handlers: NetHandlers) {
-    const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-    this.ws = new WebSocket(`${proto}://${location.host}/ws`);
-    this.ws.onmessage = (e) => this.receive(e.data);
-    this.ws.onclose = () => handlers.onClose();
-    this.ws.onerror = () => handlers.onError('Lost connection to the server.');
+    this.connect();
     this.pingTimer = window.setInterval(() => this.send({ type: 'ping', t: performance.now() }), 2000);
+  }
+
+  private connect(): void {
+    const ws = new WebSocket(wsUrl());
+    this.ws = ws;
+    ws.onopen = () => {
+      this.everOpened = true;
+      for (const fn of this.openWaiters.splice(0)) fn();
+    };
+    ws.onmessage = (e) => this.receive(e.data);
+    ws.onclose = () => {
+      if (this.disposed) return;
+      // A sleeping free host can refuse the first few connections while it boots; keep trying.
+      if (!this.everOpened && this.attempts < RETRIES) {
+        this.attempts++;
+        this.retryTimer = window.setTimeout(() => this.connect(), RETRY_MS);
+        return;
+      }
+      this.handlers.onClose();
+    };
+    ws.onerror = () => {
+      if (this.everOpened || this.attempts >= RETRIES) this.handlers.onError('Lost connection to the server.');
+    };
   }
 
   whenOpen(fn: () => void): void {
     if (this.ws.readyState === WebSocket.OPEN) fn();
-    else this.ws.addEventListener('open', fn, { once: true });
+    else this.openWaiters.push(fn);
   }
 
   send(msg: ClientMsg): void {
@@ -39,7 +67,9 @@ export class Net {
   }
 
   close(): void {
+    this.disposed = true;
     clearInterval(this.pingTimer);
+    clearTimeout(this.retryTimer);
     this.ws.onclose = null;
     this.ws.close();
   }

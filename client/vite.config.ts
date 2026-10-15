@@ -5,6 +5,8 @@ import react from '@vitejs/plugin-react';
 const reconstructions = fileURLToPath(new URL('../art/reconstructions', import.meta.url));
 
 export default defineConfig({
+  // GitHub Pages serves the site from /<repo>/; the deploy workflow sets VITE_BASE.
+  base: process.env.VITE_BASE ?? '/',
   plugins: [
     react(),
     {

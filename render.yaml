@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: toybox-takedown-server
+    runtime: node
+    plan: free
+    region: virginia
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: 22
+      - key: ALLOWED_ORIGINS
+        value: https://c28aa1-rgb.github.io
