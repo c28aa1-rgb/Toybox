@@ -1,0 +1,14 @@
+{
+  "admitted": true,
+  "reasons": [],
+  "provenance": {
+    "viewpoint": "reference",
+    "sourcePath": "/Users/c28aa1/Desktop/Gun Game/art/concepts/bouncer.png",
+    "width": 1448,
+    "height": 1086,
+    "foregroundCoverage": 0.3503,
+    "largestComponentFraction": 1.0,
+    "pHash": 18374326891122130976,
+    "duplicateOfHash": null
+  }
+}

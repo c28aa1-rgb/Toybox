@@ -362,7 +362,7 @@ export class GameClient {
 
     this.s.outline.render(this.s.scene, this.s.camera);
     // Name tags sit above the HUD, so standing in smoke has to hide the whole layer.
-    this.s.labels.domElement.style.visibility = this.meSmoked ? 'hidden' : '';
+    this.s.labels.domElement.style.visibility = this.meSmoked || snap?.phase === 'ended' ? 'hidden' : '';
     this.s.labels.render(this.s.scene, this.s.camera);
 
     if (now - this.hudAt > 100) {
@@ -728,7 +728,8 @@ export class GameClient {
         if (g.util === 'trap') {
           const light = new THREE.Mesh(new THREE.SphereGeometry(0.07, 10, 8), new THREE.MeshBasicMaterial({ color: '#FF3B5C' }));
           (light.material as THREE.Material).userData.outlineParameters = { visible: false };
-          light.position.y = 0.36;
+          // Sit the blinking light on top of the button, whatever model is loaded.
+          light.position.y = new THREE.Box3().setFromObject(obj).max.y / obj.scale.y - 0.01;
           light.name = 'trapLight';
           obj.add(light);
         }
@@ -818,6 +819,14 @@ export class GameClient {
       if (!g) {
         g = new THREE.Group();
         const mat = new THREE.MeshToonMaterial({ color: '#8BE05A', transparent: true, opacity: 0.85 });
+        // Keep the puddle inside the arena walls when it lands near the border.
+        if (this.map) {
+          const { w, h } = this.map;
+          mat.clippingPlanes = [
+            new THREE.Plane(new THREE.Vector3(1, 0, 0), -1), new THREE.Plane(new THREE.Vector3(-1, 0, 0), w - 1),
+            new THREE.Plane(new THREE.Vector3(0, 0, 1), -1), new THREE.Plane(new THREE.Vector3(0, 0, -1), h - 1),
+          ];
+        }
         const disc = new THREE.Mesh(new THREE.CircleGeometry(1, 40), mat);
         disc.rotation.x = -Math.PI / 2;
         disc.position.y = 0.04;

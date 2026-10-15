@@ -1,0 +1,14 @@
+{
+  "admitted": true,
+  "reasons": [],
+  "provenance": {
+    "viewpoint": "reference",
+    "sourcePath": "/Users/c28aa1/Desktop/Gun Game/art/concepts/goo.png",
+    "width": 1448,
+    "height": 1086,
+    "foregroundCoverage": 0.3062,
+    "largestComponentFraction": 1.0,
+    "pHash": 13382632082962430120,
+    "duplicateOfHash": null
+  }
+}

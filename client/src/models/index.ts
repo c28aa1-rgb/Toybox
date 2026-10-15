@@ -15,6 +15,11 @@ import { createThumperModel } from '../../../art/reconstructions/thumper/src/cre
 import { createFizzBombModel } from '../../../art/reconstructions/frag/src/createFizzBombModel';
 import { createFlashPopModel } from '../../../art/reconstructions/flash/src/createFlashPopModel';
 import { createPuffCanModel } from '../../../art/reconstructions/smoke/src/createPuffCanModel';
+import { createTriPopModel } from '../../../art/reconstructions/burst/src/createTriPopModel';
+import { createBouncerModel } from '../../../art/reconstructions/bouncer/src/createBouncerModel';
+import { createStingerModel } from '../../../art/reconstructions/stinger/src/createStingerModel';
+import { createGooBombModel } from '../../../art/reconstructions/goo/src/createGooBombModel';
+import { createSnapTrapModel } from '../../../art/reconstructions/trap/src/createSnapTrapModel';
 import { registerGunModel, registerHeroModel, registerUtilModel } from '../skins/registry';
 import { toonify } from './toonify';
 
@@ -68,6 +73,9 @@ const GUN_FACTORIES: Partial<Record<GunId, () => THREE.Group>> = {
   pistol: () => createPeaShooterModel({ textureSize: 8 }),
   minismg: () => createMiniBuzzModel({ textureSize: 8 }),
   thumper: () => createThumperModel({ textureSize: 8 }),
+  bouncer: () => createBouncerModel({ textureSize: 8 }),
+  stinger: () => createStingerModel({ textureSize: 8 }),
+  burst: () => createTriPopModel({ textureSize: 8 }),
   smg: () => createBuzzboxModel({ textureSize: 8 }),
   shotgun: () => createBoomstickModel({ textureSize: 8 }),
   sniper: () => createLongshotModel({ textureSize: 8 }),
@@ -94,14 +102,16 @@ export function registerGunModels(): void {
   }
 }
 
-/** Throwables, origin at the base. Scaled to a fixed height so they read the same in hand, in flight and as pickups. */
-const UTIL_FACTORIES: Partial<Record<UtilId, () => THREE.Group>> = {
+/** Throwables, origin at the base. Scaled by their largest side so a flat trap and a tall can read at the same size. */
+const UTIL_FACTORIES: Record<UtilId, () => THREE.Group> = {
   frag: () => createFizzBombModel({ textureSize: 8 }),
   flash: () => createFlashPopModel({ textureSize: 8 }),
   smoke: () => createPuffCanModel({ textureSize: 8 }),
+  goo: () => createGooBombModel({ textureSize: 8 }),
+  trap: () => createSnapTrapModel({ textureSize: 8 }),
 };
 
-const UTIL_HEIGHT = 0.42;
+const UTIL_SIZE = 0.42;
 const utilTemplates = new Map<UtilId, THREE.Object3D>();
 
 export function registerUtilModels(): void {
@@ -109,9 +119,10 @@ export function registerUtilModels(): void {
     registerUtilModel(util, () => {
       let t = utilTemplates.get(util);
       if (!t) {
-        t = toonify(UTIL_FACTORIES[util]!());
+        t = toonify(UTIL_FACTORIES[util]());
         const box = new THREE.Box3().setFromObject(t);
-        t.scale.setScalar(UTIL_HEIGHT / Math.max(0.001, box.max.y - box.min.y));
+        const size = box.getSize(new THREE.Vector3());
+        t.scale.setScalar(UTIL_SIZE / Math.max(0.001, size.x, size.y, size.z));
         utilTemplates.set(util, t);
       }
       const g = new THREE.Group();
