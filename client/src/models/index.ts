@@ -19,7 +19,7 @@ import { createTriPopModel } from '../../../art/reconstructions/burst/src/create
 import { createBouncerModel } from '../../../art/reconstructions/bouncer/src/createBouncerModel';
 import { createStingerModel } from '../../../art/reconstructions/stinger/src/createStingerModel';
 import { createGooBombModel } from '../../../art/reconstructions/goo/src/createGooBombModel';
-import { createSnapTrapModel } from '../../../art/reconstructions/trap/src/createSnapTrapModel';
+import { createJuiceBoxModel } from '../../../art/reconstructions/juice/src/createJuiceBoxModel';
 import { registerGunModel, registerHeroModel, registerUtilModel } from '../skins/registry';
 import { toonify } from './toonify';
 
@@ -102,13 +102,13 @@ export function registerGunModels(): void {
   }
 }
 
-/** Throwables, origin at the base. Scaled by their largest side so a flat trap and a tall can read at the same size. */
+/** Throwables, origin at the base. Scaled by their largest side so wide and tall ones read at the same size. */
 const UTIL_FACTORIES: Record<UtilId, () => THREE.Group> = {
   frag: () => createFizzBombModel({ textureSize: 8 }),
   flash: () => createFlashPopModel({ textureSize: 8 }),
   smoke: () => createPuffCanModel({ textureSize: 8 }),
   goo: () => createGooBombModel({ textureSize: 8 }),
-  trap: () => createSnapTrapModel({ textureSize: 8 }),
+  juice: () => createJuiceBoxModel({ textureSize: 8 }),
 };
 
 const UTIL_SIZE = 0.42;

@@ -5,13 +5,17 @@ import type { JoinOptions } from '../game/GameClient';
 import { loadProfile, saveProfile } from '../unlocks';
 import type { Portraits } from './App';
 import { GunRack, HatRack, HeroShelf, UtilRack } from './Pickers';
+import { MusicToggle } from './MusicToggle';
 import { music } from '../game/audio';
+import { ACTIONS, bindingLabel, useBindings } from '../game/bindings';
+import { ControlsButton } from './Controls';
 
 function initialRoom(): string {
   return new URLSearchParams(location.search).get('room')?.toUpperCase().slice(0, 6) ?? '';
 }
 
 export function Lobby({ portraits, onPlay }: { portraits: Portraits; onPlay: (o: JoinOptions) => void }) {
+  useBindings();
   const profile = loadProfile();
   const [name, setName] = useState(profile.name);
   const [hero, setHero] = useState<HeroId>(profile.hero);
@@ -20,7 +24,6 @@ export function Lobby({ portraits, onPlay }: { portraits: Portraits; onPlay: (o:
   const [utility, setUtility] = useState<UtilId>(profile.utility);
   const [hat, setHat] = useState<HatId>(profile.hat);
   const [gameMode, setGameMode] = useState<ModeId>('ffa');
-  const [musicOn, setMusicOn] = useState(music.enabled);
   useEffect(() => music.play('lobby'), []);
   const [room, setRoom] = useState(initialRoom);
   const [map, setMap] = useState<MapId>('playmat');
@@ -31,20 +34,6 @@ export function Lobby({ portraits, onPlay }: { portraits: Portraits; onPlay: (o:
     saveProfile({ ...loadProfile(), name: name.trim(), hero, gun, secondary, utility, hat });
     onPlay({ ...opts, name: name.trim() || 'Player', hero, gun, secondary, utility, hat });
   };
-  const musicToggle = (
-    <button
-      type="button"
-      className="btn btn--ghost btn--small btn--music"
-      aria-pressed={musicOn}
-      onClick={() => {
-        music.setEnabled(!musicOn);
-        setMusicOn(!musicOn);
-      }}
-    >
-      Music {musicOn ? 'on' : 'off'}
-    </button>
-  );
-
   if (page === 'friends') {
     return (
       <main className="lobby lobby--friends">
@@ -54,6 +43,7 @@ export function Lobby({ portraits, onPlay }: { portraits: Portraits; onPlay: (o:
             Back
           </motion.button>
           <h2 className="section-title">Private lobby</h2>
+          <MusicToggle className="lobby__music" />
         </div>
         <p className="lobby__hint">Private rooms only let in people with the code. Pick a map, create the room, then share its link.</p>
         <h3 className="friends__label">Mode</h3>
@@ -139,16 +129,15 @@ export function Lobby({ portraits, onPlay }: { portraits: Portraits; onPlay: (o:
           animate={{ y: 0, rotate: -3, opacity: 1 }}
           transition={{ type: 'spring', stiffness: 380, damping: 16 }}
         >
-          Toybox Brawl
+          Toybox Takedown
         </motion.h1>
-        <p className="lobby__pitch">
-          Free-for-all arena. Every hero has one trick, every gun drops when its owner goes down.
-          First to 15 takes the round.
-        </p>
-        <dl className="lobby__stats">
-          <div><dt>Kills</dt><dd>{profile.kills}</dd></div>
-          <div><dt>Deaths</dt><dd>{profile.deaths}</dd></div>
-        </dl>
+        <div className="lobby__utility">
+          <dl className="lobby__stats">
+            <div><dt>Kills</dt><dd>{profile.kills}</dd></div>
+            <div><dt>Deaths</dt><dd>{profile.deaths}</dd></div>
+          </dl>
+          <MusicToggle className="lobby__music" />
+        </div>
       </header>
 
       <section className="playbar">
@@ -195,17 +184,9 @@ export function Lobby({ portraits, onPlay }: { portraits: Portraits; onPlay: (o:
       </motion.button>
 
       <footer className="lobby__keys">
-        {musicToggle}
-        <span><kbd>WASD</kbd> move</span>
-        <span><kbd>Mouse</kbd> aim</span>
-        <span><kbd>Click</kbd> shoot</span>
-        <span><kbd>Left Shift</kbd> or <kbd>Right click</kbd> scope</span>
-        <span><kbd>Space</kbd> or <kbd>Q</kbd> ability</span>
-        <span><kbd>F</kbd>, <kbd>1</kbd> <kbd>2</kbd> or <kbd>Wheel</kbd> swap guns</span>
-        <span>Hold <kbd>G</kbd> aim throw, release to throw</span>
-        <span><kbd>E</kbd> pick up</span>
-        <span><kbd>Tab</kbd> scores</span>
-        <span><kbd>Enter</kbd> chat</span>
+        {(['up', 'fire', 'reload', 'scope', 'ability', 'swap', 'grenade', 'cancelGrenade', 'pickup', 'chat'] as const).map(action =>
+          <span key={action}><kbd>{bindingLabel(action)}</kbd> {ACTIONS[action]}</span>)}
+        <ControlsButton />
       </footer>
     </main>
   );

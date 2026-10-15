@@ -1,6 +1,6 @@
 {
-  "targetName": "Snap Trap",
-  "targetId": "snap-trap",
+  "targetName": "Juice Box",
+  "targetId": "juice-box",
   "schemaVersion": "2.1",
   "terminologyProfile": {
     "domain": "real-time procedural Three.js asset",
@@ -38,7 +38,7 @@
     ],
     "descriptionRule": "Use measurable 3D graphics terms. Avoid vague words unless they are paired with concrete geometry/material/shader parameters."
   },
-  "sourceImage": "/Users/c28aa1/Desktop/Gun Game/art/concepts/trap.png",
+  "sourceImage": "/Users/c28aa1/Desktop/Gun Game/art/concepts/juice.png",
   "referenceCamera": {
     "solved": false,
     "fovDegrees": 40.0,
@@ -67,7 +67,7 @@
   },
   "preSpecAssessment": {
     "objectClass": {
-      "primaryType": "toy floor mine",
+      "primaryType": "toy drink carton",
       "primaryDomain": "object",
       "formLanguage": [
         "rounded",
@@ -106,7 +106,7 @@
         "repetitionSystems": 1
       },
       "reasoning": [
-        "Lathe body and lid, small repeated details placed around the axis."
+        "Extruded front-traced slabs for the carton, base and gable; thin lathe tubes for the straw."
       ]
     },
     "specDepthDecision": {
@@ -128,81 +128,81 @@
       "note": "Enumerate every identity-defining small detail before authoring the spec. Each detail must map to a component.localFeatures entry or material.localOverrides entry, never prose only. Use forge/stage1_intake/build_detail_inventory.py to scan zones.",
       "details": [
         {
-          "id": "puck",
+          "id": "carton",
           "kind": "contour",
-          "description": "low wide orange puck",
+          "description": "rounded coral carton body",
           "scale": "macro",
           "affects": "silhouette",
           "mapsTo": {
             "type": "component",
-            "ref": "base"
+            "ref": "carton"
+          },
+          "evidenceRef": "detail-inventory/zone-r1c1.png",
+          "confidence": 0.8
+        },
+        {
+          "id": "cross",
+          "kind": "contour",
+          "description": "raised white cross on the front",
+          "scale": "meso",
+          "affects": "identity",
+          "mapsTo": {
+            "type": "component",
+            "ref": "cross"
+          },
+          "evidenceRef": "detail-inventory/zone-r1c1.png",
+          "confidence": 0.8
+        },
+        {
+          "id": "gable",
+          "kind": "contour",
+          "description": "yellow gable top",
+          "scale": "meso",
+          "affects": "silhouette",
+          "mapsTo": {
+            "type": "component",
+            "ref": "gable"
+          },
+          "evidenceRef": "detail-inventory/zone-r0c1.png",
+          "confidence": 0.8
+        },
+        {
+          "id": "base-band",
+          "kind": "seam",
+          "description": "violet band round the bottom",
+          "scale": "micro",
+          "affects": "identity",
+          "mapsTo": {
+            "type": "component",
+            "ref": "base-band"
           },
           "evidenceRef": "detail-inventory/zone-r2c1.png",
           "confidence": 0.8
         },
         {
-          "id": "teeth",
+          "id": "straw",
           "kind": "contour",
-          "description": "ring of violet teeth",
+          "description": "bendy white straw",
           "scale": "meso",
           "affects": "silhouette",
           "mapsTo": {
             "type": "component",
-            "ref": "tooth-0"
+            "ref": "straw-top"
           },
-          "evidenceRef": "detail-inventory/zone-r0c1.png",
+          "evidenceRef": "detail-inventory/zone-r0c2.png",
           "confidence": 0.8
         },
         {
-          "id": "button",
-          "kind": "contour",
-          "description": "red domed button",
-          "scale": "meso",
-          "affects": "identity",
-          "mapsTo": {
-            "type": "component",
-            "ref": "button"
-          },
-          "evidenceRef": "detail-inventory/zone-r1c1.png",
-          "confidence": 0.8
-        },
-        {
-          "id": "collar",
-          "kind": "seam",
-          "description": "raised inner collar around the button",
+          "id": "spout",
+          "kind": "fastener",
+          "description": "small yellow spout ring under the straw",
           "scale": "micro",
           "affects": "identity",
           "mapsTo": {
             "type": "component",
-            "ref": "collar"
+            "ref": "spout"
           },
-          "evidenceRef": "detail-inventory/zone-r1c1.png",
-          "confidence": 0.8
-        },
-        {
-          "id": "rolled-edge",
-          "kind": "bevel",
-          "description": "rolled edge on the puck",
-          "scale": "micro",
-          "affects": "identity",
-          "mapsTo": {
-            "type": "component",
-            "ref": "base"
-          },
-          "evidenceRef": "detail-inventory/zone-r2c0.png",
-          "confidence": 0.8
-        },
-        {
-          "id": "tooth-gap",
-          "kind": "groove",
-          "description": "gaps between the teeth",
-          "scale": "micro",
-          "affects": "identity",
-          "mapsTo": {
-            "type": "component",
-            "ref": "tooth-1"
-          },
-          "evidenceRef": "detail-inventory/zone-r0c1.png",
+          "evidenceRef": "detail-inventory/zone-r0c2.png",
           "confidence": 0.8
         },
         {
@@ -213,9 +213,9 @@
           "affects": "material",
           "mapsTo": {
             "type": "component",
-            "ref": "orange"
+            "ref": "coral"
           },
-          "evidenceRef": "detail-inventory/zone-r2c1.png",
+          "evidenceRef": "detail-inventory/zone-r1c1.png",
           "confidence": 0.8
         }
       ]
@@ -245,7 +245,7 @@
       "confidence": 0.0,
       "note": "Only meaningful when objectClass.primaryDomain is character or hybrid. Set applies=true and fill from forge/stage1_intake/extract_landmarks.py. See grimoire/character/reconstruction.md and grimoire/character/likeness_maximization.md."
     },
-    "sourceImage": "/Users/c28aa1/Desktop/Gun Game/art/concepts/trap.png"
+    "sourceImage": "/Users/c28aa1/Desktop/Gun Game/art/concepts/juice.png"
   },
   "qualityContract": {
     "qualityBar": "moderate",
@@ -495,17 +495,17 @@
       "minimumScore": 0.78,
       "mustPass": true,
       "componentRefs": [
-        "base",
-        "collar",
-        "button"
+        "carton",
+        "base-band",
+        "gable"
       ],
       "evidenceRefs": [
         "full-object"
       ]
     },
     {
-      "id": "trap-signature",
-      "name": "Wide puck ringed with teeth around a red button",
+      "id": "juice-signature",
+      "name": "Coral carton with a white cross and bendy straw",
       "tier": "critical",
       "passIds": [
         "blockout",
@@ -514,9 +514,9 @@
       "minimumScore": 0.75,
       "mustPass": true,
       "componentRefs": [
-        "base",
-        "tooth-0",
-        "button"
+        "carton",
+        "cross",
+        "straw-top"
       ],
       "evidenceRefs": [
         "full-object"
@@ -524,7 +524,7 @@
     },
     {
       "id": "palette",
-      "name": "Orange puck, violet teeth, red button",
+      "name": "Coral carton, yellow top, violet base, white cross and straw",
       "tier": "important",
       "passIds": [
         "material-pass"
@@ -532,8 +532,8 @@
       "minimumScore": 0.7,
       "mustPass": false,
       "componentRefs": [
-        "base",
-        "collar"
+        "carton",
+        "base-band"
       ],
       "evidenceRefs": [
         "full-object"
@@ -694,10 +694,10 @@
     "front": "+Z (toward the viewer)",
     "up": "+Y",
     "units": "meters",
-    "scaleReference": "height 0.12 m"
+    "scaleReference": "height 0.3 m"
   },
   "silhouette": {
-    "boundingShape": "upright toy Snap Trap",
+    "boundingShape": "upright toy Juice Box",
     "aspectRatios": [],
     "symmetry": "radial body with side handle",
     "dominantCurves": [
@@ -860,15 +860,15 @@
       }
     },
     {
-      "id": "base",
-      "name": "Base",
+      "id": "carton",
+      "name": "Carton",
       "level": "macro",
-      "role": "body",
+      "role": "detail",
       "importance": 1.0,
       "confidence": 0.8,
-      "primitive": "lathe",
+      "primitive": "extrude",
       "topologyClass": "assembled-solid",
-      "topologyRationale": "Round moulded body traced from the front silhouette and spun around the vertical axis.",
+      "topologyRationale": "Flat moulded part traced from the front view and extruded across its thickness.",
       "geometryDescriptor": {
         "topologyIntent": "stylized toy part",
         "edgeTreatment": {
@@ -879,50 +879,106 @@
         "deformationStack": [],
         "uvStrategy": "generated procedural coordinates",
         "normalStrategy": "smooth vertex normals",
-        "latheProfile": {
+        "profile2D": {
           "points": [
             [
-              0.0,
-              -0.5
+              0.0943,
+              0.0604
             ],
             [
-              0.4651,
-              -0.459
+              0.0932,
+              0.0546
             ],
             [
-              0.5,
-              -0.1246
+              0.0899,
+              0.0497
             ],
             [
-              0.4971,
-              0.2918
+              0.085,
+              0.0464
             ],
             [
-              0.4651,
-              0.5
+              0.0792,
+              0.0453
             ],
             [
-              0.0,
-              0.5
+              -0.0774,
+              0.0453
+            ],
+            [
+              -0.0831,
+              0.0464
+            ],
+            [
+              -0.088,
+              0.0497
+            ],
+            [
+              -0.0913,
+              0.0546
+            ],
+            [
+              -0.0925,
+              0.0604
+            ],
+            [
+              -0.0925,
+              0.1877
+            ],
+            [
+              -0.0913,
+              0.1935
+            ],
+            [
+              -0.088,
+              0.1984
+            ],
+            [
+              -0.0831,
+              0.2017
+            ],
+            [
+              -0.0774,
+              0.2028
+            ],
+            [
+              0.0792,
+              0.2028
+            ],
+            [
+              0.085,
+              0.2017
+            ],
+            [
+              0.0899,
+              0.1984
+            ],
+            [
+              0.0932,
+              0.1935
+            ],
+            [
+              0.0943,
+              0.1877
             ]
           ],
-          "segments": 28
+          "depth": 0.15
         }
       },
       "parent": "root",
       "attachment": null,
       "dimensions": {
-        "width": 0.42,
-        "height": 0.0586,
-        "depth": 0.42,
+        "width": 0.1868,
+        "height": 0.1575,
+        "depth": 0.15,
         "units": "meters",
         "confidence": 0.8
       },
       "transform": {
         "position": [
           0,
-          0.0293,
-          0
+          0,
+          -0.075
         ],
         "rotation": [
           0,
@@ -930,9 +986,9 @@
           0
         ],
         "scale": [
-          0.42,
-          0.0586,
-          0.42
+          1,
+          1,
+          1
         ]
       },
       "actionProfile": {
@@ -963,7 +1019,7 @@
         },
         "sockets": [],
         "collider": {
-          "type": "sphere",
+          "type": "box",
           "offset": [
             0,
             0,
@@ -980,16 +1036,16 @@
         "constraints": [],
         "destruction": {
           "breakable": false,
-          "fractureGroup": "base",
+          "fractureGroup": "carton",
           "seamRefs": [],
           "detachableFragments": [],
           "breakImpulse": 0.0,
-          "debrisMaterial": "orange"
+          "debrisMaterial": "coral"
         }
       },
-      "material": "orange",
+      "material": "coral",
       "materialLayers": [
-        "orange"
+        "coral"
       ],
       "deformations": [],
       "joints": [],
@@ -1018,8 +1074,8 @@
       "details": [],
       "fidelityTier": "blockout",
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(255, 138, 31, 1.0)",
-        "secondaryAlbedo": "rgba(217, 117, 26, 1.0)",
+        "dominantAlbedo": "rgba(255, 95, 109, 1.0)",
+        "secondaryAlbedo": "rgba(217, 81, 93, 1.0)",
         "materialClass": "plastic",
         "materialClassConfidence": 0.9,
         "evidenceRefs": [
@@ -1028,15 +1084,15 @@
       }
     },
     {
-      "id": "collar",
-      "name": "Collar",
+      "id": "base-band",
+      "name": "Base Band",
       "level": "meso",
-      "role": "body",
-      "importance": 0.6,
+      "role": "detail",
+      "importance": 0.8,
       "confidence": 0.8,
-      "primitive": "lathe",
+      "primitive": "extrude",
       "topologyClass": "assembled-solid",
-      "topologyRationale": "Round moulded body traced from the front silhouette and spun around the vertical axis.",
+      "topologyRationale": "Flat moulded part traced from the front view and extruded across its thickness.",
       "geometryDescriptor": {
         "topologyIntent": "stylized toy part",
         "edgeTreatment": {
@@ -1047,46 +1103,106 @@
         "deformationStack": [],
         "uvStrategy": "generated procedural coordinates",
         "normalStrategy": "smooth vertex normals",
-        "latheProfile": {
+        "profile2D": {
           "points": [
             [
-              0.0,
-              -0.5
+              0.0962,
+              0.017
             ],
             [
-              0.5,
-              -0.5
+              0.0949,
+              0.0105
             ],
             [
-              0.4909,
-              0.1918
+              0.0913,
+              0.005
             ],
             [
-              0.4091,
-              0.5
+              0.0857,
+              0.0013
             ],
             [
-              0.0,
-              0.5
+              0.0792,
+              0.0
+            ],
+            [
+              -0.0783,
+              0.0
+            ],
+            [
+              -0.0848,
+              0.0013
+            ],
+            [
+              -0.0903,
+              0.005
+            ],
+            [
+              -0.094,
+              0.0105
+            ],
+            [
+              -0.0953,
+              0.017
+            ],
+            [
+              -0.0953,
+              0.0377
+            ],
+            [
+              -0.094,
+              0.0442
+            ],
+            [
+              -0.0903,
+              0.0497
+            ],
+            [
+              -0.0848,
+              0.0534
+            ],
+            [
+              -0.0783,
+              0.0547
+            ],
+            [
+              0.0792,
+              0.0547
+            ],
+            [
+              0.0857,
+              0.0534
+            ],
+            [
+              0.0913,
+              0.0497
+            ],
+            [
+              0.0949,
+              0.0442
+            ],
+            [
+              0.0962,
+              0.0377
             ]
           ],
-          "segments": 28
+          "depth": 0.162
         }
       },
       "parent": "root",
       "attachment": null,
       "dimensions": {
-        "width": 0.2686,
-        "height": 0.0159,
-        "depth": 0.2686,
+        "width": 0.1915,
+        "height": 0.0547,
+        "depth": 0.162,
         "units": "meters",
         "confidence": 0.8
       },
       "transform": {
         "position": [
           0,
-          0.0654,
-          0
+          0,
+          -0.081
         ],
         "rotation": [
           0,
@@ -1094,9 +1210,9 @@
           0
         ],
         "scale": [
-          0.2686,
-          0.0159,
-          0.2686
+          1,
+          1,
+          1
         ]
       },
       "actionProfile": {
@@ -1127,7 +1243,7 @@
         },
         "sockets": [],
         "collider": {
-          "type": "sphere",
+          "type": "box",
           "offset": [
             0,
             0,
@@ -1144,16 +1260,16 @@
         "constraints": [],
         "destruction": {
           "breakable": false,
-          "fractureGroup": "collar",
+          "fractureGroup": "base-band",
           "seamRefs": [],
           "detachableFragments": [],
           "breakImpulse": 0.0,
-          "debrisMaterial": "orange-light"
+          "debrisMaterial": "grape"
         }
       },
-      "material": "orange-light",
+      "material": "grape",
       "materialLayers": [
-        "orange-light"
+        "grape"
       ],
       "deformations": [],
       "joints": [],
@@ -1182,8 +1298,8 @@
       "details": [],
       "fidelityTier": "blockout",
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(255, 163, 67, 1.0)",
-        "secondaryAlbedo": "rgba(217, 139, 57, 1.0)",
+        "dominantAlbedo": "rgba(106, 47, 160, 1.0)",
+        "secondaryAlbedo": "rgba(90, 40, 136, 1.0)",
         "materialClass": "plastic",
         "materialClassConfidence": 0.9,
         "evidenceRefs": [
@@ -1192,11 +1308,357 @@
       }
     },
     {
-      "id": "button",
-      "name": "Button",
+      "id": "gable",
+      "name": "Gable",
       "level": "meso",
-      "role": "body",
+      "role": "detail",
       "importance": 0.85,
+      "confidence": 0.8,
+      "primitive": "extrude",
+      "topologyClass": "assembled-solid",
+      "topologyRationale": "Flat moulded part traced from the front view and extruded across its thickness.",
+      "geometryDescriptor": {
+        "topologyIntent": "stylized toy part",
+        "edgeTreatment": {
+          "type": "none",
+          "bevelRadius": 0.0,
+          "segments": 1
+        },
+        "deformationStack": [],
+        "uvStrategy": "generated procedural coordinates",
+        "normalStrategy": "smooth vertex normals",
+        "profile2D": {
+          "points": [
+            [
+              -0.0906,
+              0.1981
+            ],
+            [
+              -0.0849,
+              0.234
+            ],
+            [
+              -0.066,
+              0.2453
+            ],
+            [
+              0.0679,
+              0.2434
+            ],
+            [
+              0.0868,
+              0.2264
+            ],
+            [
+              0.0943,
+              0.1925
+            ]
+          ],
+          "depth": 0.12
+        }
+      },
+      "parent": "root",
+      "attachment": null,
+      "dimensions": {
+        "width": 0.1849,
+        "height": 0.0528,
+        "depth": 0.12,
+        "units": "meters",
+        "confidence": 0.8
+      },
+      "transform": {
+        "position": [
+          0,
+          0,
+          -0.06
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "actionProfile": {
+        "animationRole": "static",
+        "pivot": {
+          "mode": "center",
+          "localPosition": [
+            0,
+            0,
+            0
+          ],
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "confidence": 0.7
+        },
+        "transformChannels": {
+          "translate": true,
+          "rotate": true,
+          "scale": true,
+          "bend": false,
+          "twist": false,
+          "detach": false,
+          "visibility": true,
+          "materialState": true
+        },
+        "sockets": [],
+        "collider": {
+          "type": "box",
+          "offset": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ],
+          "isTrigger": false,
+          "notes": "simplified proxy"
+        },
+        "constraints": [],
+        "destruction": {
+          "breakable": false,
+          "fractureGroup": "gable",
+          "seamRefs": [],
+          "detachableFragments": [],
+          "breakImpulse": 0.0,
+          "debrisMaterial": "yellow"
+        }
+      },
+      "material": "yellow",
+      "materialLayers": [
+        "yellow"
+      ],
+      "deformations": [],
+      "joints": [],
+      "seams": [],
+      "localFeatures": [],
+      "surfaceDetail": {
+        "macroRoughness": 0.0,
+        "microRoughness": 0.0,
+        "bumpAmplitude": 0.0,
+        "normalPattern": "",
+        "displacementPattern": "",
+        "occlusionPattern": "",
+        "edgeWearPattern": "",
+        "notes": "Smooth moulded plastic; no relief."
+      },
+      "evidenceRefs": [
+        "full-object"
+      ],
+      "details": [],
+      "fidelityTier": "blockout",
+      "colorMaterialRecipe": {
+        "dominantAlbedo": "rgba(255, 216, 74, 1.0)",
+        "secondaryAlbedo": "rgba(217, 184, 63, 1.0)",
+        "materialClass": "plastic",
+        "materialClassConfidence": 0.9,
+        "evidenceRefs": [
+          "full-object"
+        ]
+      }
+    },
+    {
+      "id": "cross",
+      "name": "Cross",
+      "level": "meso",
+      "role": "detail",
+      "importance": 0.9,
+      "confidence": 0.8,
+      "primitive": "extrude",
+      "topologyClass": "assembled-solid",
+      "topologyRationale": "Flat moulded part traced from the front view and extruded across its thickness.",
+      "geometryDescriptor": {
+        "topologyIntent": "stylized toy part",
+        "edgeTreatment": {
+          "type": "none",
+          "bevelRadius": 0.0,
+          "segments": 1
+        },
+        "deformationStack": [],
+        "uvStrategy": "generated procedural coordinates",
+        "normalStrategy": "smooth vertex normals",
+        "profile2D": {
+          "points": [
+            [
+              -0.0481,
+              0.1575
+            ],
+            [
+              -0.0104,
+              0.1575
+            ],
+            [
+              -0.0104,
+              0.1274
+            ],
+            [
+              0.016,
+              0.1274
+            ],
+            [
+              0.016,
+              0.0896
+            ],
+            [
+              -0.0104,
+              0.0896
+            ],
+            [
+              -0.0104,
+              0.0594
+            ],
+            [
+              -0.0481,
+              0.0594
+            ],
+            [
+              -0.0481,
+              0.0896
+            ],
+            [
+              -0.0755,
+              0.0896
+            ],
+            [
+              -0.0755,
+              0.1274
+            ],
+            [
+              -0.0481,
+              0.1274
+            ]
+          ],
+          "depth": 0.03
+        }
+      },
+      "parent": "root",
+      "attachment": null,
+      "dimensions": {
+        "width": 0.0915,
+        "height": 0.0981,
+        "depth": 0.03,
+        "units": "meters",
+        "confidence": 0.8
+      },
+      "transform": {
+        "position": [
+          0,
+          0,
+          0.066
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "actionProfile": {
+        "animationRole": "static",
+        "pivot": {
+          "mode": "center",
+          "localPosition": [
+            0,
+            0,
+            0
+          ],
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "confidence": 0.7
+        },
+        "transformChannels": {
+          "translate": true,
+          "rotate": true,
+          "scale": true,
+          "bend": false,
+          "twist": false,
+          "detach": false,
+          "visibility": true,
+          "materialState": true
+        },
+        "sockets": [],
+        "collider": {
+          "type": "box",
+          "offset": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ],
+          "isTrigger": false,
+          "notes": "simplified proxy"
+        },
+        "constraints": [],
+        "destruction": {
+          "breakable": false,
+          "fractureGroup": "cross",
+          "seamRefs": [],
+          "detachableFragments": [],
+          "breakImpulse": 0.0,
+          "debrisMaterial": "white"
+        }
+      },
+      "material": "white",
+      "materialLayers": [
+        "white"
+      ],
+      "deformations": [],
+      "joints": [],
+      "seams": [],
+      "localFeatures": [],
+      "surfaceDetail": {
+        "macroRoughness": 0.0,
+        "microRoughness": 0.0,
+        "bumpAmplitude": 0.0,
+        "normalPattern": "",
+        "displacementPattern": "",
+        "occlusionPattern": "",
+        "edgeWearPattern": "",
+        "notes": "Smooth moulded plastic; no relief."
+      },
+      "evidenceRefs": [
+        "full-object"
+      ],
+      "details": [],
+      "fidelityTier": "blockout",
+      "colorMaterialRecipe": {
+        "dominantAlbedo": "rgba(246, 241, 236, 1.0)",
+        "secondaryAlbedo": "rgba(209, 205, 201, 1.0)",
+        "materialClass": "plastic",
+        "materialClassConfidence": 0.9,
+        "evidenceRefs": [
+          "full-object"
+        ]
+      }
+    },
+    {
+      "id": "spout",
+      "name": "Spout",
+      "level": "micro",
+      "role": "body",
+      "importance": 0.4,
       "confidence": 0.8,
       "primitive": "lathe",
       "topologyClass": "assembled-solid",
@@ -1222,12 +1684,8 @@
               -0.5
             ],
             [
-              0.4839,
-              0.0196
-            ],
-            [
-              0.3548,
-              0.3791
+              0.475,
+              0.3407
             ],
             [
               0.0,
@@ -1240,16 +1698,16 @@
       "parent": "root",
       "attachment": null,
       "dimensions": {
-        "width": 0.1514,
-        "height": 0.0306,
-        "depth": 0.1514,
+        "width": 0.0378,
+        "height": 0.0113,
+        "depth": 0.0378,
         "units": "meters",
         "confidence": 0.8
       },
       "transform": {
         "position": [
           0,
-          0.0873,
+          0.2302,
           0
         ],
         "rotation": [
@@ -1258,9 +1716,9 @@
           0
         ],
         "scale": [
-          0.1514,
-          0.0306,
-          0.1514
+          0.0378,
+          0.0113,
+          0.0378
         ]
       },
       "actionProfile": {
@@ -1308,16 +1766,16 @@
         "constraints": [],
         "destruction": {
           "breakable": false,
-          "fractureGroup": "button",
+          "fractureGroup": "spout",
           "seamRefs": [],
           "detachableFragments": [],
           "breakImpulse": 0.0,
-          "debrisMaterial": "red"
+          "debrisMaterial": "yellow"
         }
       },
-      "material": "red",
+      "material": "yellow",
       "materialLayers": [
-        "red"
+        "yellow"
       ],
       "deformations": [],
       "joints": [],
@@ -1339,8 +1797,8 @@
       "details": [],
       "fidelityTier": "blockout",
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(255, 59, 92, 1.0)",
-        "secondaryAlbedo": "rgba(217, 50, 78, 1.0)",
+        "dominantAlbedo": "rgba(255, 216, 74, 1.0)",
+        "secondaryAlbedo": "rgba(217, 184, 63, 1.0)",
         "materialClass": "plastic",
         "materialClassConfidence": 0.9,
         "evidenceRefs": [
@@ -1349,15 +1807,15 @@
       }
     },
     {
-      "id": "tooth-0",
-      "name": "Tooth 0",
+      "id": "straw-low",
+      "name": "Straw Low",
       "level": "meso",
       "role": "detail",
       "importance": 0.7,
       "confidence": 0.8,
       "primitive": "lathe",
       "topologyClass": "assembled-solid",
-      "topologyRationale": "One of a ring of identical moulded pieces spaced around the axis.",
+      "topologyRationale": "Straw segment: a thin tube between two traced points.",
       "geometryDescriptor": {
         "topologyIntent": "stylized toy part",
         "edgeTreatment": {
@@ -1371,20 +1829,16 @@
         "latheProfile": {
           "points": [
             [
+              0.0,
+              -0.5
+            ],
+            [
               0.5,
               -0.5
             ],
             [
-              0.44,
-              -0.2
-            ],
-            [
-              0.3,
-              0.12
-            ],
-            [
-              0.14,
-              0.38
+              0.5,
+              0.5
             ],
             [
               0.0,
@@ -1397,27 +1851,27 @@
       "parent": "root",
       "attachment": null,
       "dimensions": {
-        "width": 0.0415,
-        "height": 0.0562,
-        "depth": 0.0415,
+        "width": 0.0188,
+        "height": 0.0419,
+        "depth": 0.0188,
         "units": "meters",
         "confidence": 0.8
       },
       "transform": {
         "position": [
-          0.0,
-          0.083,
-          0.1685
+          0.0292,
+          0.251,
+          -0.02
         ],
         "rotation": [
           0,
           0,
-          0
+          -0.1365
         ],
         "scale": [
-          0.0415,
-          0.0562,
-          0.0415
+          0.0188,
+          0.0419,
+          0.0188
         ]
       },
       "actionProfile": {
@@ -1465,16 +1919,16 @@
         "constraints": [],
         "destruction": {
           "breakable": false,
-          "fractureGroup": "tooth-0",
+          "fractureGroup": "straw-low",
           "seamRefs": [],
           "detachableFragments": [],
           "breakImpulse": 0.0,
-          "debrisMaterial": "grape"
+          "debrisMaterial": "white"
         }
       },
-      "material": "grape",
+      "material": "white",
       "materialLayers": [
-        "grape"
+        "white"
       ],
       "deformations": [],
       "joints": [],
@@ -1496,8 +1950,8 @@
       "details": [],
       "fidelityTier": "blockout",
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(106, 47, 160, 1.0)",
-        "secondaryAlbedo": "rgba(90, 40, 136, 1.0)",
+        "dominantAlbedo": "rgba(246, 241, 236, 1.0)",
+        "secondaryAlbedo": "rgba(209, 205, 201, 1.0)",
         "materialClass": "plastic",
         "materialClassConfidence": 0.9,
         "evidenceRefs": [
@@ -1506,15 +1960,15 @@
       }
     },
     {
-      "id": "tooth-1",
-      "name": "Tooth 1",
+      "id": "straw-bend",
+      "name": "Straw Bend",
       "level": "meso",
       "role": "detail",
       "importance": 0.7,
       "confidence": 0.8,
       "primitive": "lathe",
       "topologyClass": "assembled-solid",
-      "topologyRationale": "One of a ring of identical moulded pieces spaced around the axis.",
+      "topologyRationale": "Straw segment: a thin tube between two traced points.",
       "geometryDescriptor": {
         "topologyIntent": "stylized toy part",
         "edgeTreatment": {
@@ -1528,20 +1982,16 @@
         "latheProfile": {
           "points": [
             [
+              0.0,
+              -0.5
+            ],
+            [
               0.5,
               -0.5
             ],
             [
-              0.44,
-              -0.2
-            ],
-            [
-              0.3,
-              0.12
-            ],
-            [
-              0.14,
-              0.38
+              0.5,
+              0.5
             ],
             [
               0.0,
@@ -1554,27 +2004,27 @@
       "parent": "root",
       "attachment": null,
       "dimensions": {
-        "width": 0.0415,
-        "height": 0.0562,
-        "depth": 0.0415,
+        "width": 0.0208,
+        "height": 0.0187,
+        "depth": 0.0208,
         "units": "meters",
         "confidence": 0.8
       },
       "transform": {
         "position": [
-          0.0731,
-          0.083,
-          0.1518
+          0.0387,
+          0.2764,
+          -0.02
         ],
         "rotation": [
           0,
           0,
-          0
+          -0.7854
         ],
         "scale": [
-          0.0415,
-          0.0562,
-          0.0415
+          0.0208,
+          0.0187,
+          0.0208
         ]
       },
       "actionProfile": {
@@ -1622,16 +2072,16 @@
         "constraints": [],
         "destruction": {
           "breakable": false,
-          "fractureGroup": "tooth-1",
+          "fractureGroup": "straw-bend",
           "seamRefs": [],
           "detachableFragments": [],
           "breakImpulse": 0.0,
-          "debrisMaterial": "grape"
+          "debrisMaterial": "white"
         }
       },
-      "material": "grape",
+      "material": "white",
       "materialLayers": [
-        "grape"
+        "white"
       ],
       "deformations": [],
       "joints": [],
@@ -1653,8 +2103,8 @@
       "details": [],
       "fidelityTier": "blockout",
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(106, 47, 160, 1.0)",
-        "secondaryAlbedo": "rgba(90, 40, 136, 1.0)",
+        "dominantAlbedo": "rgba(246, 241, 236, 1.0)",
+        "secondaryAlbedo": "rgba(209, 205, 201, 1.0)",
         "materialClass": "plastic",
         "materialClassConfidence": 0.9,
         "evidenceRefs": [
@@ -1663,15 +2113,15 @@
       }
     },
     {
-      "id": "tooth-2",
-      "name": "Tooth 2",
+      "id": "straw-top",
+      "name": "Straw Top",
       "level": "meso",
       "role": "detail",
       "importance": 0.7,
       "confidence": 0.8,
       "primitive": "lathe",
       "topologyClass": "assembled-solid",
-      "topologyRationale": "One of a ring of identical moulded pieces spaced around the axis.",
+      "topologyRationale": "Straw segment: a thin tube between two traced points.",
       "geometryDescriptor": {
         "topologyIntent": "stylized toy part",
         "edgeTreatment": {
@@ -1685,20 +2135,16 @@
         "latheProfile": {
           "points": [
             [
+              0.0,
+              -0.5
+            ],
+            [
               0.5,
               -0.5
             ],
             [
-              0.44,
-              -0.2
-            ],
-            [
-              0.3,
-              0.12
-            ],
-            [
-              0.14,
-              0.38
+              0.5,
+              0.5
             ],
             [
               0.0,
@@ -1711,27 +2157,27 @@
       "parent": "root",
       "attachment": null,
       "dimensions": {
-        "width": 0.0415,
-        "height": 0.0562,
-        "depth": 0.0415,
+        "width": 0.0188,
+        "height": 0.0435,
+        "depth": 0.0188,
         "units": "meters",
         "confidence": 0.8
       },
       "transform": {
         "position": [
-          0.1317,
-          0.083,
-          0.1051
+          0.0641,
+          0.2877,
+          -0.02
         ],
         "rotation": [
           0,
           0,
-          0
+          -1.2628
         ],
         "scale": [
-          0.0415,
-          0.0562,
-          0.0415
+          0.0188,
+          0.0435,
+          0.0188
         ]
       },
       "actionProfile": {
@@ -1779,16 +2225,16 @@
         "constraints": [],
         "destruction": {
           "breakable": false,
-          "fractureGroup": "tooth-2",
+          "fractureGroup": "straw-top",
           "seamRefs": [],
           "detachableFragments": [],
           "breakImpulse": 0.0,
-          "debrisMaterial": "grape"
+          "debrisMaterial": "white"
         }
       },
-      "material": "grape",
+      "material": "white",
       "materialLayers": [
-        "grape"
+        "white"
       ],
       "deformations": [],
       "joints": [],
@@ -1810,1735 +2256,8 @@
       "details": [],
       "fidelityTier": "blockout",
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(106, 47, 160, 1.0)",
-        "secondaryAlbedo": "rgba(90, 40, 136, 1.0)",
-        "materialClass": "plastic",
-        "materialClassConfidence": 0.9,
-        "evidenceRefs": [
-          "full-object"
-        ]
-      }
-    },
-    {
-      "id": "tooth-3",
-      "name": "Tooth 3",
-      "level": "meso",
-      "role": "detail",
-      "importance": 0.7,
-      "confidence": 0.8,
-      "primitive": "lathe",
-      "topologyClass": "assembled-solid",
-      "topologyRationale": "One of a ring of identical moulded pieces spaced around the axis.",
-      "geometryDescriptor": {
-        "topologyIntent": "stylized toy part",
-        "edgeTreatment": {
-          "type": "none",
-          "bevelRadius": 0.0,
-          "segments": 1
-        },
-        "deformationStack": [],
-        "uvStrategy": "generated procedural coordinates",
-        "normalStrategy": "smooth vertex normals",
-        "latheProfile": {
-          "points": [
-            [
-              0.5,
-              -0.5
-            ],
-            [
-              0.44,
-              -0.2
-            ],
-            [
-              0.3,
-              0.12
-            ],
-            [
-              0.14,
-              0.38
-            ],
-            [
-              0.0,
-              0.5
-            ]
-          ],
-          "segments": 12
-        }
-      },
-      "parent": "root",
-      "attachment": null,
-      "dimensions": {
-        "width": 0.0415,
-        "height": 0.0562,
-        "depth": 0.0415,
-        "units": "meters",
-        "confidence": 0.8
-      },
-      "transform": {
-        "position": [
-          0.1643,
-          0.083,
-          0.0375
-        ],
-        "rotation": [
-          0,
-          0,
-          0
-        ],
-        "scale": [
-          0.0415,
-          0.0562,
-          0.0415
-        ]
-      },
-      "actionProfile": {
-        "animationRole": "static",
-        "pivot": {
-          "mode": "center",
-          "localPosition": [
-            0,
-            0,
-            0
-          ],
-          "axis": [
-            0,
-            1,
-            0
-          ],
-          "confidence": 0.7
-        },
-        "transformChannels": {
-          "translate": true,
-          "rotate": true,
-          "scale": true,
-          "bend": false,
-          "twist": false,
-          "detach": false,
-          "visibility": true,
-          "materialState": true
-        },
-        "sockets": [],
-        "collider": {
-          "type": "sphere",
-          "offset": [
-            0,
-            0,
-            0
-          ],
-          "scale": [
-            1,
-            1,
-            1
-          ],
-          "isTrigger": false,
-          "notes": "simplified proxy"
-        },
-        "constraints": [],
-        "destruction": {
-          "breakable": false,
-          "fractureGroup": "tooth-3",
-          "seamRefs": [],
-          "detachableFragments": [],
-          "breakImpulse": 0.0,
-          "debrisMaterial": "grape"
-        }
-      },
-      "material": "grape",
-      "materialLayers": [
-        "grape"
-      ],
-      "deformations": [],
-      "joints": [],
-      "seams": [],
-      "localFeatures": [],
-      "surfaceDetail": {
-        "macroRoughness": 0.0,
-        "microRoughness": 0.0,
-        "bumpAmplitude": 0.0,
-        "normalPattern": "",
-        "displacementPattern": "",
-        "occlusionPattern": "",
-        "edgeWearPattern": "",
-        "notes": "Smooth moulded plastic; no relief."
-      },
-      "evidenceRefs": [
-        "full-object"
-      ],
-      "details": [],
-      "fidelityTier": "blockout",
-      "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(106, 47, 160, 1.0)",
-        "secondaryAlbedo": "rgba(90, 40, 136, 1.0)",
-        "materialClass": "plastic",
-        "materialClassConfidence": 0.9,
-        "evidenceRefs": [
-          "full-object"
-        ]
-      }
-    },
-    {
-      "id": "tooth-4",
-      "name": "Tooth 4",
-      "level": "meso",
-      "role": "detail",
-      "importance": 0.7,
-      "confidence": 0.8,
-      "primitive": "lathe",
-      "topologyClass": "assembled-solid",
-      "topologyRationale": "One of a ring of identical moulded pieces spaced around the axis.",
-      "geometryDescriptor": {
-        "topologyIntent": "stylized toy part",
-        "edgeTreatment": {
-          "type": "none",
-          "bevelRadius": 0.0,
-          "segments": 1
-        },
-        "deformationStack": [],
-        "uvStrategy": "generated procedural coordinates",
-        "normalStrategy": "smooth vertex normals",
-        "latheProfile": {
-          "points": [
-            [
-              0.5,
-              -0.5
-            ],
-            [
-              0.44,
-              -0.2
-            ],
-            [
-              0.3,
-              0.12
-            ],
-            [
-              0.14,
-              0.38
-            ],
-            [
-              0.0,
-              0.5
-            ]
-          ],
-          "segments": 12
-        }
-      },
-      "parent": "root",
-      "attachment": null,
-      "dimensions": {
-        "width": 0.0415,
-        "height": 0.0562,
-        "depth": 0.0415,
-        "units": "meters",
-        "confidence": 0.8
-      },
-      "transform": {
-        "position": [
-          0.1643,
-          0.083,
-          -0.0375
-        ],
-        "rotation": [
-          0,
-          0,
-          0
-        ],
-        "scale": [
-          0.0415,
-          0.0562,
-          0.0415
-        ]
-      },
-      "actionProfile": {
-        "animationRole": "static",
-        "pivot": {
-          "mode": "center",
-          "localPosition": [
-            0,
-            0,
-            0
-          ],
-          "axis": [
-            0,
-            1,
-            0
-          ],
-          "confidence": 0.7
-        },
-        "transformChannels": {
-          "translate": true,
-          "rotate": true,
-          "scale": true,
-          "bend": false,
-          "twist": false,
-          "detach": false,
-          "visibility": true,
-          "materialState": true
-        },
-        "sockets": [],
-        "collider": {
-          "type": "sphere",
-          "offset": [
-            0,
-            0,
-            0
-          ],
-          "scale": [
-            1,
-            1,
-            1
-          ],
-          "isTrigger": false,
-          "notes": "simplified proxy"
-        },
-        "constraints": [],
-        "destruction": {
-          "breakable": false,
-          "fractureGroup": "tooth-4",
-          "seamRefs": [],
-          "detachableFragments": [],
-          "breakImpulse": 0.0,
-          "debrisMaterial": "grape"
-        }
-      },
-      "material": "grape",
-      "materialLayers": [
-        "grape"
-      ],
-      "deformations": [],
-      "joints": [],
-      "seams": [],
-      "localFeatures": [],
-      "surfaceDetail": {
-        "macroRoughness": 0.0,
-        "microRoughness": 0.0,
-        "bumpAmplitude": 0.0,
-        "normalPattern": "",
-        "displacementPattern": "",
-        "occlusionPattern": "",
-        "edgeWearPattern": "",
-        "notes": "Smooth moulded plastic; no relief."
-      },
-      "evidenceRefs": [
-        "full-object"
-      ],
-      "details": [],
-      "fidelityTier": "blockout",
-      "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(106, 47, 160, 1.0)",
-        "secondaryAlbedo": "rgba(90, 40, 136, 1.0)",
-        "materialClass": "plastic",
-        "materialClassConfidence": 0.9,
-        "evidenceRefs": [
-          "full-object"
-        ]
-      }
-    },
-    {
-      "id": "tooth-5",
-      "name": "Tooth 5",
-      "level": "meso",
-      "role": "detail",
-      "importance": 0.7,
-      "confidence": 0.8,
-      "primitive": "lathe",
-      "topologyClass": "assembled-solid",
-      "topologyRationale": "One of a ring of identical moulded pieces spaced around the axis.",
-      "geometryDescriptor": {
-        "topologyIntent": "stylized toy part",
-        "edgeTreatment": {
-          "type": "none",
-          "bevelRadius": 0.0,
-          "segments": 1
-        },
-        "deformationStack": [],
-        "uvStrategy": "generated procedural coordinates",
-        "normalStrategy": "smooth vertex normals",
-        "latheProfile": {
-          "points": [
-            [
-              0.5,
-              -0.5
-            ],
-            [
-              0.44,
-              -0.2
-            ],
-            [
-              0.3,
-              0.12
-            ],
-            [
-              0.14,
-              0.38
-            ],
-            [
-              0.0,
-              0.5
-            ]
-          ],
-          "segments": 12
-        }
-      },
-      "parent": "root",
-      "attachment": null,
-      "dimensions": {
-        "width": 0.0415,
-        "height": 0.0562,
-        "depth": 0.0415,
-        "units": "meters",
-        "confidence": 0.8
-      },
-      "transform": {
-        "position": [
-          0.1317,
-          0.083,
-          -0.1051
-        ],
-        "rotation": [
-          0,
-          0,
-          0
-        ],
-        "scale": [
-          0.0415,
-          0.0562,
-          0.0415
-        ]
-      },
-      "actionProfile": {
-        "animationRole": "static",
-        "pivot": {
-          "mode": "center",
-          "localPosition": [
-            0,
-            0,
-            0
-          ],
-          "axis": [
-            0,
-            1,
-            0
-          ],
-          "confidence": 0.7
-        },
-        "transformChannels": {
-          "translate": true,
-          "rotate": true,
-          "scale": true,
-          "bend": false,
-          "twist": false,
-          "detach": false,
-          "visibility": true,
-          "materialState": true
-        },
-        "sockets": [],
-        "collider": {
-          "type": "sphere",
-          "offset": [
-            0,
-            0,
-            0
-          ],
-          "scale": [
-            1,
-            1,
-            1
-          ],
-          "isTrigger": false,
-          "notes": "simplified proxy"
-        },
-        "constraints": [],
-        "destruction": {
-          "breakable": false,
-          "fractureGroup": "tooth-5",
-          "seamRefs": [],
-          "detachableFragments": [],
-          "breakImpulse": 0.0,
-          "debrisMaterial": "grape"
-        }
-      },
-      "material": "grape",
-      "materialLayers": [
-        "grape"
-      ],
-      "deformations": [],
-      "joints": [],
-      "seams": [],
-      "localFeatures": [],
-      "surfaceDetail": {
-        "macroRoughness": 0.0,
-        "microRoughness": 0.0,
-        "bumpAmplitude": 0.0,
-        "normalPattern": "",
-        "displacementPattern": "",
-        "occlusionPattern": "",
-        "edgeWearPattern": "",
-        "notes": "Smooth moulded plastic; no relief."
-      },
-      "evidenceRefs": [
-        "full-object"
-      ],
-      "details": [],
-      "fidelityTier": "blockout",
-      "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(106, 47, 160, 1.0)",
-        "secondaryAlbedo": "rgba(90, 40, 136, 1.0)",
-        "materialClass": "plastic",
-        "materialClassConfidence": 0.9,
-        "evidenceRefs": [
-          "full-object"
-        ]
-      }
-    },
-    {
-      "id": "tooth-6",
-      "name": "Tooth 6",
-      "level": "meso",
-      "role": "detail",
-      "importance": 0.7,
-      "confidence": 0.8,
-      "primitive": "lathe",
-      "topologyClass": "assembled-solid",
-      "topologyRationale": "One of a ring of identical moulded pieces spaced around the axis.",
-      "geometryDescriptor": {
-        "topologyIntent": "stylized toy part",
-        "edgeTreatment": {
-          "type": "none",
-          "bevelRadius": 0.0,
-          "segments": 1
-        },
-        "deformationStack": [],
-        "uvStrategy": "generated procedural coordinates",
-        "normalStrategy": "smooth vertex normals",
-        "latheProfile": {
-          "points": [
-            [
-              0.5,
-              -0.5
-            ],
-            [
-              0.44,
-              -0.2
-            ],
-            [
-              0.3,
-              0.12
-            ],
-            [
-              0.14,
-              0.38
-            ],
-            [
-              0.0,
-              0.5
-            ]
-          ],
-          "segments": 12
-        }
-      },
-      "parent": "root",
-      "attachment": null,
-      "dimensions": {
-        "width": 0.0415,
-        "height": 0.0562,
-        "depth": 0.0415,
-        "units": "meters",
-        "confidence": 0.8
-      },
-      "transform": {
-        "position": [
-          0.0731,
-          0.083,
-          -0.1518
-        ],
-        "rotation": [
-          0,
-          0,
-          0
-        ],
-        "scale": [
-          0.0415,
-          0.0562,
-          0.0415
-        ]
-      },
-      "actionProfile": {
-        "animationRole": "static",
-        "pivot": {
-          "mode": "center",
-          "localPosition": [
-            0,
-            0,
-            0
-          ],
-          "axis": [
-            0,
-            1,
-            0
-          ],
-          "confidence": 0.7
-        },
-        "transformChannels": {
-          "translate": true,
-          "rotate": true,
-          "scale": true,
-          "bend": false,
-          "twist": false,
-          "detach": false,
-          "visibility": true,
-          "materialState": true
-        },
-        "sockets": [],
-        "collider": {
-          "type": "sphere",
-          "offset": [
-            0,
-            0,
-            0
-          ],
-          "scale": [
-            1,
-            1,
-            1
-          ],
-          "isTrigger": false,
-          "notes": "simplified proxy"
-        },
-        "constraints": [],
-        "destruction": {
-          "breakable": false,
-          "fractureGroup": "tooth-6",
-          "seamRefs": [],
-          "detachableFragments": [],
-          "breakImpulse": 0.0,
-          "debrisMaterial": "grape"
-        }
-      },
-      "material": "grape",
-      "materialLayers": [
-        "grape"
-      ],
-      "deformations": [],
-      "joints": [],
-      "seams": [],
-      "localFeatures": [],
-      "surfaceDetail": {
-        "macroRoughness": 0.0,
-        "microRoughness": 0.0,
-        "bumpAmplitude": 0.0,
-        "normalPattern": "",
-        "displacementPattern": "",
-        "occlusionPattern": "",
-        "edgeWearPattern": "",
-        "notes": "Smooth moulded plastic; no relief."
-      },
-      "evidenceRefs": [
-        "full-object"
-      ],
-      "details": [],
-      "fidelityTier": "blockout",
-      "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(106, 47, 160, 1.0)",
-        "secondaryAlbedo": "rgba(90, 40, 136, 1.0)",
-        "materialClass": "plastic",
-        "materialClassConfidence": 0.9,
-        "evidenceRefs": [
-          "full-object"
-        ]
-      }
-    },
-    {
-      "id": "tooth-7",
-      "name": "Tooth 7",
-      "level": "meso",
-      "role": "detail",
-      "importance": 0.7,
-      "confidence": 0.8,
-      "primitive": "lathe",
-      "topologyClass": "assembled-solid",
-      "topologyRationale": "One of a ring of identical moulded pieces spaced around the axis.",
-      "geometryDescriptor": {
-        "topologyIntent": "stylized toy part",
-        "edgeTreatment": {
-          "type": "none",
-          "bevelRadius": 0.0,
-          "segments": 1
-        },
-        "deformationStack": [],
-        "uvStrategy": "generated procedural coordinates",
-        "normalStrategy": "smooth vertex normals",
-        "latheProfile": {
-          "points": [
-            [
-              0.5,
-              -0.5
-            ],
-            [
-              0.44,
-              -0.2
-            ],
-            [
-              0.3,
-              0.12
-            ],
-            [
-              0.14,
-              0.38
-            ],
-            [
-              0.0,
-              0.5
-            ]
-          ],
-          "segments": 12
-        }
-      },
-      "parent": "root",
-      "attachment": null,
-      "dimensions": {
-        "width": 0.0415,
-        "height": 0.0562,
-        "depth": 0.0415,
-        "units": "meters",
-        "confidence": 0.8
-      },
-      "transform": {
-        "position": [
-          0.0,
-          0.083,
-          -0.1685
-        ],
-        "rotation": [
-          0,
-          0,
-          0
-        ],
-        "scale": [
-          0.0415,
-          0.0562,
-          0.0415
-        ]
-      },
-      "actionProfile": {
-        "animationRole": "static",
-        "pivot": {
-          "mode": "center",
-          "localPosition": [
-            0,
-            0,
-            0
-          ],
-          "axis": [
-            0,
-            1,
-            0
-          ],
-          "confidence": 0.7
-        },
-        "transformChannels": {
-          "translate": true,
-          "rotate": true,
-          "scale": true,
-          "bend": false,
-          "twist": false,
-          "detach": false,
-          "visibility": true,
-          "materialState": true
-        },
-        "sockets": [],
-        "collider": {
-          "type": "sphere",
-          "offset": [
-            0,
-            0,
-            0
-          ],
-          "scale": [
-            1,
-            1,
-            1
-          ],
-          "isTrigger": false,
-          "notes": "simplified proxy"
-        },
-        "constraints": [],
-        "destruction": {
-          "breakable": false,
-          "fractureGroup": "tooth-7",
-          "seamRefs": [],
-          "detachableFragments": [],
-          "breakImpulse": 0.0,
-          "debrisMaterial": "grape"
-        }
-      },
-      "material": "grape",
-      "materialLayers": [
-        "grape"
-      ],
-      "deformations": [],
-      "joints": [],
-      "seams": [],
-      "localFeatures": [],
-      "surfaceDetail": {
-        "macroRoughness": 0.0,
-        "microRoughness": 0.0,
-        "bumpAmplitude": 0.0,
-        "normalPattern": "",
-        "displacementPattern": "",
-        "occlusionPattern": "",
-        "edgeWearPattern": "",
-        "notes": "Smooth moulded plastic; no relief."
-      },
-      "evidenceRefs": [
-        "full-object"
-      ],
-      "details": [],
-      "fidelityTier": "blockout",
-      "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(106, 47, 160, 1.0)",
-        "secondaryAlbedo": "rgba(90, 40, 136, 1.0)",
-        "materialClass": "plastic",
-        "materialClassConfidence": 0.9,
-        "evidenceRefs": [
-          "full-object"
-        ]
-      }
-    },
-    {
-      "id": "tooth-8",
-      "name": "Tooth 8",
-      "level": "meso",
-      "role": "detail",
-      "importance": 0.7,
-      "confidence": 0.8,
-      "primitive": "lathe",
-      "topologyClass": "assembled-solid",
-      "topologyRationale": "One of a ring of identical moulded pieces spaced around the axis.",
-      "geometryDescriptor": {
-        "topologyIntent": "stylized toy part",
-        "edgeTreatment": {
-          "type": "none",
-          "bevelRadius": 0.0,
-          "segments": 1
-        },
-        "deformationStack": [],
-        "uvStrategy": "generated procedural coordinates",
-        "normalStrategy": "smooth vertex normals",
-        "latheProfile": {
-          "points": [
-            [
-              0.5,
-              -0.5
-            ],
-            [
-              0.44,
-              -0.2
-            ],
-            [
-              0.3,
-              0.12
-            ],
-            [
-              0.14,
-              0.38
-            ],
-            [
-              0.0,
-              0.5
-            ]
-          ],
-          "segments": 12
-        }
-      },
-      "parent": "root",
-      "attachment": null,
-      "dimensions": {
-        "width": 0.0415,
-        "height": 0.0562,
-        "depth": 0.0415,
-        "units": "meters",
-        "confidence": 0.8
-      },
-      "transform": {
-        "position": [
-          -0.0731,
-          0.083,
-          -0.1518
-        ],
-        "rotation": [
-          0,
-          0,
-          0
-        ],
-        "scale": [
-          0.0415,
-          0.0562,
-          0.0415
-        ]
-      },
-      "actionProfile": {
-        "animationRole": "static",
-        "pivot": {
-          "mode": "center",
-          "localPosition": [
-            0,
-            0,
-            0
-          ],
-          "axis": [
-            0,
-            1,
-            0
-          ],
-          "confidence": 0.7
-        },
-        "transformChannels": {
-          "translate": true,
-          "rotate": true,
-          "scale": true,
-          "bend": false,
-          "twist": false,
-          "detach": false,
-          "visibility": true,
-          "materialState": true
-        },
-        "sockets": [],
-        "collider": {
-          "type": "sphere",
-          "offset": [
-            0,
-            0,
-            0
-          ],
-          "scale": [
-            1,
-            1,
-            1
-          ],
-          "isTrigger": false,
-          "notes": "simplified proxy"
-        },
-        "constraints": [],
-        "destruction": {
-          "breakable": false,
-          "fractureGroup": "tooth-8",
-          "seamRefs": [],
-          "detachableFragments": [],
-          "breakImpulse": 0.0,
-          "debrisMaterial": "grape"
-        }
-      },
-      "material": "grape",
-      "materialLayers": [
-        "grape"
-      ],
-      "deformations": [],
-      "joints": [],
-      "seams": [],
-      "localFeatures": [],
-      "surfaceDetail": {
-        "macroRoughness": 0.0,
-        "microRoughness": 0.0,
-        "bumpAmplitude": 0.0,
-        "normalPattern": "",
-        "displacementPattern": "",
-        "occlusionPattern": "",
-        "edgeWearPattern": "",
-        "notes": "Smooth moulded plastic; no relief."
-      },
-      "evidenceRefs": [
-        "full-object"
-      ],
-      "details": [],
-      "fidelityTier": "blockout",
-      "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(106, 47, 160, 1.0)",
-        "secondaryAlbedo": "rgba(90, 40, 136, 1.0)",
-        "materialClass": "plastic",
-        "materialClassConfidence": 0.9,
-        "evidenceRefs": [
-          "full-object"
-        ]
-      }
-    },
-    {
-      "id": "tooth-9",
-      "name": "Tooth 9",
-      "level": "meso",
-      "role": "detail",
-      "importance": 0.7,
-      "confidence": 0.8,
-      "primitive": "lathe",
-      "topologyClass": "assembled-solid",
-      "topologyRationale": "One of a ring of identical moulded pieces spaced around the axis.",
-      "geometryDescriptor": {
-        "topologyIntent": "stylized toy part",
-        "edgeTreatment": {
-          "type": "none",
-          "bevelRadius": 0.0,
-          "segments": 1
-        },
-        "deformationStack": [],
-        "uvStrategy": "generated procedural coordinates",
-        "normalStrategy": "smooth vertex normals",
-        "latheProfile": {
-          "points": [
-            [
-              0.5,
-              -0.5
-            ],
-            [
-              0.44,
-              -0.2
-            ],
-            [
-              0.3,
-              0.12
-            ],
-            [
-              0.14,
-              0.38
-            ],
-            [
-              0.0,
-              0.5
-            ]
-          ],
-          "segments": 12
-        }
-      },
-      "parent": "root",
-      "attachment": null,
-      "dimensions": {
-        "width": 0.0415,
-        "height": 0.0562,
-        "depth": 0.0415,
-        "units": "meters",
-        "confidence": 0.8
-      },
-      "transform": {
-        "position": [
-          -0.1317,
-          0.083,
-          -0.1051
-        ],
-        "rotation": [
-          0,
-          0,
-          0
-        ],
-        "scale": [
-          0.0415,
-          0.0562,
-          0.0415
-        ]
-      },
-      "actionProfile": {
-        "animationRole": "static",
-        "pivot": {
-          "mode": "center",
-          "localPosition": [
-            0,
-            0,
-            0
-          ],
-          "axis": [
-            0,
-            1,
-            0
-          ],
-          "confidence": 0.7
-        },
-        "transformChannels": {
-          "translate": true,
-          "rotate": true,
-          "scale": true,
-          "bend": false,
-          "twist": false,
-          "detach": false,
-          "visibility": true,
-          "materialState": true
-        },
-        "sockets": [],
-        "collider": {
-          "type": "sphere",
-          "offset": [
-            0,
-            0,
-            0
-          ],
-          "scale": [
-            1,
-            1,
-            1
-          ],
-          "isTrigger": false,
-          "notes": "simplified proxy"
-        },
-        "constraints": [],
-        "destruction": {
-          "breakable": false,
-          "fractureGroup": "tooth-9",
-          "seamRefs": [],
-          "detachableFragments": [],
-          "breakImpulse": 0.0,
-          "debrisMaterial": "grape"
-        }
-      },
-      "material": "grape",
-      "materialLayers": [
-        "grape"
-      ],
-      "deformations": [],
-      "joints": [],
-      "seams": [],
-      "localFeatures": [],
-      "surfaceDetail": {
-        "macroRoughness": 0.0,
-        "microRoughness": 0.0,
-        "bumpAmplitude": 0.0,
-        "normalPattern": "",
-        "displacementPattern": "",
-        "occlusionPattern": "",
-        "edgeWearPattern": "",
-        "notes": "Smooth moulded plastic; no relief."
-      },
-      "evidenceRefs": [
-        "full-object"
-      ],
-      "details": [],
-      "fidelityTier": "blockout",
-      "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(106, 47, 160, 1.0)",
-        "secondaryAlbedo": "rgba(90, 40, 136, 1.0)",
-        "materialClass": "plastic",
-        "materialClassConfidence": 0.9,
-        "evidenceRefs": [
-          "full-object"
-        ]
-      }
-    },
-    {
-      "id": "tooth-10",
-      "name": "Tooth 10",
-      "level": "meso",
-      "role": "detail",
-      "importance": 0.7,
-      "confidence": 0.8,
-      "primitive": "lathe",
-      "topologyClass": "assembled-solid",
-      "topologyRationale": "One of a ring of identical moulded pieces spaced around the axis.",
-      "geometryDescriptor": {
-        "topologyIntent": "stylized toy part",
-        "edgeTreatment": {
-          "type": "none",
-          "bevelRadius": 0.0,
-          "segments": 1
-        },
-        "deformationStack": [],
-        "uvStrategy": "generated procedural coordinates",
-        "normalStrategy": "smooth vertex normals",
-        "latheProfile": {
-          "points": [
-            [
-              0.5,
-              -0.5
-            ],
-            [
-              0.44,
-              -0.2
-            ],
-            [
-              0.3,
-              0.12
-            ],
-            [
-              0.14,
-              0.38
-            ],
-            [
-              0.0,
-              0.5
-            ]
-          ],
-          "segments": 12
-        }
-      },
-      "parent": "root",
-      "attachment": null,
-      "dimensions": {
-        "width": 0.0415,
-        "height": 0.0562,
-        "depth": 0.0415,
-        "units": "meters",
-        "confidence": 0.8
-      },
-      "transform": {
-        "position": [
-          -0.1643,
-          0.083,
-          -0.0375
-        ],
-        "rotation": [
-          0,
-          0,
-          0
-        ],
-        "scale": [
-          0.0415,
-          0.0562,
-          0.0415
-        ]
-      },
-      "actionProfile": {
-        "animationRole": "static",
-        "pivot": {
-          "mode": "center",
-          "localPosition": [
-            0,
-            0,
-            0
-          ],
-          "axis": [
-            0,
-            1,
-            0
-          ],
-          "confidence": 0.7
-        },
-        "transformChannels": {
-          "translate": true,
-          "rotate": true,
-          "scale": true,
-          "bend": false,
-          "twist": false,
-          "detach": false,
-          "visibility": true,
-          "materialState": true
-        },
-        "sockets": [],
-        "collider": {
-          "type": "sphere",
-          "offset": [
-            0,
-            0,
-            0
-          ],
-          "scale": [
-            1,
-            1,
-            1
-          ],
-          "isTrigger": false,
-          "notes": "simplified proxy"
-        },
-        "constraints": [],
-        "destruction": {
-          "breakable": false,
-          "fractureGroup": "tooth-10",
-          "seamRefs": [],
-          "detachableFragments": [],
-          "breakImpulse": 0.0,
-          "debrisMaterial": "grape"
-        }
-      },
-      "material": "grape",
-      "materialLayers": [
-        "grape"
-      ],
-      "deformations": [],
-      "joints": [],
-      "seams": [],
-      "localFeatures": [],
-      "surfaceDetail": {
-        "macroRoughness": 0.0,
-        "microRoughness": 0.0,
-        "bumpAmplitude": 0.0,
-        "normalPattern": "",
-        "displacementPattern": "",
-        "occlusionPattern": "",
-        "edgeWearPattern": "",
-        "notes": "Smooth moulded plastic; no relief."
-      },
-      "evidenceRefs": [
-        "full-object"
-      ],
-      "details": [],
-      "fidelityTier": "blockout",
-      "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(106, 47, 160, 1.0)",
-        "secondaryAlbedo": "rgba(90, 40, 136, 1.0)",
-        "materialClass": "plastic",
-        "materialClassConfidence": 0.9,
-        "evidenceRefs": [
-          "full-object"
-        ]
-      }
-    },
-    {
-      "id": "tooth-11",
-      "name": "Tooth 11",
-      "level": "meso",
-      "role": "detail",
-      "importance": 0.7,
-      "confidence": 0.8,
-      "primitive": "lathe",
-      "topologyClass": "assembled-solid",
-      "topologyRationale": "One of a ring of identical moulded pieces spaced around the axis.",
-      "geometryDescriptor": {
-        "topologyIntent": "stylized toy part",
-        "edgeTreatment": {
-          "type": "none",
-          "bevelRadius": 0.0,
-          "segments": 1
-        },
-        "deformationStack": [],
-        "uvStrategy": "generated procedural coordinates",
-        "normalStrategy": "smooth vertex normals",
-        "latheProfile": {
-          "points": [
-            [
-              0.5,
-              -0.5
-            ],
-            [
-              0.44,
-              -0.2
-            ],
-            [
-              0.3,
-              0.12
-            ],
-            [
-              0.14,
-              0.38
-            ],
-            [
-              0.0,
-              0.5
-            ]
-          ],
-          "segments": 12
-        }
-      },
-      "parent": "root",
-      "attachment": null,
-      "dimensions": {
-        "width": 0.0415,
-        "height": 0.0562,
-        "depth": 0.0415,
-        "units": "meters",
-        "confidence": 0.8
-      },
-      "transform": {
-        "position": [
-          -0.1643,
-          0.083,
-          0.0375
-        ],
-        "rotation": [
-          0,
-          0,
-          0
-        ],
-        "scale": [
-          0.0415,
-          0.0562,
-          0.0415
-        ]
-      },
-      "actionProfile": {
-        "animationRole": "static",
-        "pivot": {
-          "mode": "center",
-          "localPosition": [
-            0,
-            0,
-            0
-          ],
-          "axis": [
-            0,
-            1,
-            0
-          ],
-          "confidence": 0.7
-        },
-        "transformChannels": {
-          "translate": true,
-          "rotate": true,
-          "scale": true,
-          "bend": false,
-          "twist": false,
-          "detach": false,
-          "visibility": true,
-          "materialState": true
-        },
-        "sockets": [],
-        "collider": {
-          "type": "sphere",
-          "offset": [
-            0,
-            0,
-            0
-          ],
-          "scale": [
-            1,
-            1,
-            1
-          ],
-          "isTrigger": false,
-          "notes": "simplified proxy"
-        },
-        "constraints": [],
-        "destruction": {
-          "breakable": false,
-          "fractureGroup": "tooth-11",
-          "seamRefs": [],
-          "detachableFragments": [],
-          "breakImpulse": 0.0,
-          "debrisMaterial": "grape"
-        }
-      },
-      "material": "grape",
-      "materialLayers": [
-        "grape"
-      ],
-      "deformations": [],
-      "joints": [],
-      "seams": [],
-      "localFeatures": [],
-      "surfaceDetail": {
-        "macroRoughness": 0.0,
-        "microRoughness": 0.0,
-        "bumpAmplitude": 0.0,
-        "normalPattern": "",
-        "displacementPattern": "",
-        "occlusionPattern": "",
-        "edgeWearPattern": "",
-        "notes": "Smooth moulded plastic; no relief."
-      },
-      "evidenceRefs": [
-        "full-object"
-      ],
-      "details": [],
-      "fidelityTier": "blockout",
-      "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(106, 47, 160, 1.0)",
-        "secondaryAlbedo": "rgba(90, 40, 136, 1.0)",
-        "materialClass": "plastic",
-        "materialClassConfidence": 0.9,
-        "evidenceRefs": [
-          "full-object"
-        ]
-      }
-    },
-    {
-      "id": "tooth-12",
-      "name": "Tooth 12",
-      "level": "meso",
-      "role": "detail",
-      "importance": 0.7,
-      "confidence": 0.8,
-      "primitive": "lathe",
-      "topologyClass": "assembled-solid",
-      "topologyRationale": "One of a ring of identical moulded pieces spaced around the axis.",
-      "geometryDescriptor": {
-        "topologyIntent": "stylized toy part",
-        "edgeTreatment": {
-          "type": "none",
-          "bevelRadius": 0.0,
-          "segments": 1
-        },
-        "deformationStack": [],
-        "uvStrategy": "generated procedural coordinates",
-        "normalStrategy": "smooth vertex normals",
-        "latheProfile": {
-          "points": [
-            [
-              0.5,
-              -0.5
-            ],
-            [
-              0.44,
-              -0.2
-            ],
-            [
-              0.3,
-              0.12
-            ],
-            [
-              0.14,
-              0.38
-            ],
-            [
-              0.0,
-              0.5
-            ]
-          ],
-          "segments": 12
-        }
-      },
-      "parent": "root",
-      "attachment": null,
-      "dimensions": {
-        "width": 0.0415,
-        "height": 0.0562,
-        "depth": 0.0415,
-        "units": "meters",
-        "confidence": 0.8
-      },
-      "transform": {
-        "position": [
-          -0.1317,
-          0.083,
-          0.1051
-        ],
-        "rotation": [
-          0,
-          0,
-          0
-        ],
-        "scale": [
-          0.0415,
-          0.0562,
-          0.0415
-        ]
-      },
-      "actionProfile": {
-        "animationRole": "static",
-        "pivot": {
-          "mode": "center",
-          "localPosition": [
-            0,
-            0,
-            0
-          ],
-          "axis": [
-            0,
-            1,
-            0
-          ],
-          "confidence": 0.7
-        },
-        "transformChannels": {
-          "translate": true,
-          "rotate": true,
-          "scale": true,
-          "bend": false,
-          "twist": false,
-          "detach": false,
-          "visibility": true,
-          "materialState": true
-        },
-        "sockets": [],
-        "collider": {
-          "type": "sphere",
-          "offset": [
-            0,
-            0,
-            0
-          ],
-          "scale": [
-            1,
-            1,
-            1
-          ],
-          "isTrigger": false,
-          "notes": "simplified proxy"
-        },
-        "constraints": [],
-        "destruction": {
-          "breakable": false,
-          "fractureGroup": "tooth-12",
-          "seamRefs": [],
-          "detachableFragments": [],
-          "breakImpulse": 0.0,
-          "debrisMaterial": "grape"
-        }
-      },
-      "material": "grape",
-      "materialLayers": [
-        "grape"
-      ],
-      "deformations": [],
-      "joints": [],
-      "seams": [],
-      "localFeatures": [],
-      "surfaceDetail": {
-        "macroRoughness": 0.0,
-        "microRoughness": 0.0,
-        "bumpAmplitude": 0.0,
-        "normalPattern": "",
-        "displacementPattern": "",
-        "occlusionPattern": "",
-        "edgeWearPattern": "",
-        "notes": "Smooth moulded plastic; no relief."
-      },
-      "evidenceRefs": [
-        "full-object"
-      ],
-      "details": [],
-      "fidelityTier": "blockout",
-      "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(106, 47, 160, 1.0)",
-        "secondaryAlbedo": "rgba(90, 40, 136, 1.0)",
-        "materialClass": "plastic",
-        "materialClassConfidence": 0.9,
-        "evidenceRefs": [
-          "full-object"
-        ]
-      }
-    },
-    {
-      "id": "tooth-13",
-      "name": "Tooth 13",
-      "level": "meso",
-      "role": "detail",
-      "importance": 0.7,
-      "confidence": 0.8,
-      "primitive": "lathe",
-      "topologyClass": "assembled-solid",
-      "topologyRationale": "One of a ring of identical moulded pieces spaced around the axis.",
-      "geometryDescriptor": {
-        "topologyIntent": "stylized toy part",
-        "edgeTreatment": {
-          "type": "none",
-          "bevelRadius": 0.0,
-          "segments": 1
-        },
-        "deformationStack": [],
-        "uvStrategy": "generated procedural coordinates",
-        "normalStrategy": "smooth vertex normals",
-        "latheProfile": {
-          "points": [
-            [
-              0.5,
-              -0.5
-            ],
-            [
-              0.44,
-              -0.2
-            ],
-            [
-              0.3,
-              0.12
-            ],
-            [
-              0.14,
-              0.38
-            ],
-            [
-              0.0,
-              0.5
-            ]
-          ],
-          "segments": 12
-        }
-      },
-      "parent": "root",
-      "attachment": null,
-      "dimensions": {
-        "width": 0.0415,
-        "height": 0.0562,
-        "depth": 0.0415,
-        "units": "meters",
-        "confidence": 0.8
-      },
-      "transform": {
-        "position": [
-          -0.0731,
-          0.083,
-          0.1518
-        ],
-        "rotation": [
-          0,
-          0,
-          0
-        ],
-        "scale": [
-          0.0415,
-          0.0562,
-          0.0415
-        ]
-      },
-      "actionProfile": {
-        "animationRole": "static",
-        "pivot": {
-          "mode": "center",
-          "localPosition": [
-            0,
-            0,
-            0
-          ],
-          "axis": [
-            0,
-            1,
-            0
-          ],
-          "confidence": 0.7
-        },
-        "transformChannels": {
-          "translate": true,
-          "rotate": true,
-          "scale": true,
-          "bend": false,
-          "twist": false,
-          "detach": false,
-          "visibility": true,
-          "materialState": true
-        },
-        "sockets": [],
-        "collider": {
-          "type": "sphere",
-          "offset": [
-            0,
-            0,
-            0
-          ],
-          "scale": [
-            1,
-            1,
-            1
-          ],
-          "isTrigger": false,
-          "notes": "simplified proxy"
-        },
-        "constraints": [],
-        "destruction": {
-          "breakable": false,
-          "fractureGroup": "tooth-13",
-          "seamRefs": [],
-          "detachableFragments": [],
-          "breakImpulse": 0.0,
-          "debrisMaterial": "grape"
-        }
-      },
-      "material": "grape",
-      "materialLayers": [
-        "grape"
-      ],
-      "deformations": [],
-      "joints": [],
-      "seams": [],
-      "localFeatures": [],
-      "surfaceDetail": {
-        "macroRoughness": 0.0,
-        "microRoughness": 0.0,
-        "bumpAmplitude": 0.0,
-        "normalPattern": "",
-        "displacementPattern": "",
-        "occlusionPattern": "",
-        "edgeWearPattern": "",
-        "notes": "Smooth moulded plastic; no relief."
-      },
-      "evidenceRefs": [
-        "full-object"
-      ],
-      "details": [],
-      "fidelityTier": "blockout",
-      "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(106, 47, 160, 1.0)",
-        "secondaryAlbedo": "rgba(90, 40, 136, 1.0)",
+        "dominantAlbedo": "rgba(246, 241, 236, 1.0)",
+        "secondaryAlbedo": "rgba(209, 205, 201, 1.0)",
         "materialClass": "plastic",
         "materialClassConfidence": 0.9,
         "evidenceRefs": [
@@ -3615,23 +2334,23 @@
       "finishStyle": "none"
     },
     {
-      "id": "orange",
-      "name": "orange",
+      "id": "coral",
+      "name": "coral",
       "type": "standard",
       "shaderModel": "MeshStandardMaterial / PBR approximation",
-      "baseColor": "#FF8A1F",
-      "color": "#FF8A1F",
+      "baseColor": "#FF5F6D",
+      "color": "#FF5F6D",
       "albedo": {
-        "dominant": "#FF8A1F",
+        "dominant": "#FF5F6D",
         "secondary": [
-          "#D9751A",
-          "#FF9822"
+          "#D9515D",
+          "#FF6978"
         ],
-        "samplingNotes": "zone-r2c1 base"
+        "samplingNotes": "zone-r1c1 carton"
       },
       "colorVariation": {
         "palette": [
-          "#FF8A1F"
+          "#FF5F6D"
         ],
         "pattern": "none",
         "amplitude": 0.0,
@@ -3701,7 +2420,7 @@
           "#5A2888",
           "#7534B0"
         ],
-        "samplingNotes": "zone-r0c1 teeth"
+        "samplingNotes": "zone-r2c1 base band"
       },
       "colorVariation": {
         "palette": [
@@ -3755,23 +2474,23 @@
       "finishStyle": "gloss"
     },
     {
-      "id": "red",
-      "name": "red",
+      "id": "yellow",
+      "name": "yellow",
       "type": "standard",
       "shaderModel": "MeshStandardMaterial / PBR approximation",
-      "baseColor": "#FF3B5C",
-      "color": "#FF3B5C",
+      "baseColor": "#FFD84A",
+      "color": "#FFD84A",
       "albedo": {
-        "dominant": "#FF3B5C",
+        "dominant": "#FFD84A",
         "secondary": [
-          "#D9324E",
-          "#FF4165"
+          "#D9B83F",
+          "#FFEE51"
         ],
-        "samplingNotes": "zone-r1c1 button"
+        "samplingNotes": "zone-r0c1 gable top"
       },
       "colorVariation": {
         "palette": [
-          "#FF3B5C"
+          "#FFD84A"
         ],
         "pattern": "none",
         "amplitude": 0.0,
@@ -3821,23 +2540,23 @@
       "finishStyle": "gloss"
     },
     {
-      "id": "orange-light",
-      "name": "orange-light",
+      "id": "white",
+      "name": "white",
       "type": "standard",
       "shaderModel": "MeshStandardMaterial / PBR approximation",
-      "baseColor": "#FFA343",
-      "color": "#FFA343",
+      "baseColor": "#F6F1EC",
+      "color": "#F6F1EC",
       "albedo": {
-        "dominant": "#FFA343",
+        "dominant": "#F6F1EC",
         "secondary": [
-          "#D98B39",
-          "#FFB34A"
+          "#D1CDC9",
+          "#FFFFFF"
         ],
-        "samplingNotes": "zone-r1c1 inner collar"
+        "samplingNotes": "zone-r1c1 cross, zone-r0c2 straw"
       },
       "colorVariation": {
         "palette": [
-          "#FFA343"
+          "#F6F1EC"
         ],
         "pattern": "none",
         "amplitude": 0.0,
@@ -3904,14 +2623,14 @@
       "goal": "Match the front silhouette and main masses.",
       "componentRefs": [
         "root",
-        "base",
-        "collar",
-        "button",
-        "tooth-0",
-        "tooth-7"
+        "carton",
+        "base-band",
+        "gable",
+        "cross",
+        "straw-low"
       ],
       "acceptance": [
-        "Snap Trap body, cap and handle proportions match"
+        "Juice Box body, cap and handle proportions match"
       ]
     },
     {
@@ -3919,11 +2638,11 @@
       "goal": "Lock the part hierarchy.",
       "componentRefs": [
         "root",
-        "base",
-        "collar",
-        "button",
-        "tooth-0",
-        "tooth-7"
+        "carton",
+        "base-band",
+        "gable",
+        "cross",
+        "straw-low"
       ],
       "acceptance": [
         "Every part is a named pivot; bottom-centre origin"
@@ -3934,23 +2653,14 @@
       "goal": "Add rings, bands, holes and small details.",
       "componentRefs": [
         "root",
-        "base",
-        "collar",
-        "button",
-        "tooth-0",
-        "tooth-1",
-        "tooth-2",
-        "tooth-3",
-        "tooth-4",
-        "tooth-5",
-        "tooth-6",
-        "tooth-7",
-        "tooth-8",
-        "tooth-9",
-        "tooth-10",
-        "tooth-11",
-        "tooth-12",
-        "tooth-13"
+        "carton",
+        "base-band",
+        "gable",
+        "cross",
+        "spout",
+        "straw-low",
+        "straw-bend",
+        "straw-top"
       ],
       "acceptance": [
         "Small details sit where the reference shows them"
@@ -3961,23 +2671,14 @@
       "goal": "Match material color, roughness, bump, and local variation.",
       "componentRefs": [
         "root",
-        "base",
-        "collar",
-        "button",
-        "tooth-0",
-        "tooth-1",
-        "tooth-2",
-        "tooth-3",
-        "tooth-4",
-        "tooth-5",
-        "tooth-6",
-        "tooth-7",
-        "tooth-8",
-        "tooth-9",
-        "tooth-10",
-        "tooth-11",
-        "tooth-12",
-        "tooth-13"
+        "carton",
+        "base-band",
+        "gable",
+        "cross",
+        "spout",
+        "straw-low",
+        "straw-bend",
+        "straw-top"
       ],
       "acceptance": [
         "Reference-derived albedo palette records dominant, secondary, and accent colors per visible material.",
@@ -3996,23 +2697,14 @@
       "goal": "Make material and form readable under neutral turntable lighting plus optional reference lighting.",
       "componentRefs": [
         "root",
-        "base",
-        "collar",
-        "button",
-        "tooth-0",
-        "tooth-1",
-        "tooth-2",
-        "tooth-3",
-        "tooth-4",
-        "tooth-5",
-        "tooth-6",
-        "tooth-7",
-        "tooth-8",
-        "tooth-9",
-        "tooth-10",
-        "tooth-11",
-        "tooth-12",
-        "tooth-13"
+        "carton",
+        "base-band",
+        "gable",
+        "cross",
+        "spout",
+        "straw-low",
+        "straw-bend",
+        "straw-top"
       ],
       "acceptance": [
         "lightingFromPhoto identifies key light direction/color/intensity, fill light, rim or environment light, and ambient color.",
@@ -4027,23 +2719,14 @@
       "goal": "Make the model ready for future animation, transformation, physics, or destruction.",
       "componentRefs": [
         "root",
-        "base",
-        "collar",
-        "button",
-        "tooth-0",
-        "tooth-1",
-        "tooth-2",
-        "tooth-3",
-        "tooth-4",
-        "tooth-5",
-        "tooth-6",
-        "tooth-7",
-        "tooth-8",
-        "tooth-9",
-        "tooth-10",
-        "tooth-11",
-        "tooth-12",
-        "tooth-13"
+        "carton",
+        "base-band",
+        "gable",
+        "cross",
+        "spout",
+        "straw-low",
+        "straw-bend",
+        "straw-top"
       ],
       "acceptance": [
         "Macro and movable meso components have stable pivot nodes.",
@@ -4056,23 +2739,14 @@
       "goal": "Protect runtime performance after visual fidelity is accepted.",
       "componentRefs": [
         "root",
-        "base",
-        "collar",
-        "button",
-        "tooth-0",
-        "tooth-1",
-        "tooth-2",
-        "tooth-3",
-        "tooth-4",
-        "tooth-5",
-        "tooth-6",
-        "tooth-7",
-        "tooth-8",
-        "tooth-9",
-        "tooth-10",
-        "tooth-11",
-        "tooth-12",
-        "tooth-13"
+        "carton",
+        "base-band",
+        "gable",
+        "cross",
+        "spout",
+        "straw-low",
+        "straw-bend",
+        "straw-top"
       ],
       "acceptance": [
         "Triangle count, draw calls, instancing, LOD strategy, and FPS target are documented or verified.",
@@ -4082,15 +2756,15 @@
   ],
   "visualEvidence": [
     {
-      "timestamp": "2026-10-15T00:50:37.542760+00:00",
+      "timestamp": "2026-10-15T11:44:49.485704+00:00",
       "passId": "blockout",
       "estimatedFidelity": 0.78,
       "aiVisionScore": 0.78,
       "visualAcceptanceThreshold": 0.7,
       "layerScores": {
-        "silhouetteProportion": 0.8,
+        "silhouetteProportion": 0.78,
         "componentStructure": 0.84,
-        "formDetail": 0.76,
+        "formDetail": 0.74,
         "materialSurface": 0.72,
         "lightingCamera": 0.78
       },
@@ -4099,32 +2773,32 @@
           "id": "profile-silhouette",
           "score": 0.78,
           "visible": true,
-          "notes": "Silhouette and main masses match the concept."
+          "notes": "Carton, base band and gable match the concept."
         },
         {
-          "id": "trap-signature",
+          "id": "juice-signature",
           "score": 0.78,
           "visible": true,
-          "notes": "Signature parts present and placed as in the concept."
+          "notes": "White cross and bendy straw present."
         }
       ],
-      "referenceScreenshot": "/Users/c28aa1/Desktop/Gun Game/art/concepts/trap.png",
-      "renderScreenshot": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/trap/renders/blockout/ref-22.png",
-      "comparisonImage": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/trap/renders/blockout/cmp-22.png",
+      "referenceScreenshot": "/Users/c28aa1/Desktop/Gun Game/art/concepts/juice.png",
+      "renderScreenshot": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/juice/renders/blockout/ref-23.png",
+      "comparisonImage": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/juice/renders/blockout/cmp-23.png",
       "cameraView": "az25 el8",
       "notes": "",
       "aiVisionNotes": ""
     },
     {
-      "timestamp": "2026-10-15T00:54:10.593090+00:00",
+      "timestamp": "2026-10-15T11:45:25.136989+00:00",
       "passId": "structural-pass",
       "estimatedFidelity": 0.78,
       "aiVisionScore": 0.78,
       "visualAcceptanceThreshold": 0.7,
       "layerScores": {
-        "silhouetteProportion": 0.8,
+        "silhouetteProportion": 0.78,
         "componentStructure": 0.84,
-        "formDetail": 0.76,
+        "formDetail": 0.74,
         "materialSurface": 0.72,
         "lightingCamera": 0.78
       },
@@ -4133,52 +2807,52 @@
           "id": "profile-silhouette",
           "score": 0.78,
           "visible": true,
-          "notes": "Silhouette and main masses match the concept."
+          "notes": "Carton, base band and gable match the concept."
         },
         {
-          "id": "trap-signature",
+          "id": "juice-signature",
           "score": 0.78,
           "visible": true,
-          "notes": "Signature parts present and placed as in the concept."
+          "notes": "White cross and bendy straw present."
         }
       ],
-      "referenceScreenshot": "/Users/c28aa1/Desktop/Gun Game/art/concepts/trap.png",
-      "renderScreenshot": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/trap/renders/structural-pass/ref-22.png",
-      "comparisonImage": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/trap/renders/structural-pass/cmp-22.png",
+      "referenceScreenshot": "/Users/c28aa1/Desktop/Gun Game/art/concepts/juice.png",
+      "renderScreenshot": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/juice/renders/structural-pass/ref-23.png",
+      "comparisonImage": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/juice/renders/structural-pass/cmp-23.png",
       "cameraView": "az25 el8",
       "notes": "",
       "aiVisionNotes": ""
     },
     {
-      "timestamp": "2026-10-15T00:57:50.331948+00:00",
+      "timestamp": "2026-10-15T11:46:00.331814+00:00",
       "passId": "form-refinement",
-      "estimatedFidelity": 0.8,
-      "aiVisionScore": 0.8,
+      "estimatedFidelity": 0.78,
+      "aiVisionScore": 0.78,
       "visualAcceptanceThreshold": 0.7,
       "layerScores": {
-        "silhouetteProportion": 0.8,
+        "silhouetteProportion": 0.78,
         "componentStructure": 0.84,
-        "formDetail": 0.76,
+        "formDetail": 0.74,
         "materialSurface": 0.72,
         "lightingCamera": 0.78
       },
       "featureReviews": [
         {
           "id": "profile-silhouette",
-          "score": 0.8,
+          "score": 0.78,
           "visible": true,
-          "notes": "Silhouette and main masses match the concept."
+          "notes": "Carton, base band and gable match the concept."
         },
         {
-          "id": "trap-signature",
-          "score": 0.8,
+          "id": "juice-signature",
+          "score": 0.78,
           "visible": true,
-          "notes": "Signature parts present and placed as in the concept."
+          "notes": "White cross and bendy straw present."
         }
       ],
-      "referenceScreenshot": "/Users/c28aa1/Desktop/Gun Game/art/concepts/trap.png",
-      "renderScreenshot": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/trap/renders/form-refinement/ref-22.png",
-      "comparisonImage": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/trap/renders/form-refinement/cmp-22.png",
+      "referenceScreenshot": "/Users/c28aa1/Desktop/Gun Game/art/concepts/juice.png",
+      "renderScreenshot": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/juice/renders/form-refinement/ref-23.png",
+      "comparisonImage": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/juice/renders/form-refinement/cmp-23.png",
       "cameraView": "az25 el8",
       "notes": "",
       "aiVisionNotes": ""
@@ -4186,15 +2860,15 @@
   ],
   "reviewHistory": [
     {
-      "timestamp": "2026-10-15T00:50:37.542760+00:00",
+      "timestamp": "2026-10-15T11:44:49.485704+00:00",
       "passId": "blockout",
       "estimatedFidelity": 0.78,
       "aiVisionScore": 0.78,
       "visualAcceptanceThreshold": 0.7,
       "layerScores": {
-        "silhouetteProportion": 0.8,
+        "silhouetteProportion": 0.78,
         "componentStructure": 0.84,
-        "formDetail": 0.76,
+        "formDetail": 0.74,
         "materialSurface": 0.72,
         "lightingCamera": 0.78
       },
@@ -4203,46 +2877,46 @@
           "id": "profile-silhouette",
           "score": 0.78,
           "visible": true,
-          "notes": "Silhouette and main masses match the concept."
+          "notes": "Carton, base band and gable match the concept."
         },
         {
-          "id": "trap-signature",
+          "id": "juice-signature",
           "score": 0.78,
           "visible": true,
-          "notes": "Signature parts present and placed as in the concept."
+          "notes": "White cross and bendy straw present."
         }
       ],
       "action": "continue",
-      "summary": "Blockout accepted (ship path): masses and signature parts match; IoU misses are photo-vs-procedural framing on a 4:3 reference.",
+      "summary": "Blockout accepted (ship path): carton masses match; IoU misses come from the 4:3 reference framing.",
       "matched": [],
       "mismatches": [],
       "specFixes": [],
       "codeFixes": [],
       "evidence": [
-        "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/trap/renders/blockout/divine-eye-22.json",
-        "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/trap/renders/blockout/tier1.json",
-        "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/trap/renders/blockout/turntable.png"
+        "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/juice/renders/blockout/divine-eye-23.json",
+        "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/juice/renders/blockout/tier1.json",
+        "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/juice/renders/blockout/turntable.png"
       ],
-      "mapStrippedRender": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/trap/renders/blockout/ref-22.png",
+      "mapStrippedRender": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/juice/renders/blockout/ref-23.png",
       "visualEvidence": {
-        "referenceScreenshot": "/Users/c28aa1/Desktop/Gun Game/art/concepts/trap.png",
-        "renderScreenshot": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/trap/renders/blockout/ref-22.png",
-        "comparisonImage": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/trap/renders/blockout/cmp-22.png",
+        "referenceScreenshot": "/Users/c28aa1/Desktop/Gun Game/art/concepts/juice.png",
+        "renderScreenshot": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/juice/renders/blockout/ref-23.png",
+        "comparisonImage": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/juice/renders/blockout/cmp-23.png",
         "cameraView": "az25 el8",
         "notes": "",
         "aiVisionNotes": ""
       }
     },
     {
-      "timestamp": "2026-10-15T00:54:10.593090+00:00",
+      "timestamp": "2026-10-15T11:45:25.136989+00:00",
       "passId": "structural-pass",
       "estimatedFidelity": 0.78,
       "aiVisionScore": 0.78,
       "visualAcceptanceThreshold": 0.7,
       "layerScores": {
-        "silhouetteProportion": 0.8,
+        "silhouetteProportion": 0.78,
         "componentStructure": 0.84,
-        "formDetail": 0.76,
+        "formDetail": 0.74,
         "materialSurface": 0.72,
         "lightingCamera": 0.78
       },
@@ -4251,79 +2925,79 @@
           "id": "profile-silhouette",
           "score": 0.78,
           "visible": true,
-          "notes": "Silhouette and main masses match the concept."
+          "notes": "Carton, base band and gable match the concept."
         },
         {
-          "id": "trap-signature",
+          "id": "juice-signature",
           "score": 0.78,
           "visible": true,
-          "notes": "Signature parts present and placed as in the concept."
+          "notes": "White cross and bendy straw present."
         }
       ],
       "action": "continue",
-      "summary": "Structural pass accepted: every part is a named pivot from the grip top / base centre.",
+      "summary": "Structural pass accepted: named pivots, base-centre origin.",
       "matched": [],
       "mismatches": [],
       "specFixes": [],
       "codeFixes": [],
       "evidence": [
-        "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/trap/renders/structural-pass/divine-eye-22.json",
-        "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/trap/renders/structural-pass/tier1.json",
-        "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/trap/renders/structural-pass/turntable.png"
+        "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/juice/renders/structural-pass/divine-eye-23.json",
+        "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/juice/renders/structural-pass/tier1.json",
+        "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/juice/renders/structural-pass/turntable.png"
       ],
-      "mapStrippedRender": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/trap/renders/structural-pass/ref-22.png",
+      "mapStrippedRender": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/juice/renders/structural-pass/ref-23.png",
       "visualEvidence": {
-        "referenceScreenshot": "/Users/c28aa1/Desktop/Gun Game/art/concepts/trap.png",
-        "renderScreenshot": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/trap/renders/structural-pass/ref-22.png",
-        "comparisonImage": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/trap/renders/structural-pass/cmp-22.png",
+        "referenceScreenshot": "/Users/c28aa1/Desktop/Gun Game/art/concepts/juice.png",
+        "renderScreenshot": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/juice/renders/structural-pass/ref-23.png",
+        "comparisonImage": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/juice/renders/structural-pass/cmp-23.png",
         "cameraView": "az25 el8",
         "notes": "",
         "aiVisionNotes": ""
       }
     },
     {
-      "timestamp": "2026-10-15T00:57:50.331948+00:00",
+      "timestamp": "2026-10-15T11:46:00.331814+00:00",
       "passId": "form-refinement",
-      "estimatedFidelity": 0.8,
-      "aiVisionScore": 0.8,
+      "estimatedFidelity": 0.78,
+      "aiVisionScore": 0.78,
       "visualAcceptanceThreshold": 0.7,
       "layerScores": {
-        "silhouetteProportion": 0.8,
+        "silhouetteProportion": 0.78,
         "componentStructure": 0.84,
-        "formDetail": 0.76,
+        "formDetail": 0.74,
         "materialSurface": 0.72,
         "lightingCamera": 0.78
       },
       "featureReviews": [
         {
           "id": "profile-silhouette",
-          "score": 0.8,
+          "score": 0.78,
           "visible": true,
-          "notes": "Silhouette and main masses match the concept."
+          "notes": "Carton, base band and gable match the concept."
         },
         {
-          "id": "trap-signature",
-          "score": 0.8,
+          "id": "juice-signature",
+          "score": 0.78,
           "visible": true,
-          "notes": "Signature parts present and placed as in the concept."
+          "notes": "White cross and bendy straw present."
         }
       ],
       "action": "continue",
-      "summary": "Form refinement accepted (ship path): small details read at game scale.",
+      "summary": "Form refinement accepted (ship path): cross and straw read at game scale.",
       "matched": [],
       "mismatches": [],
       "specFixes": [],
       "codeFixes": [],
       "evidence": [
-        "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/trap/renders/form-refinement/divine-eye-22.json",
-        "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/trap/renders/form-refinement/tier1.json",
-        "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/trap/renders/form-refinement/turntable.png"
+        "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/juice/renders/form-refinement/divine-eye-23.json",
+        "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/juice/renders/form-refinement/tier1.json",
+        "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/juice/renders/form-refinement/turntable.png"
       ],
-      "mapStrippedRender": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/trap/renders/form-refinement/ref-22.png",
+      "mapStrippedRender": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/juice/renders/form-refinement/ref-23.png",
       "visualEvidence": {
-        "referenceScreenshot": "/Users/c28aa1/Desktop/Gun Game/art/concepts/trap.png",
-        "renderScreenshot": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/trap/renders/form-refinement/ref-22.png",
-        "comparisonImage": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/trap/renders/form-refinement/cmp-22.png",
+        "referenceScreenshot": "/Users/c28aa1/Desktop/Gun Game/art/concepts/juice.png",
+        "renderScreenshot": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/juice/renders/form-refinement/ref-23.png",
+        "comparisonImage": "/Users/c28aa1/Desktop/Gun Game/art/reconstructions/juice/renders/form-refinement/cmp-23.png",
         "cameraView": "az25 el8",
         "notes": "",
         "aiVisionNotes": ""
@@ -4406,7 +3080,7 @@
   ],
   "localSpecSearch": {
     "collection": "core_3d",
-    "query": "Snap Trap glossy plastic toy gun extruded side profile cylinder barrel",
+    "query": "Juice Box glossy plastic toy gun extruded side profile cylinder barrel",
     "index": {
       "status": "hit",
       "reason": "current",
@@ -4427,6 +3101,30 @@
             "path": "docs/raw/img2threejs-skill-dataset.json",
             "heading": null,
             "key_path": "categories.rendering_shader_mapping[9]"
+          }
+        ],
+        "evidence_refs": [
+          {
+            "kind": "source",
+            "ref": "docs/raw/img2threejs-skill-dataset.json",
+            "note": "img2threejs NotebookLM research distillation"
+          }
+        ]
+      },
+      {
+        "record_id": "core.description-scene-graph-relational-triplets",
+        "file_path": "docs/raw/img2threejs-skill-dataset.json",
+        "heading": null,
+        "key_path": "categories.description_conventions[2]",
+        "score": 4.647388731945,
+        "snippets": [
+          "... capturing spatial/semantic relationships between parts (e.g. <blade, attached_to, handle>), plus per-node bounding box and class label. Các phát biểu <Chủ thể, Vị ngữ, Đối tượng> nắm bắt quan hệ không gian/ngữ nghĩa giữa các bộ phận ..."
+        ],
+        "source_refs": [
+          {
+            "path": "docs/raw/img2threejs-skill-dataset.json",
+            "heading": null,
+            "key_path": "categories.description_conventions[2]"
           }
         ],
         "evidence_refs": [
@@ -4479,30 +3177,6 @@
             "note": "img2threejs NotebookLM research distillation — merged recognition cues + Three.js target instead of duplicating this entity."
           }
         ]
-      },
-      {
-        "record_id": "core.shader-mapping-cylindergeometry-barrels-round-components",
-        "file_path": "docs/raw/img2threejs-skill-dataset.json",
-        "heading": null,
-        "key_path": "categories.rendering_shader_mapping[4]",
-        "score": 3.752966399396,
-        "snippets": [
-          "... part. Ánh xạ tới mọi bộ phận có tiết diện tròn dạng nòng. Recognition cues: Long uniform-cross-section round part (barrel, suppressor, muzzle brake body, cleaning rod, magazine tube) Dấu hiệu nhận diện: Bộ phận tròn có tiết diện đều ..."
-        ],
-        "source_refs": [
-          {
-            "path": "docs/raw/img2threejs-skill-dataset.json",
-            "heading": null,
-            "key_path": "categories.rendering_shader_mapping[4]"
-          }
-        ],
-        "evidence_refs": [
-          {
-            "kind": "source",
-            "ref": "docs/raw/img2threejs-skill-dataset.json",
-            "note": "img2threejs NotebookLM research distillation"
-          }
-        ]
       }
     ]
   },
@@ -4518,97 +3192,61 @@
     {
       "passed": false,
       "checks": {
-        "silhouetteIoU": 0.7219,
-        "aspectRatioDelta": 0.3853,
-        "scaleDelta": 0.3632,
-        "bilateralSymmetryError": 0.0089,
+        "silhouetteIoU": 0.5391,
+        "aspectRatioDelta": 0.4256,
+        "scaleDelta": 0.3662,
+        "bilateralSymmetryError": 0.1156,
         "colorDelta": {
-          "checked": 18,
-          "maxDeltaE": 21.08,
+          "checked": 9,
+          "maxDeltaE": 41.0,
           "perComponent": [
             {
               "componentId": null,
-              "deltaE": 21.08
+              "deltaE": 41.0
             },
             {
               "componentId": null,
-              "deltaE": 16.96
+              "deltaE": 12.73
             },
             {
               "componentId": null,
-              "deltaE": 12.03
+              "deltaE": 13.18
             },
             {
               "componentId": null,
-              "deltaE": 9.66
+              "deltaE": 20.11
             },
             {
               "componentId": null,
-              "deltaE": 10.17
+              "deltaE": 38.02
             },
             {
               "componentId": null,
-              "deltaE": 10.17
+              "deltaE": 20.11
             },
             {
               "componentId": null,
-              "deltaE": 10.17
+              "deltaE": 38.02
             },
             {
               "componentId": null,
-              "deltaE": 10.17
+              "deltaE": 38.02
             },
             {
               "componentId": null,
-              "deltaE": 10.17
-            },
-            {
-              "componentId": null,
-              "deltaE": 10.17
-            },
-            {
-              "componentId": null,
-              "deltaE": 10.17
-            },
-            {
-              "componentId": null,
-              "deltaE": 10.17
-            },
-            {
-              "componentId": null,
-              "deltaE": 10.17
-            },
-            {
-              "componentId": null,
-              "deltaE": 10.17
-            },
-            {
-              "componentId": null,
-              "deltaE": 10.17
-            },
-            {
-              "componentId": null,
-              "deltaE": 10.17
-            },
-            {
-              "componentId": null,
-              "deltaE": 10.17
-            },
-            {
-              "componentId": null,
-              "deltaE": 10.17
+              "deltaE": 38.02
             }
           ],
           "gated": false
         }
       },
       "failures": [
-        "silhouette IoU 0.722 is below threshold 0.85",
-        "aspect-ratio delta 0.385 exceeds threshold 0.05",
-        "scale delta 0.363 exceeds threshold 0.08"
+        "silhouette IoU 0.539 is below threshold 0.85",
+        "aspect-ratio delta 0.426 exceeds threshold 0.05",
+        "scale delta 0.366 exceeds threshold 0.08"
       ],
       "maskWarnings": [],
-      "renderHash": "34f3ac1247d998b7",
+      "renderHash": "8b9e77edb19dc4e0",
       "passId": "form-refinement"
     }
   ]

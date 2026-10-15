@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react';
+import type { SmokeFog } from './smoke';
 import type { HillSnap, Loadout, MapId, ModeId, PlayerSnap, WeaponId } from '@gg/shared';
 
 export interface FeedEntry {
@@ -57,9 +58,7 @@ export interface HudState {
   slowed: boolean;
   /** Seconds of flash blindness left for this player. */
   blind: number;
-  /** Standing inside a smoke cloud: the whole view is covered. */
-  smoked: boolean;
-  scoreboard: boolean;
+  smoke: SmokeFog[];
   /** Bumps on each hit you take, used to flash the vignette. */
   hurtTick: number;
   toast: { key: number; text: string } | null;

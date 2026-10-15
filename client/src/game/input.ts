@@ -1,121 +1,93 @@
-/** Keyboard and mouse state for the game canvas. */
+import { getBindings, listenActions, matches } from './bindings';
+
+/** Keyboard, mouse and wheel intents, using the current saved bindings. */
 export class Input {
   private keys = new Set<string>();
+  private blocked = false;
+  private scopeToggled = false;
   mouseX = 0;
   mouseY = 0;
-  fireHeld = false;
-  scopeHeld = false;
-  /** Held G: aiming a throw. Releasing it throws. */
   throwHeld = false;
   private throwReleased = false;
-  /** 1 or 2 from the number keys, or 'toggle' from the mouse wheel. */
+  /** Set when the grenade key goes down; drinkables use it instead of waiting for release. */
+  private throwPressed = false;
   private slotQueued: 1 | 2 | 'toggle' | null = null;
   private abilityQueued = false;
   private pickupQueued = false;
-  scoreboardHeld = false;
+  private reloadQueued = false;
   private cleanup: (() => void)[] = [];
 
+  get fireHeld() { return getBindings().fire.some(k => this.keys.has(k)); }
+  get scopeHeld() { return this.scopeToggled || getBindings().scope.some(k => this.keys.has(k)); }
+
   constructor(private el: HTMLElement) {
-    const on = <K extends keyof WindowEventMap>(type: K, fn: (e: WindowEventMap[K]) => void, target: EventTarget = window) => {
-      target.addEventListener(type, fn as EventListener);
-      this.cleanup.push(() => target.removeEventListener(type, fn as EventListener));
+    const on = (type: string, fn: EventListener) => {
+      window.addEventListener(type, fn);
+      this.cleanup.push(() => window.removeEventListener(type, fn));
     };
-    on('keydown', (e) => {
-      if (isTyping(e)) return;
-      const k = e.code;
-      if (k === 'Space' || k === 'Tab') e.preventDefault();
-      if (!e.repeat) {
-        if (k === 'Space' || k === 'KeyQ') this.abilityQueued = true;
-        if (k === 'KeyC') this.scopeHeld = !this.scopeHeld; // keyboard toggle for trackpads
-        if (k === 'KeyE') this.pickupQueued = true;
-        if (k === 'KeyF') this.slotQueued = 'toggle';
-        if (k === 'Digit1') this.slotQueued = 1;
-        if (k === 'Digit2') this.slotQueued = 2;
-        if (k === 'KeyG') this.throwHeld = true;
+    this.cleanup.push(listenActions((code, e) => {
+      if (this.blocked) return;
+      if (Object.values(getBindings()).some(keys => keys.includes(code))) e.preventDefault();
+      if (!code.startsWith('Wheel')) this.keys.add(code);
+      if (matches('ability', code)) this.abilityQueued = true;
+      if (matches('scopeToggle', code)) this.scopeToggled = !this.scopeToggled;
+      if (matches('pickup', code)) this.pickupQueued = true;
+      if (matches('reload', code)) this.reloadQueued = true;
+      if (matches('swap', code)) this.slotQueued = 'toggle';
+      if (matches('primary', code)) this.slotQueued = 1;
+      if (matches('secondary', code)) this.slotQueued = 2;
+      if (matches('grenade', code)) {
+        this.throwHeld = true;
+        this.throwPressed = true;
       }
-      if (k === 'Tab') this.scoreboardHeld = true;
-      if (k === 'ShiftLeft') this.scopeHeld = true; // hold to scope
-      this.keys.add(k);
-    });
-    on('keyup', (e) => {
-      this.keys.delete(e.code);
-      if (e.code === 'Tab') this.scoreboardHeld = false;
-      if (e.code === 'ShiftLeft') this.scopeHeld = false;
-      if (e.code === 'KeyG' && this.throwHeld) {
+      if (matches('cancelGrenade', code)) {
+        this.throwHeld = false;
+        this.throwReleased = false;
+      }
+    }));
+    const release = (code: string) => {
+      this.keys.delete(code);
+      if (matches('grenade', code) && this.throwHeld && !getBindings().grenade.some(k => this.keys.has(k))) {
         this.throwHeld = false;
         this.throwReleased = true;
       }
-    });
-    on('blur', () => {
-      this.clear();
-    });
-    on('mousemove', (e) => {
+    };
+    on('keyup', e => release((e as KeyboardEvent).code));
+    on('mouseup', e => release('Mouse' + (e as MouseEvent).button));
+    on('blur', () => this.clear());
+    on('gg:input-reset', () => this.clear());
+    on('mousemove', e => {
       const r = this.el.getBoundingClientRect();
-      this.mouseX = e.clientX - r.left;
-      this.mouseY = e.clientY - r.top;
+      this.mouseX = (e as MouseEvent).clientX - r.left;
+      this.mouseY = (e as MouseEvent).clientY - r.top;
     });
-    on('mousedown', (e) => {
-      if (e.target !== this.el) return;
-      if (e.button === 0) this.fireHeld = true;
-      if (e.button === 2) this.scopeHeld = true;
-    });
-    on('mouseup', (e) => {
-      if (e.button === 0) this.fireHeld = false;
-      if (e.button === 2) this.scopeHeld = false;
-    });
-    on('wheel', (e) => {
-      if (e.target === this.el && Math.abs(e.deltaY) > 4) this.slotQueued = 'toggle';
-    });
-    on('contextmenu', (e) => {
-      if (e.target === this.el) e.preventDefault();
-    });
+    on('contextmenu', e => { if (e.target === this.el) e.preventDefault(); });
   }
 
-  /** Drop held keys and buttons, e.g. when the chat box opens. */
+  setBlocked(blocked: boolean) { this.blocked = blocked; this.clear(); }
   clear(): void {
     this.keys.clear();
-    this.fireHeld = false;
-    this.scopeHeld = false;
-    this.throwHeld = false;
-  }
-
-  takeSlot(): 1 | 2 | 'toggle' | null {
-    const v = this.slotQueued;
+    this.scopeToggled = this.throwHeld = this.throwReleased = false;
+    this.abilityQueued = this.pickupQueued = this.reloadQueued = false;
     this.slotQueued = null;
+  }
+  reload(): void { if (!this.blocked) this.reloadQueued = true; }
+  swapWeapon(): void { if (!this.blocked) this.slotQueued = 'toggle'; }
+  takeReload() { const v = this.reloadQueued; this.reloadQueued = false; return v; }
+  takeSlot() { const v = this.slotQueued; this.slotQueued = null; return v; }
+  takeThrow() { const v = this.throwReleased; this.throwReleased = false; this.throwPressed = false; return v; }
+  /** Instant use on key down. Clears the hold so releasing the key doesn't fire a second time. */
+  takeThrowPress() {
+    const v = this.throwPressed;
+    this.throwPressed = false;
+    if (v) this.throwHeld = this.throwReleased = false;
     return v;
   }
-
-  takeThrow(): boolean {
-    const v = this.throwReleased;
-    this.throwReleased = false;
-    return v;
-  }
-
+  takeAbility() { const v = this.abilityQueued; this.abilityQueued = false; return v; }
+  takePickup() { const v = this.pickupQueued; this.pickupQueued = false; return v; }
   move(): { mx: number; my: number } {
-    const k = this.keys;
-    const mx = (k.has('KeyD') || k.has('ArrowRight') ? 1 : 0) - (k.has('KeyA') || k.has('ArrowLeft') ? 1 : 0);
-    const my = (k.has('KeyS') || k.has('ArrowDown') ? 1 : 0) - (k.has('KeyW') || k.has('ArrowUp') ? 1 : 0);
-    return { mx, my };
+    const held = (action: 'up' | 'down' | 'left' | 'right') => Number(getBindings()[action].some(k => this.keys.has(k)));
+    return { mx: held('right') - held('left'), my: held('down') - held('up') };
   }
-
-  takeAbility(): boolean {
-    const v = this.abilityQueued;
-    this.abilityQueued = false;
-    return v;
-  }
-
-  takePickup(): boolean {
-    const v = this.pickupQueued;
-    this.pickupQueued = false;
-    return v;
-  }
-
-  dispose(): void {
-    for (const c of this.cleanup) c();
-  }
-}
-
-function isTyping(e: KeyboardEvent): boolean {
-  const t = e.target as HTMLElement | null;
-  return !!t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable);
+  dispose() { this.cleanup.forEach(fn => fn()); }
 }

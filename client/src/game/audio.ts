@@ -92,6 +92,7 @@ export class Sfx {
     this.noise(0.12, 0.3, 1200, 0.8);
     [660, 880, 1320].forEach((f, i) => this.tone(f, f, 0.12, 'triangle', 0.16, 0.05 + i * 0.06));
   }
+  refill(): void { this.tone(880, 1320, 0.08, 'triangle', 0.1); this.tone(1320, 1760, 0.08, 'triangle', 0.08, 0.07); }
   heal(): void { [523, 784, 1046].forEach((f, i) => this.tone(f, f * 1.02, 0.12, 'sine', 0.14, i * 0.05)); }
   streak(n: number): void {
     const base = n >= 8 ? 523 : n >= 5 ? 440 : 392;

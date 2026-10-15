@@ -22,6 +22,9 @@ export interface PlayerState {
   primary: GunId;
   secondary: GunId;
   slot: 'primary' | 'secondary';
+  ammo: { primary: number; secondary: number };
+  reloadAt: number;
+  wantReload: boolean;
   utility: UtilId;
   utilCharges: number;
   throwReadyAt: number;
@@ -127,9 +130,6 @@ export interface Throwable {
   vz: number;
   landed: boolean;
   fuseAt: number;
-  /** Snap Trap only: live from this time until `expiresAt`. */
-  armedAt: number;
-  expiresAt: number;
 }
 
 export interface Goo {
@@ -363,6 +363,9 @@ export function addPlayer(
     primary: opts.gun,
     secondary: opts.secondary,
     slot: 'primary',
+    ammo: { primary: 0, secondary: 0 },
+    reloadAt: 0,
+    wantReload: false,
     utility: opts.utility,
     utilCharges: 0,
     throwReadyAt: 0,
@@ -444,6 +447,9 @@ function spawn(state: GameState, p: PlayerState): void {
     p.gun = gun;
   }
   p.utilCharges = UTILS[p.utility].charges;
+  p.ammo = { primary: GUNS[p.primary].magazine, secondary: GUNS[p.secondary].magazine };
+  p.reloadAt = 0;
+  p.wantReload = false;
   p.throwReadyAt = state.time;
   p.blindUntil = 0;
   p.slowUntil = 0;
@@ -482,6 +488,7 @@ export function applyInput(state: GameState, p: PlayerState, frame: InputFrame):
   p.fire = !!frame.fire;
   if (frame.ability) p.wantAbility = true;
   if (frame.pickup) p.wantPickup = true;
+  if (frame.reload === true) p.wantReload = true;
   if (frame.slot === 1 || frame.slot === 2) p.wantSlot = frame.slot;
   if (frame.throw) p.wantThrow = true;
 }
@@ -519,6 +526,8 @@ function killPlayer(state: GameState, victim: PlayerState, killerId: string, gun
   victim.alive = false;
   victim.fire = false;
   victim.burstLeft = 0;
+  victim.reloadAt = 0;
+  victim.wantReload = false;
   victim.respawnAt = state.time + RESPAWN_TIME;
   victim.deaths++;
   victim.streak = 0;
@@ -543,6 +552,12 @@ function killPlayer(state: GameState, victim: PlayerState, killerId: string, gun
   killer.streak++;
   killer.bestStreak = Math.max(killer.bestStreak, killer.streak);
   killer.weaponKills[gun] = (killer.weaponKills[gun] ?? 0) + 1;
+  // Every kill hands back one utility charge, so a long streak doesn't run dry.
+  const maxCharges = UTILS[killer.utility].charges;
+  if (killer.alive && killer.utilCharges < maxCharges) {
+    killer.utilCharges++;
+    state.events.push({ t: 'refill', id: killer.id, util: killer.utility });
+  }
   if (STREAK_CALLS.includes(killer.streak)) state.events.push({ t: 'streak', id: killer.id, n: killer.streak });
   const mode = MODES[state.mode];
   if (state.mode === 'ffa') {
@@ -563,6 +578,8 @@ function killPlayer(state: GameState, victim: PlayerState, killerId: string, gun
       killer.primary = next;
       killer.secondary = next;
       killer.gun = next;
+      killer.ammo = { primary: GUNS[next].magazine, secondary: GUNS[next].magazine };
+      killer.reloadAt = 0;
       killer.burstLeft = 0;
       killer.fireReadyAt = Math.max(killer.fireReadyAt, state.time + 0.3);
       state.events.push({ t: 'ladder', id: killer.id, gun: next });
@@ -622,6 +639,12 @@ function explode(state: GameState, x: number, y: number, owner: string, gun: Wea
 
 // ---------- actions ----------
 
+function startReload(state: GameState, p: PlayerState): void {
+  if (p.reloadAt || p.ammo[p.slot] >= GUNS[p.gun].magazine) return;
+  p.burstLeft = 0;
+  p.reloadAt = state.time + GUNS[p.gun].reloadTime;
+}
+
 function fireGun(state: GameState, p: PlayerState): void {
   const def = GUNS[p.gun];
   p.fireReadyAt = state.time + def.cooldown;
@@ -635,6 +658,7 @@ function fireGun(state: GameState, p: PlayerState): void {
 /** One trigger's worth of bullets, without touching the cooldown. Bursts call it again. */
 function shoot(state: GameState, p: PlayerState): void {
   const def = GUNS[p.gun];
+  p.ammo[p.slot]--;
   const spread = def.spread * (p.scoped ? SCOPE_SPREAD : 1);
   p.shieldUntil = Math.min(p.shieldUntil, state.time);
   for (let i = 0; i < def.pellets; i++) {
@@ -787,7 +811,12 @@ function tryPickup(state: GameState, p: PlayerState): void {
     const slot = GUNS[gun].slot;
     if (p[slot] !== gun) dropOld('gun', p[slot]);
     p[slot] = gun;
-    if (p.slot === slot) p.gun = gun;
+    p.ammo[slot] = GUNS[gun].magazine;
+    if (p.slot === slot) {
+      p.gun = gun;
+      p.reloadAt = 0;
+      p.burstLeft = 0;
+    }
     p.fireReadyAt = Math.max(p.fireReadyAt, state.time + 0.2);
   } else {
     if (state.mode === 'ladder') return;
@@ -802,6 +831,10 @@ function tryPickup(state: GameState, p: PlayerState): void {
 function switchSlot(state: GameState, p: PlayerState, want: 1 | 2): void {
   const slot = want === 1 ? 'primary' : 'secondary';
   if (p.slot === slot) return;
+  // The ladder has one weapon, so changing slots must not grant a second magazine.
+  if (state.mode === 'ladder') return;
+  p.reloadAt = 0;
+  p.burstLeft = 0;
   p.slot = slot;
   p.gun = p[slot];
   p.fireReadyAt = Math.max(p.fireReadyAt, state.time + 0.25);
@@ -811,6 +844,16 @@ function switchSlot(state: GameState, p: PlayerState, want: 1 | 2): void {
 /** Lob the utility at the cursor on a real arc: it clears any wall while it is high enough. */
 function throwUtil(state: GameState, p: PlayerState): void {
   if (p.utilCharges <= 0 || state.time < p.throwReadyAt) return;
+  const heal = UTILS[p.utility].heal;
+  if (heal) {
+    // Drinkables are used on the spot. Not at full health, so a charge isn't wasted.
+    if (p.hp >= MAX_HP) return;
+    p.hp = Math.min(MAX_HP, p.hp + heal);
+    p.utilCharges--;
+    p.throwReadyAt = state.time + THROW.cooldown;
+    state.events.push({ t: 'heal', id: p.id, x: r2(p.x), y: r2(p.y) });
+    return;
+  }
   const dist = clamp(p.aimDist, THROW.minDistance, THROW.maxDistance);
   const T = throwFlightTime(dist);
   const dx = Math.cos(p.aim);
@@ -821,7 +864,7 @@ function throwUtil(state: GameState, p: PlayerState): void {
   const vz = ((THROW.gravity * T * T) / 2 - THROW.releaseHeight) / T;
   state.throwables.push({
     id: state.nextId++, owner: p.id, util: p.utility, x, y, z: THROW.releaseHeight,
-    vx: dx * speed, vy: dy * speed, vz, landed: false, fuseAt: Infinity, armedAt: Infinity, expiresAt: Infinity,
+    vx: dx * speed, vy: dy * speed, vz, landed: false, fuseAt: Infinity,
   });
   p.utilCharges--;
   p.throwReadyAt = state.time + THROW.cooldown;
@@ -865,12 +908,7 @@ function updateThrowables(state: GameState, dt: number): void {
         g.z = 0;
         if (!g.landed) {
           g.landed = true;
-          if (g.util === 'trap') {
-            g.armedAt = state.time + THROW.trapArm;
-            g.expiresAt = state.time + THROW.trapLife;
-          } else {
-            g.fuseAt = state.time + UTILS[g.util].fuseAfterLanding;
-          }
+          g.fuseAt = state.time + UTILS[g.util].fuseAfterLanding;
         }
         g.vz = Math.abs(g.vz) > 2 ? -g.vz * 0.3 : 0;
         g.vx *= 0.55;
@@ -878,26 +916,15 @@ function updateThrowables(state: GameState, dt: number): void {
       }
     }
     if (state.time >= g.fuseAt) done.push(g);
-    else if (g.util === 'trap' && state.time >= g.armedAt && trapTriggered(state, g)) done.push(g);
   }
-  // Traps nobody stepped near fizzle out quietly.
-  state.throwables = state.throwables.filter((g) => g.expiresAt > state.time || done.includes(g));
   if (!done.length) return;
   state.throwables = state.throwables.filter((g) => !done.includes(g));
   for (const g of done) detonate(state, g);
 }
 
-function trapTriggered(state: GameState, g: Throwable): boolean {
-  for (const p of state.players.values()) {
-    if (!p.alive || p.id === g.owner || sameTeam(state, p.id, g.owner)) continue;
-    if (Math.hypot(p.x - g.x, p.y - g.y) < THROW.trapTrigger) return true;
-  }
-  return false;
-}
-
 function detonate(state: GameState, g: Throwable): void {
   const def = UTILS[g.util];
-  if (g.util === 'frag' || g.util === 'trap') {
+  if (g.util === 'frag') {
     explode(state, g.x, g.y, g.owner, 'frag', def.damage, def.radius, def.knockback);
   } else if (g.util === 'flash') {
     state.events.push({ t: 'flash', x: r2(g.x), y: r2(g.y) });
@@ -963,7 +990,16 @@ export function tick(state: GameState, dt: number): void {
       p.wantThrow = false;
       throwUtil(state, p);
     }
-    if (p.burstLeft > 0 && state.time >= p.burstAt) {
+    if (p.reloadAt && state.time >= p.reloadAt) {
+      p.ammo[p.slot] = GUNS[p.gun].magazine;
+      p.reloadAt = 0;
+    }
+    if (p.wantReload) {
+      p.wantReload = false;
+      startReload(state, p);
+    }
+    if (!p.reloadAt && p.ammo[p.slot] === 0) startReload(state, p);
+    if (!p.reloadAt && p.burstLeft > 0 && state.time >= p.burstAt) {
       if (GUNS[p.gun].burst) {
         shoot(state, p);
         p.burstLeft--;
@@ -971,9 +1007,10 @@ export function tick(state: GameState, dt: number): void {
       } else {
         p.burstLeft = 0;
       }
-    } else if (p.fire && p.burstLeft === 0 && state.time >= p.fireReadyAt) {
+    } else if (!p.reloadAt && p.fire && p.burstLeft === 0 && state.time >= p.fireReadyAt) {
       fireGun(state, p);
     }
+    if (p.ammo[p.slot] === 0) startReload(state, p);
     collectHeals(state, p);
   }
   if (state.hill) updateHill(state, state.hill, dt);

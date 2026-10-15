@@ -1,4 +1,4 @@
-# Snap Trap: reference suitability
+# Juice Box: reference suitability
 
 Verdict: **conditional** (single side view).
 

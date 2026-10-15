@@ -1,6 +1,6 @@
 {
-  "targetName": "Snap Trap",
-  "targetId": "snap-trap",
+  "targetName": "Juice Box",
+  "targetId": "juice-box",
   "schemaVersion": "2.1",
   "terminologyProfile": {
     "domain": "real-time procedural Three.js asset",
@@ -38,7 +38,7 @@
     ],
     "descriptionRule": "Use measurable 3D graphics terms. Avoid vague words unless they are paired with concrete geometry/material/shader parameters."
   },
-  "sourceImage": "/Users/c28aa1/Desktop/Gun Game/art/concepts/trap.png",
+  "sourceImage": "/Users/c28aa1/Desktop/Gun Game/art/concepts/juice.png",
   "referenceCamera": {
     "solved": false,
     "fovDegrees": 40.0,
@@ -67,7 +67,7 @@
   },
   "preSpecAssessment": {
     "objectClass": {
-      "primaryType": "toy floor mine",
+      "primaryType": "toy drink carton",
       "primaryDomain": "object",
       "formLanguage": [
         "rounded",
@@ -106,7 +106,7 @@
         "repetitionSystems": 1
       },
       "reasoning": [
-        "Lathe body and lid, small repeated details placed around the axis."
+        "Extruded front-traced slabs for the carton, base and gable; thin lathe tubes for the straw."
       ]
     },
     "specDepthDecision": {
@@ -153,7 +153,7 @@
       "confidence": 0.0,
       "note": "Only meaningful when objectClass.primaryDomain is character or hybrid. Set applies=true and fill from forge/stage1_intake/extract_landmarks.py. See grimoire/character/reconstruction.md and grimoire/character/likeness_maximization.md."
     },
-    "sourceImage": "/Users/c28aa1/Desktop/Gun Game/art/concepts/trap.png"
+    "sourceImage": "/Users/c28aa1/Desktop/Gun Game/art/concepts/juice.png"
   },
   "qualityContract": {
     "qualityBar": "moderate",
@@ -602,7 +602,7 @@
   "componentTree": [
     {
       "id": "root",
-      "name": "Snap Trap",
+      "name": "Juice Box",
       "level": "macro",
       "role": "body",
       "importance": 1.0,
@@ -981,7 +981,7 @@
   "risks": [],
   "localSpecSearch": {
     "collection": "core_3d",
-    "query": "Snap Trap glossy plastic toy gun extruded side profile cylinder barrel",
+    "query": "Juice Box glossy plastic toy gun extruded side profile cylinder barrel",
     "index": {
       "status": "hit",
       "reason": "current",
@@ -1002,6 +1002,30 @@
             "path": "docs/raw/img2threejs-skill-dataset.json",
             "heading": null,
             "key_path": "categories.rendering_shader_mapping[9]"
+          }
+        ],
+        "evidence_refs": [
+          {
+            "kind": "source",
+            "ref": "docs/raw/img2threejs-skill-dataset.json",
+            "note": "img2threejs NotebookLM research distillation"
+          }
+        ]
+      },
+      {
+        "record_id": "core.description-scene-graph-relational-triplets",
+        "file_path": "docs/raw/img2threejs-skill-dataset.json",
+        "heading": null,
+        "key_path": "categories.description_conventions[2]",
+        "score": 4.647388731945,
+        "snippets": [
+          "... capturing spatial/semantic relationships between parts (e.g. <blade, attached_to, handle>), plus per-node bounding box and class label. Các phát biểu <Chủ thể, Vị ngữ, Đối tượng> nắm bắt quan hệ không gian/ngữ nghĩa giữa các bộ phận ..."
+        ],
+        "source_refs": [
+          {
+            "path": "docs/raw/img2threejs-skill-dataset.json",
+            "heading": null,
+            "key_path": "categories.description_conventions[2]"
           }
         ],
         "evidence_refs": [
@@ -1052,30 +1076,6 @@
             "kind": "source",
             "ref": "docs/raw/img2threejs-skill-dataset.json",
             "note": "img2threejs NotebookLM research distillation — merged recognition cues + Three.js target instead of duplicating this entity."
-          }
-        ]
-      },
-      {
-        "record_id": "core.shader-mapping-cylindergeometry-barrels-round-components",
-        "file_path": "docs/raw/img2threejs-skill-dataset.json",
-        "heading": null,
-        "key_path": "categories.rendering_shader_mapping[4]",
-        "score": 3.752966399396,
-        "snippets": [
-          "... part. Ánh xạ tới mọi bộ phận có tiết diện tròn dạng nòng. Recognition cues: Long uniform-cross-section round part (barrel, suppressor, muzzle brake body, cleaning rod, magazine tube) Dấu hiệu nhận diện: Bộ phận tròn có tiết diện đều ..."
-        ],
-        "source_refs": [
-          {
-            "path": "docs/raw/img2threejs-skill-dataset.json",
-            "heading": null,
-            "key_path": "categories.rendering_shader_mapping[4]"
-          }
-        ],
-        "evidence_refs": [
-          {
-            "kind": "source",
-            "ref": "docs/raw/img2threejs-skill-dataset.json",
-            "note": "img2threejs NotebookLM research distillation"
           }
         ]
       }

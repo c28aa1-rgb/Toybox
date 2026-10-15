@@ -10,6 +10,9 @@ export interface GunDef {
   damage: number;
   /** Seconds between shots. */
   cooldown: number;
+  magazine: number;
+  /** Seconds to refill a magazine; reserve ammo is unlimited. */
+  reloadTime: number;
   speed: number;
   range: number;
   pellets: number;
@@ -31,42 +34,52 @@ export interface GunDef {
 
 export const GUNS: Record<GunId, GunDef> = {
   pistol: {
+    magazine: 12, reloadTime: 1.2,
     id: 'pistol', slot: 'secondary', name: 'Pea Shooter', blurb: 'Reliable. Hits where you point it.',
     damage: 19, cooldown: 0.3, speed: 26, range: 15, pellets: 1, spread: 0.04,
   },
   minismg: {
+    magazine: 20, reloadTime: 1.4,
     id: 'minismg', slot: 'secondary', name: 'Mini Buzz', blurb: 'Pocket sprayer. Fast and sloppy.',
     damage: 7, cooldown: 0.075, speed: 26, range: 9, pellets: 1, spread: 0.22,
   },
   thumper: {
+    magazine: 6, reloadTime: 1.6,
     id: 'thumper', slot: 'secondary', name: 'Thumper', blurb: 'Hand cannon. Slow, heavy, shoves people back.',
     damage: 36, cooldown: 0.65, speed: 32, range: 12, pellets: 1, spread: 0.03, knockback: 1.6,
   },
   bouncer: {
+    magazine: 10, reloadTime: 1.4,
     id: 'bouncer', slot: 'secondary', name: 'Bouncer', blurb: 'Rubber rounds bounce off walls twice. Shoot around corners.',
     damage: 17, cooldown: 0.34, speed: 24, range: 22, pellets: 1, spread: 0.04, bounces: 2,
   },
   stinger: {
+    magazine: 16, reloadTime: 1.4,
     id: 'stinger', slot: 'secondary', name: 'Stinger', blurb: 'Light darts. Every hit slows the target for a moment.',
     damage: 11, cooldown: 0.2, speed: 30, range: 11, pellets: 1, spread: 0.08, slow: 0.9,
   },
   smg: {
+    magazine: 24, reloadTime: 1.6,
     id: 'smg', slot: 'primary', name: 'Buzzbox', blurb: 'Sprays fast, loses accuracy at range.',
     damage: 9, cooldown: 0.09, speed: 28, range: 11, pellets: 1, spread: 0.16,
   },
   burst: {
+    magazine: 24, reloadTime: 1.7,
     id: 'burst', slot: 'primary', name: 'Tri-Pop', blurb: 'Three-round bursts. Accurate at mid range.',
     damage: 15, cooldown: 0.5, speed: 34, range: 17, pellets: 1, spread: 0.05, burst: 3, burstGap: 0.07,
   },
   shotgun: {
+    magazine: 6, reloadTime: 1.9,
     id: 'shotgun', slot: 'primary', name: 'Boomstick', blurb: 'Six pellets. Get close.',
     damage: 11, cooldown: 0.85, speed: 22, range: 7.5, pellets: 6, spread: 0.42, knockback: 1.2,
   },
   sniper: {
+    magazine: 4, reloadTime: 2.1,
     id: 'sniper', slot: 'primary', name: 'Longshot', blurb: 'Hits harder the farther it flies. One-shots from across the map.',
     damage: 72, ramp: { near: 40, far: 100, fullAt: 0.8 }, cooldown: 1.35, speed: 60, range: 50, pellets: 1, spread: 0,
   },
   rocket: {
+    magazine: 2, reloadTime: 2.3,
     id: 'rocket', slot: 'primary', name: 'Party Popper', blurb: 'Slow rocket, big splash, sends people flying.',
     damage: 58, cooldown: 1.4, speed: 14, range: 18, pellets: 1, spread: 0,
     splashRadius: 2.6, knockback: 7,

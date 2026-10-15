@@ -1,15 +1,17 @@
-export type UtilId = 'frag' | 'flash' | 'smoke' | 'goo' | 'trap';
+export type UtilId = 'frag' | 'flash' | 'smoke' | 'goo' | 'juice';
 
 export interface UtilDef {
   id: UtilId;
   name: string;
   blurb: string;
-  /** Seconds after landing before it goes off. Snap Traps instead wait for someone to step close. */
+  /** Seconds after landing before it goes off. */
   fuseAfterLanding: number;
   radius: number;
   damage: number;
   knockback: number;
   charges: number;
+  /** Used on the spot instead of thrown: restores this much health. */
+  heal?: number;
 }
 
 export const UTILS: Record<UtilId, UtilDef> = {
@@ -22,16 +24,16 @@ export const UTILS: Record<UtilId, UtilDef> = {
     fuseAfterLanding: 0.25, radius: 10, damage: 0, knockback: 0, charges: 2,
   },
   smoke: {
-    id: 'smoke', name: 'Puff Can', blurb: 'A thick cloud nobody can see through for 7 s.',
+    id: 'smoke', name: 'Puff Can', blurb: 'Dense smoke for 7 s. Faint silhouettes, clearer near the edge.',
     fuseAfterLanding: 0.1, radius: 3.6, damage: 0, knockback: 0, charges: 2,
   },
   goo: {
     id: 'goo', name: 'Goo Bomb', blurb: 'Leaves a sticky puddle for 5 s. Enemies in it move at half speed.',
     fuseAfterLanding: 0.15, radius: 3.4, damage: 0, knockback: 0, charges: 2,
   },
-  trap: {
-    id: 'trap', name: 'Snap Trap', blurb: 'Sits on the floor and snaps when an enemy walks close.',
-    fuseAfterLanding: 0, radius: 2.6, damage: 60, knockback: 5, charges: 2,
+  juice: {
+    id: 'juice', name: 'Juice Box', blurb: 'Press G to drink it. Heals 45 straight away.',
+    fuseAfterLanding: 0, radius: 0, damage: 0, knockback: 0, charges: 2, heal: 45,
   },
 };
 
@@ -51,10 +53,6 @@ export const THROW = {
   cooldown: 0.8,
   smokeDuration: 7,
   gooDuration: 5,
-  /** Snap Trap: seconds before it is live, how close an enemy must get, and how long it waits. */
-  trapArm: 0.7,
-  trapTrigger: 1.8,
-  trapLife: 30,
 };
 
 /** Movement multiplier while slowed by goo or a Stinger hit. */

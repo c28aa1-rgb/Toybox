@@ -1,5 +1,5 @@
 import {
-  GUNS, HERO_IDS, TICK_DT, allWalls, hasLineOfSight, sameTeam,
+  GUNS, HERO_IDS, TICK_DT, UTILS, allWalls, hasLineOfSight, sameTeam,
   type GameState, type HeroId, type InputFrame, type PlayerState, type Rect,
 } from '@gg/shared';
 
@@ -83,6 +83,8 @@ export function botInput(state: GameState, p: PlayerState): InputFrame {
     (k) => k.kind === 'gun' && GUNS[k.item as keyof typeof GUNS].slot === 'primary'
       && gunRank[k.item] > gunRank[p.primary] && Math.hypot(k.x - p.x, k.y - p.y) < 7,
   );
+  // Drink a heal when badly hurt.
+  if (UTILS[p.utility].heal && p.utilCharges > 0 && p.hp < 45 && state.time >= p.throwReadyAt) frame.throw = true;
   // Flash-blinded bots stumble around and hold fire.
   if (state.time < p.blindUntil) {
     frame.mx = Math.cos(m.wanderAngle);
@@ -137,7 +139,7 @@ export function botInput(state: GameState, p: PlayerState): InputFrame {
       // Snipers scope up for long shots, like players do.
       frame.scope = p.gun === 'sniper' && d > 10;
       // Lob utility at mid range now and then.
-      if (p.utilCharges > 0 && d > 4 && d < 12 && state.time >= p.throwReadyAt && rng() < 0.012) frame.throw = true;
+      if (p.utilCharges > 0 && !UTILS[p.utility].heal && d > 4 && d < 12 && state.time >= p.throwReadyAt && rng() < 0.012) frame.throw = true;
       // Close in with the sidearm when the primary is a long gun.
       frame.slot = p.primary === 'sniper' && d < 6 ? 2 : p.slot === 'secondary' && d > 8 ? 1 : 0;
       if (state.time >= p.abilityReadyAt && rng() < 0.025) {

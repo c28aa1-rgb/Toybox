@@ -118,7 +118,7 @@ export class Room {
       const id = `b${i}`;
       const guns: GunId[] = ['smg', 'shotgun', 'burst', 'sniper', 'smg'];
       const sides: GunId[] = ['pistol', 'minismg', 'thumper', 'bouncer', 'stinger'];
-      const utils: UtilId[] = ['frag', 'flash', 'smoke', 'goo', 'trap'];
+      const utils: UtilId[] = ['frag', 'flash', 'smoke', 'goo', 'juice'];
       addPlayer(this.state, {
         id, name: botName(i), hero: botHero(i), gun: guns[i % guns.length],
         secondary: sides[(i * 2) % sides.length], utility: utils[(i * 3) % utils.length], hat: HAT_IDS[i % HAT_IDS.length], bot: true,
@@ -165,6 +165,7 @@ export class Room {
       players: [...s.players.values()].map((p) => ({
         id: p.id, name: p.name, hero: p.hero, gun: p.gun,
         primary: p.primary, secondary: p.secondary, slot: p.slot, utility: p.utility, utilCharges: p.utilCharges,
+        ammo: p.ammo, reloadIn: r2(Math.max(0, p.reloadAt - t)),
         blindIn: r2(Math.max(0, p.blindUntil - t)),
         slowIn: r2(Math.max(0, p.slowUntil - t)),
         hat: p.loadout.hat,
@@ -183,7 +184,7 @@ export class Room {
       })),
       bullets: s.bullets.map((b) => ({ id: b.id, gun: b.gun, x: r2(b.x), y: r2(b.y), fake: b.fake })),
       pickups: s.pickups.map((k) => ({ id: k.id, kind: k.kind, item: k.item, x: r2(k.x), y: r2(k.y), expiresIn: r2(k.expiresAt - t) })),
-      throwables: s.throwables.map((g) => ({ id: g.id, util: g.util, x: r2(g.x), y: r2(g.y), z: r2(g.z), armed: t >= g.armedAt, owner: g.owner })),
+      throwables: s.throwables.map((g) => ({ id: g.id, util: g.util, x: r2(g.x), y: r2(g.y), z: r2(g.z), owner: g.owner })),
       goos: s.goos.map((g) => ({ id: g.id, x: r2(g.x), y: r2(g.y), r: g.r, owner: g.owner, team: g.team, endsIn: r2(g.expiresAt - t) })),
       smokes: s.smokes.map((sm) => ({ id: sm.id, x: r2(sm.x), y: r2(sm.y), r: sm.r, endsIn: r2(sm.expiresAt - t) })),
       walls: s.walls.map((w) => ({

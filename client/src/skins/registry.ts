@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { HEROES, type GunId, type HatId, type HeroId, type UtilId } from '@gg/shared';
 import { createHatModel } from './hats';
 import { mesh, toon } from './toon';
@@ -173,10 +174,10 @@ function placeholderGun(gun: GunId): THREE.Group {
 
 function placeholderUtil(util: UtilId): THREE.Group {
   const g = new THREE.Group();
-  const colors: Record<UtilId, string> = { frag: '#3DDBB4', flash: '#FFE45C', smoke: '#B48CFF', goo: '#8BE05A', trap: '#FF8A1F' };
-  if (util === 'trap') {
-    g.add(mesh(new THREE.CylinderGeometry(0.2, 0.22, 0.1, 16), toon(colors.trap), [0, 0.05, 0]));
-    g.add(mesh(new THREE.SphereGeometry(0.06, 10, 8), toon('#FF3B5C'), [0, 0.12, 0]));
+  const colors: Record<UtilId, string> = { frag: '#3DDBB4', flash: '#FFE45C', smoke: '#B48CFF', goo: '#8BE05A', juice: '#FF5F6D' };
+  if (util === 'juice') {
+    g.add(mesh(new RoundedBoxGeometry(0.2, 0.28, 0.14, 2, 0.04), toon(colors.juice), [0, 0.14, 0]));
+    g.add(mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.16), toon('#FFFFFF'), [0.05, 0.34, 0], [0, 0, -0.3]));
     return g;
   }
   g.add(mesh(new THREE.SphereGeometry(0.16, 14, 10), toon(colors[util]), [0, 0.16, 0]));

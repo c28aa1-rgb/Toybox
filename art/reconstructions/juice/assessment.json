@@ -1,9 +1,9 @@
 {
-  "targetName": "Snap Trap",
-  "sourceImage": "/Users/c28aa1/Desktop/Gun Game/art/concepts/trap.png",
+  "targetName": "Juice Box",
+  "sourceImage": "/Users/c28aa1/Desktop/Gun Game/art/concepts/juice.png",
   "preSpecAssessment": {
     "objectClass": {
-      "primaryType": "toy floor mine",
+      "primaryType": "toy drink carton",
       "primaryDomain": "object",
       "formLanguage": [
         "rounded",
@@ -42,7 +42,7 @@
         "repetitionSystems": 1
       },
       "reasoning": [
-        "Lathe body and lid, small repeated details placed around the axis."
+        "Extruded front-traced slabs for the carton, base and gable; thin lathe tubes for the straw."
       ]
     },
     "specDepthDecision": {
@@ -89,7 +89,7 @@
       "confidence": 0.0,
       "note": "Only meaningful when objectClass.primaryDomain is character or hybrid. Set applies=true and fill from forge/stage1_intake/extract_landmarks.py. See grimoire/character/reconstruction.md and grimoire/character/likeness_maximization.md."
     },
-    "sourceImage": "/Users/c28aa1/Desktop/Gun Game/art/concepts/trap.png"
+    "sourceImage": "/Users/c28aa1/Desktop/Gun Game/art/concepts/juice.png"
   },
   "qualityContract": {
     "qualityBar": "moderate",
@@ -212,7 +212,7 @@
   "authoringInstruction": "Fill observed object class, complexity reasoning, featureGroups, visualDeltaChecks, and unknowns before generating or implementing ObjectSculptSpec.",
   "localSpecSearch": {
     "collection": "core_3d",
-    "query": "Snap Trap glossy plastic toy gun extruded side profile cylinder barrel",
+    "query": "Juice Box glossy plastic toy gun extruded side profile cylinder barrel",
     "index": {
       "status": "hit",
       "reason": "current",
@@ -233,6 +233,30 @@
             "path": "docs/raw/img2threejs-skill-dataset.json",
             "heading": null,
             "key_path": "categories.rendering_shader_mapping[9]"
+          }
+        ],
+        "evidence_refs": [
+          {
+            "kind": "source",
+            "ref": "docs/raw/img2threejs-skill-dataset.json",
+            "note": "img2threejs NotebookLM research distillation"
+          }
+        ]
+      },
+      {
+        "record_id": "core.description-scene-graph-relational-triplets",
+        "file_path": "docs/raw/img2threejs-skill-dataset.json",
+        "heading": null,
+        "key_path": "categories.description_conventions[2]",
+        "score": 4.647388731945,
+        "snippets": [
+          "... capturing spatial/semantic relationships between parts (e.g. <blade, attached_to, handle>), plus per-node bounding box and class label. C\u00e1c ph\u00e1t bi\u1ec3u <Ch\u1ee7 th\u1ec3, V\u1ecb ng\u1eef, \u0110\u1ed1i t\u01b0\u1ee3ng> n\u1eafm b\u1eaft quan h\u1ec7 kh\u00f4ng gian/ng\u1eef ngh\u0129a gi\u1eefa c\u00e1c b\u1ed9 ph\u1eadn ..."
+        ],
+        "source_refs": [
+          {
+            "path": "docs/raw/img2threejs-skill-dataset.json",
+            "heading": null,
+            "key_path": "categories.description_conventions[2]"
           }
         ],
         "evidence_refs": [
@@ -283,30 +307,6 @@
             "kind": "source",
             "ref": "docs/raw/img2threejs-skill-dataset.json",
             "note": "img2threejs NotebookLM research distillation \u2014 merged recognition cues + Three.js target instead of duplicating this entity."
-          }
-        ]
-      },
-      {
-        "record_id": "core.shader-mapping-cylindergeometry-barrels-round-components",
-        "file_path": "docs/raw/img2threejs-skill-dataset.json",
-        "heading": null,
-        "key_path": "categories.rendering_shader_mapping[4]",
-        "score": 3.752966399396,
-        "snippets": [
-          "... part. \u00c1nh x\u1ea1 t\u1edbi m\u1ecdi b\u1ed9 ph\u1eadn c\u00f3 ti\u1ebft di\u1ec7n tr\u00f2n d\u1ea1ng n\u00f2ng. Recognition cues: Long uniform-cross-section round part (barrel, suppressor, muzzle brake body, cleaning rod, magazine tube) D\u1ea5u hi\u1ec7u nh\u1eadn di\u1ec7n: B\u1ed9 ph\u1eadn tr\u00f2n c\u00f3 ti\u1ebft di\u1ec7n \u0111\u1ec1u ..."
-        ],
-        "source_refs": [
-          {
-            "path": "docs/raw/img2threejs-skill-dataset.json",
-            "heading": null,
-            "key_path": "categories.rendering_shader_mapping[4]"
-          }
-        ],
-        "evidence_refs": [
-          {
-            "kind": "source",
-            "ref": "docs/raw/img2threejs-skill-dataset.json",
-            "note": "img2threejs NotebookLM research distillation"
           }
         ]
       }

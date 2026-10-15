@@ -1,0 +1,136 @@
+/* A shallow equipment strip keeps the arena visible. */
+.combat {
+  position: absolute;
+  right: max(18px, env(safe-area-inset-right));
+  bottom: max(18px, env(safe-area-inset-bottom));
+  width: min(330px, calc(100vw - 24px));
+  color: var(--cream);
+  font-variant-numeric: tabular-nums;
+  pointer-events: auto;
+}
+.combat button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.combat button:disabled { cursor: default; }
+.combat button:focus-visible { outline: 2px solid var(--sky); outline-offset: -3px; }
+.combat kbd {
+  position: absolute;
+  top: 5px;
+  left: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+  color: #fff4e099;
+  font: 9px var(--font-mono);
+}
+.combat__strip {
+  display: grid;
+  grid-template-columns: 44px 76px minmax(0, 1fr);
+  height: 66px;
+  overflow: hidden;
+  border: 1px solid #fff4e055;
+  border-radius: 12px 3px 3px 3px;
+  background: #1b1030eb;
+}
+.combat .combat__other,
+.combat__utility {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 0;
+  padding: 5px 3px 7px;
+  border: 0;
+  border-right: 1px solid #fff4e025;
+  background: transparent;
+}
+.combat__other img { width: 55px; height: 32px; object-fit: cover; }
+.combat__other > span {
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font: 10px/1.2 var(--font-body);
+}
+.combat__other { color: #fff4e0bb; }
+.combat__utility img { width: 26px; height: 30px; object-fit: contain; }
+.combat__utility b { font: 11px/1.2 var(--font-mono); }
+.combat__utility.is-empty { opacity: .5; }
+.combat__weapon {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 80px;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 9px;
+  border-bottom: 2px solid var(--lemon);
+}
+.combat__weapon-info { min-width: 0; text-align: center; }
+.combat__weapon-info img {
+  display: block;
+  width: 88px;
+  max-width: 100%;
+  height: 35px;
+  margin: 0 auto;
+  object-fit: cover;
+}
+.combat__weapon-info > span { display: block; font: 11px/1.2 var(--font-body); white-space: nowrap; }
+.combat .combat__ammo {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+.combat__ammo strong { font: 30px/1 var(--font-display); letter-spacing: -.04em; }
+.combat__ammo small { font: 10px var(--font-mono); color: #fff4e099; white-space: nowrap; }
+.combat__weapon.is-low .combat__ammo strong { color: var(--danger); }
+.combat__weapon.is-reloading .combat__ammo { color: var(--tangerine); }
+.combat__weapon.is-reloading { border-bottom-color: transparent; }
+.combat__reload-track { position: absolute; bottom: 0; left: 0; right: 0; height: 2px; background: #fff4e020; }
+.combat__reload-track { color: var(--tangerine); }
+.combat__health {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 22px;
+  padding: 0 5px;
+  color: var(--mint);
+  background: #1b1030d9;
+  border-radius: 0 0 3px 3px;
+}
+.combat__health > span { min-width: 31px; font: 10px var(--font-mono); }
+.combat__health-track { flex: 1; height: 4px; overflow: hidden; background: #fff4e030; }
+.combat__health-track i,
+.combat__reload-track i { display: block; width: 100%; height: 100%; background: currentColor; transform-origin: left; }
+.combat__health.is-low { color: var(--danger); }
+.combat .combat__help-toggle { width: 18px; height: 18px; padding: 0; border: 0; background: none; color: #fff4e099; font: 11px var(--font-mono); }
+.combat__help {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  right: 0;
+  width: min(350px, calc(100vw - 24px));
+  padding: 12px 14px;
+  border: 2px solid var(--ink);
+  border-radius: 8px;
+  background: var(--cream);
+  color: var(--ink);
+  box-shadow: 0 3px 0 var(--ink);
+  max-height: calc(100dvh - 130px);
+  overflow-y: auto;
+}
+.combat__help header { display: flex; align-items: center; justify-content: space-between; font: 12px var(--font-mono); }
+.combat__help header button { border: 0; background: transparent; font-size: 24px; line-height: 1; }
+.combat__help dl { margin: 8px 0; font-size: 12px; }
+.combat__help dl > div { display: flex; justify-content: space-between; gap: 10px; border-bottom: 1px solid #1b103017; padding: 3px 0; }
+.combat__help dd { margin: 0; font: 10px/1.8 var(--font-mono); text-align: right; }
+.combat__help p { margin: 10px 0 0; font-size: 12px; line-height: 1.3; }
+@media (max-width: 600px), (max-height: 600px) {
+  .combat { right: 12px; bottom: 12px; }
+}

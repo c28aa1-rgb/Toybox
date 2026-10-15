@@ -12,6 +12,7 @@ import { addDeath, addKill, addWin, loadProfile, saveProfile } from '../unlocks'
 import { Sfx } from './audio';
 import { Particles, Rings, Shake, Shatter } from './fx';
 import { Input } from './input';
+import { smokeFog, type SmokeFog } from './smoke';
 import { Net } from './net';
 import { createScene, PALETTE, WALL_HEIGHT, type SceneBundle } from './scene';
 import { HudStore, type HudState } from './store';
@@ -66,7 +67,7 @@ const BULLET_COLORS: Record<GunId, string> = {
   rocket: PALETTE.bubblegum,
 };
 
-const UTIL_COLORS: Record<UtilId, string> = { frag: PALETTE.mint, flash: PALETTE.lemon, smoke: '#B48CFF', goo: '#8BE05A', trap: PALETTE.tangerine };
+const UTIL_COLORS: Record<UtilId, string> = { frag: PALETTE.mint, flash: PALETTE.lemon, smoke: '#B48CFF', goo: '#8BE05A', juice: '#FF5F6D' };
 
 export function itemName(id: WeaponId): string {
   return isUtilId(id) ? UTILS[id].name : GUNS[id].name;
@@ -193,8 +194,8 @@ export class GameClient {
     this.hud = new HudStore({
       connected: false, error: null, room: opts.room ?? '', host: false, myId: null, me: null, players: [],
       phase: 'playing', winner: null, endsIn: 0, feed: [], ping: 0, killedBy: null, nearPickup: null,
-      loadout: { hero: opts.hero, gun: opts.gun, secondary: opts.secondary, utility: opts.utility, hat: opts.hat }, blind: 0, smoked: false,
-      mode: opts.gameMode ?? 'ffa', target: MODES[opts.gameMode ?? 'ffa'].target, teamScores: [0, 0], hill: null, streak: null, slowed: false, scoreboard: false, hurtTick: 0, toast: null, bots: 0,
+      loadout: { hero: opts.hero, gun: opts.gun, secondary: opts.secondary, utility: opts.utility, hat: opts.hat }, blind: 0, smoke: [],
+      mode: opts.gameMode ?? 'ffa', target: MODES[opts.gameMode ?? 'ffa'].target, teamScores: [0, 0], hill: null, streak: null, slowed: false, hurtTick: 0, toast: null, bots: 0,
       isPublic: opts.mode === 'public', map: null, chat: [], chatOpen: false, banner: null, scoped: false,
     });
 
@@ -238,6 +239,10 @@ export class GameClient {
   }
 
   // ---------- public controls ----------
+
+  reload(): void { this.input.reload(); }
+  setMenuOpen(open: boolean): void { this.input.setBlocked(open); }
+  swapWeapon(): void { this.input.swapWeapon(); }
 
   setLoadout(l: Loadout): void {
     this.net.send({ type: 'loadout', ...l });
@@ -412,8 +417,10 @@ export class GameClient {
       scope: !typing && this.input.scopeHeld,
       ability: !typing && this.input.takeAbility(),
       pickup: !typing && this.input.takePickup(),
+      reload: !typing && this.input.takeReload(),
       slot: 0,
-      throw: !typing && this.input.takeThrow(),
+      // Drinkables fire on key down; throwables wait for release so you can aim the arc.
+      throw: !typing && (UTILS[me.utility].heal ? this.input.takeThrowPress() : this.input.takeThrow()),
       respawn: this.respawnQueued,
     };
     if (me.alive) this.respawnQueued = false;
@@ -561,7 +568,7 @@ export class GameClient {
     const top = new THREE.Box3().setFromObject(skin.root).max.y;
     label.position.set(0, Math.max(2.15, top + 0.35), 0);
     skin.root.add(label);
-    // Laser sight shown while this player scopes in; enemies see it too.
+    // Scope sights are visible only to their owner.
     const laser = new THREE.Mesh(
       this.laserGeo,
       new THREE.MeshBasicMaterial({ color: HEROES[hero].color, transparent: true, opacity: 0.75, depthWrite: false }),
@@ -622,7 +629,7 @@ export class GameClient {
 
   /** Dashed arc preview while G is held, using the same flight curve the server simulates. */
   private updateThrowPreview(me: PlayerSnap, aimDist: number): void {
-    const show = this.input.throwHeld && me.alive && me.utilCharges > 0 && !this.hud.get().chatOpen;
+    const show = this.input.throwHeld && me.alive && me.utilCharges > 0 && !UTILS[me.utility].heal && !this.hud.get().chatOpen;
     this.arcLine.visible = show;
     this.arcRing.visible = show;
     this.cursorRing.visible = !show && !this.input.scopeHeld;
@@ -654,11 +661,12 @@ export class GameClient {
 
   /** Laser from the gun along the aim, stopped by walls. */
   private updateLaser(view: PlayerView, x: number, y: number, aim: number, on: boolean, gun: GunId, mine: boolean): void {
+    on = on && mine;
     view.laser.visible = on;
     view.laserGlow.visible = on;
     view.laserDot.visible = on;
     if (!on) return;
-    const max = mine ? Math.min(GUNS[gun].range, Math.hypot(this.aimPoint.x - x, this.aimPoint.z - y)) : GUNS[gun].range;
+    const max = Math.min(GUNS[gun].range, Math.hypot(this.aimPoint.x - x, this.aimPoint.z - y));
     const walls = this.mapWalls();
     const dx = Math.cos(aim);
     const dy = Math.sin(aim);
@@ -734,14 +742,6 @@ export class GameClient {
       if (!v) {
         const obj = createUtilModel(g.util);
         obj.scale.setScalar(1.3);
-        if (g.util === 'trap') {
-          const light = new THREE.Mesh(new THREE.SphereGeometry(0.07, 10, 8), new THREE.MeshBasicMaterial({ color: '#FF3B5C' }));
-          (light.material as THREE.Material).userData.outlineParameters = { visible: false };
-          // Sit the blinking light on top of the button, whatever model is loaded.
-          light.position.y = new THREE.Box3().setFromObject(obj).max.y / obj.scale.y - 0.01;
-          light.name = 'trapLight';
-          obj.add(light);
-        }
         this.s.world.add(obj);
         v = { obj, born: this.clock };
         this.throwViews.set(g.id, v);
@@ -757,14 +757,6 @@ export class GameClient {
         if (Math.random() < 0.5) {
           this.particles.burst({ x, y, z: z + 0.1, count: 1, color: [UTIL_COLORS[g.util], '#FFFFFF'], speed: 0.2, up: 0, life: 0.35, size: 0.08, gravity: 0 });
         }
-      } else if (g.util === 'trap') {
-        // Armed traps sit flat and blink red; teammates and the owner see a calmer pulse.
-        v.obj.rotation.set(0, 0, 0);
-        const light = v.obj.getObjectByName('trapLight');
-        if (g.armed && Math.floor(this.clock * 4) % 2 === 0 && Math.random() < 0.3) {
-          this.particles.burst({ x, y, z: 0.25, count: 1, color: ['#FF3B5C'], speed: 0.3, up: 0.6, life: 0.3, size: 0.09, gravity: 0 });
-        }
-        if (light) light.visible = !g.armed || Math.floor(this.clock * 4) % 2 === 0;
       } else if (g.util === 'frag' && Math.random() < 0.6) {
         this.particles.burst({ x, y, z: 0.3, count: 1, color: ['#FFE45C', '#FF8A1F'], speed: 1.5, up: 2, life: 0.25, size: 0.07 });
       }
@@ -784,12 +776,12 @@ export class GameClient {
       let g = this.smokeViews.get(sm.id);
       if (!g) {
         g = new THREE.Group();
-        const mat = new THREE.MeshToonMaterial({ color: '#C8B9E6', transparent: true, opacity: 0.95 });
+        const mat = new THREE.MeshLambertMaterial({ color: '#C8C3D5', transparent: true, opacity: 0.45, depthWrite: false });
         // A cluster of puffs; tall enough to hide anyone standing inside.
         for (let i = 0; i < 14; i++) {
           const a = (i / 14) * Math.PI * 2;
           const rr = i < 7 ? sm.r * 0.55 : sm.r * 0.25;
-          const puff = new THREE.Mesh(new THREE.IcosahedronGeometry(1, 1), mat);
+          const puff = new THREE.Mesh(new THREE.SphereGeometry(1, 12, 8), mat);
           puff.position.set(Math.cos(a) * rr, 0.9 + (i % 3) * 0.55, Math.sin(a) * rr);
           puff.scale.setScalar(sm.r * (0.42 + ((i * 37) % 10) / 40));
           puff.userData.base = puff.scale.x;
@@ -805,7 +797,9 @@ export class GameClient {
       const age = this.clock - (g.userData.born as number);
       const grow = Math.min(1, age / 0.5);
       const fade = Math.min(1, sm.endsIn / 1.2);
-      (g.userData.mat as THREE.MeshToonMaterial).opacity = 0.95 * fade;
+      const depth = this.hud.get().me?.alive ? Math.max(0, Math.min(1, (sm.r - Math.hypot(this.pred.x + this.predOffset.x - sm.x, this.pred.y + this.predOffset.y - sm.y)) / (sm.r * 0.08))) : 0;
+      // Screen haze supplies density from inside, leaving silhouettes visible beneath it.
+      (g.userData.mat as THREE.MeshLambertMaterial).opacity = (0.45 - 0.37 * depth * depth * (3 - 2 * depth)) * fade;
       for (const puff of g.children) {
         const b = puff.userData.base as number;
         puff.scale.setScalar(b * (0.3 + 0.7 * grow) * (1 + Math.sin(this.clock * 1.5 + (puff.userData.phase as number)) * 0.05));
@@ -813,6 +807,8 @@ export class GameClient {
     }
     for (const [id, g] of this.smokeViews) {
       if (!seen.has(id)) {
+        for (const puff of g.children) (puff as THREE.Mesh).geometry.dispose();
+        (g.userData.mat as THREE.Material).dispose();
         g.removeFromParent();
         this.smokeViews.delete(id);
       }
@@ -1263,6 +1259,9 @@ export class GameClient {
         this.particles.burst({ x: ev.x, y: ev.y, z: 0.2, count: 26, color: ['#8BE05A', '#C6F25B', '#4E9A2E'], speed: 5, up: 3, life: 0.5, size: 0.22 });
         this.sfx.splat(this.nearness(ev.x, ev.y));
         break;
+      case 'refill':
+        if (ev.id === me) this.sfx.refill();
+        break;
       case 'ladder':
         if (ev.id === me) {
           this.sfx.pickup();
@@ -1335,6 +1334,17 @@ export class GameClient {
 
   private pushHud(snap: Snapshot | null, me: PlayerSnap | null): void {
     if (!snap) return;
+    const smoke: SmokeFog[] = [];
+    if (me?.alive) {
+      const x = this.pred.x + this.predOffset.x;
+      const y = this.pred.y + this.predOffset.y;
+      const player = new THREE.Vector3(x, 0, y).project(this.s.camera);
+      for (const sm of snap.smokes) {
+        const center = new THREE.Vector3(sm.x, 0, sm.y).project(this.s.camera);
+        const fog = smokeFog(sm, x, y, (player.x - center.x) * this.container.clientWidth, (center.y - player.y) * this.container.clientHeight);
+        if (fog) smoke.push(fog);
+      }
+    }
     let nearPickup: WeaponId | null = null;
     if (me?.alive) {
       let best = PICKUP_RADIUS;
@@ -1360,11 +1370,10 @@ export class GameClient {
       endsIn: snap.endsIn,
       ping: Math.round(this.net.rtt),
       nearPickup,
-      scoreboard: this.input.scoreboardHeld,
       bots: snap.players.filter((p) => p.bot).length,
       scoped: !!me?.alive && this.input.scopeHeld && !this.hud.get().chatOpen,
       blind: me?.blindIn ?? 0,
-      smoked: this.meSmoked,
+      smoke,
     };
     if (this.botsWanted) {
       if (patch.bots === this.botsWanted.count || performance.now() - this.botsWanted.at > 1500) this.botsWanted = null;
@@ -1375,7 +1384,7 @@ export class GameClient {
   }
 }
 
-/** Smoke hides name tags and blinds whoever stands in it. Slightly inside the edge so it matches the puffs. */
+/** Smoke hides name tags so labels cannot reveal silhouettes through the cloud. */
 function inSmoke(snap: Snapshot, x: number, y: number): boolean {
   return snap.smokes.some((s) => (x - s.x) ** 2 + (y - s.y) ** 2 < (s.r * 0.92) ** 2);
 }

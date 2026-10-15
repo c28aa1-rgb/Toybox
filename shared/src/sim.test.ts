@@ -34,6 +34,112 @@ function run(s: GameState, seconds: number): void {
   for (let t = 0; t < seconds; t += TICK_DT) tick(s, TICK_DT);
 }
 
+describe('magazines and reloads', () => {
+  it('starts full, ignores reload at full, and reloads a partial magazine without firing', () => {
+    const { s, a } = setup();
+    expect(a.ammo.primary).toBe(GUNS.smg.magazine);
+    expect(a.ammo.secondary).toBe(GUNS.pistol.magazine);
+    applyInput(s, a, frame(1, { reload: true }));
+    tick(s, TICK_DT);
+    expect(a.reloadAt).toBe(0);
+    a.ammo.secondary = 3;
+    applyInput(s, a, frame(2, { reload: true, fire: true }));
+    tick(s, TICK_DT);
+    const finishesAt = a.reloadAt;
+    applyInput(s, a, frame(3, { reload: true, fire: true }));
+    run(s, GUNS.pistol.reloadTime / 2);
+    expect(a.reloadAt).toBe(finishesAt);
+    expect(a.ammo.secondary).toBe(3);
+    expect(s.bullets).toHaveLength(0);
+    a.fire = false;
+    run(s, GUNS.pistol.reloadTime);
+    expect(a.reloadAt).toBe(0);
+    expect(a.ammo.secondary).toBe(GUNS.pistol.magazine);
+  });
+
+  it('automatically reloads after the last round even after releasing fire', () => {
+    const { s, a } = setup();
+    a.ammo.secondary = 1;
+    a.fire = true;
+    tick(s, TICK_DT);
+    expect(a.ammo.secondary).toBe(0);
+    expect(a.reloadAt).toBeGreaterThan(s.time);
+    a.fire = false;
+    run(s, GUNS.pistol.reloadTime + TICK_DT);
+    expect(a.ammo.secondary).toBe(GUNS.pistol.magazine);
+  });
+
+  it('cancels reload on switching, preserves each magazine, and restarts on returning empty', () => {
+    const { s, a } = setup();
+    a.ammo.secondary = 0;
+    a.ammo.primary = 7;
+    tick(s, TICK_DT);
+    applyInput(s, a, frame(1, { slot: 1 }));
+    tick(s, TICK_DT);
+    expect(a.reloadAt).toBe(0);
+    expect(a.ammo).toEqual({ primary: 7, secondary: 0 });
+    applyInput(s, a, frame(2, { slot: 2 }));
+    tick(s, TICK_DT);
+    expect(a.reloadAt).toBeCloseTo(s.time + GUNS.pistol.reloadTime);
+  });
+
+  it('uses one shell for all shotgun pellets and never fires a burst past empty', () => {
+    const { s, a } = setup();
+    a.gun = a.secondary = 'shotgun';
+    a.ammo.secondary = 2;
+    a.fire = true;
+    tick(s, TICK_DT);
+    expect(a.ammo.secondary).toBe(1);
+    expect(s.bullets).toHaveLength(GUNS.shotgun.pellets);
+    a.gun = a.secondary = 'burst';
+    a.ammo.secondary = 2;
+    a.fireReadyAt = 0;
+    tick(s, TICK_DT);
+    run(s, 0.2);
+    expect(a.ammo.secondary).toBe(0);
+    expect(a.burstLeft).toBe(0);
+    expect(a.reloadAt).toBeGreaterThan(s.time);
+  });
+
+  it('refills a picked-up gun and cancels its old reload', () => {
+    const { s, a } = setup();
+    a.ammo.secondary = 0;
+    tick(s, TICK_DT);
+    s.pickups.push({ id: s.nextId++, kind: 'gun', item: 'thumper', x: a.x, y: a.y, expiresAt: s.time + 10 });
+    applyInput(s, a, frame(1, { pickup: true }));
+    tick(s, TICK_DT);
+    expect(a.gun).toBe('thumper');
+    expect(a.ammo.secondary).toBe(GUNS.thumper.magazine);
+    expect(a.reloadAt).toBe(0);
+  });
+
+  it('refills both magazines on respawn and clears reload intent', () => {
+    const { s, a } = setup();
+    a.alive = false;
+    a.respawnAt = s.time;
+    a.ammo = { primary: 0, secondary: 0 };
+    a.wantReload = true;
+    a.reloadAt = s.time + 10;
+    applyInput(s, a, frame(1, { respawn: true }));
+    tick(s, TICK_DT);
+    expect(a.ammo).toEqual({ primary: GUNS.smg.magazine, secondary: GUNS.pistol.magazine });
+    expect(a.reloadAt).toBe(0);
+    expect(a.wantReload).toBe(false);
+  });
+
+  it('does not let ladder players bypass reloading by switching slots', () => {
+    const s = createGame(42, 'playmat', 'ladder');
+    const a = addPlayer(s, { id: 'a', name: 'A', hero: 'blink', gun: 'smg', secondary: 'pistol', utility: 'frag' });
+    a.ammo.primary = 0;
+    tick(s, TICK_DT);
+    const finishesAt = a.reloadAt;
+    applyInput(s, a, frame(1, { slot: 2 }));
+    tick(s, TICK_DT);
+    expect(a.slot).toBe('primary');
+    expect(a.reloadAt).toBe(finishesAt);
+  });
+});
+
 describe('map', () => {
   it('has no overlapping walls or cramped spawns', () => {
     expect(MAP_IDS.flatMap((id) => mapProblems(MAPS[id]))).toEqual([]);
@@ -400,22 +506,20 @@ describe('new weapons', () => {
     expect(b.x - startB).toBeLessThan((a.x - startA) * 0.7);
   });
 
-  it('snap trap waits on the floor and goes off when an enemy walks close', () => {
-    const { s, a, b } = setup();
-    a.utility = 'trap';
+  it('juice box heals on the spot and is not wasted at full health', () => {
+    const { s, a } = setup();
+    a.utility = 'juice';
     a.utilCharges = 2;
-    a.aimDist = 4;
-    b.x = 40; b.y = 30;
     a.wantThrow = true;
-    run(s, 3);
-    const trap = s.throwables.find((g) => g.util === 'trap');
-    expect(trap?.landed).toBe(true);
-    expect(s.throwables).toHaveLength(1);
-    b.x = trap!.x + 1; b.y = trap!.y;
-    run(s, 0.2);
+    tick(s, TICK_DT);
+    expect(a.utilCharges).toBe(2);
+    a.hp = 30;
+    run(s, 1);
+    a.wantThrow = true;
+    tick(s, TICK_DT);
+    expect(a.hp).toBe(75);
+    expect(a.utilCharges).toBe(1);
     expect(s.throwables).toHaveLength(0);
-    expect(b.hp).toBeLessThan(MAX_HP);
-    expect(THROW.trapTrigger).toBeGreaterThan(1);
   });
 });
 
@@ -455,5 +559,29 @@ describe('respawn', () => {
     expect(b.alive).toBe(false);
     run(s, 2.5);
     expect(b.alive).toBe(true);
+  });
+});
+
+describe('utility refill', () => {
+  it('a kill gives back one utility charge, up to the maximum', () => {
+    const { s, a, b } = setup();
+    a.utilCharges = 0;
+    b.hp = 1;
+    a.fire = true;
+    let refilled = false;
+    for (let x = 0; x < 0.5; x += TICK_DT) {
+      tick(s, TICK_DT);
+      if (s.events.some((e) => e.t === 'refill' && e.id === 'a')) refilled = true;
+    }
+    expect(a.utilCharges).toBe(1);
+    expect(refilled).toBe(true);
+  });
+
+  it('does not go past the maximum', () => {
+    const { s, a, b } = setup();
+    b.hp = 1;
+    a.fire = true;
+    run(s, 0.5);
+    expect(a.utilCharges).toBe(2);
   });
 });

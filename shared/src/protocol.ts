@@ -24,6 +24,7 @@ export interface InputFrame {
   /** Edge-triggered: true only on the frame the key went down. */
   ability: boolean;
   pickup: boolean;
+  reload?: boolean;
   /** 1 = switch to primary, 2 = switch to secondary, 0 = no change. */
   slot: 0 | 1 | 2;
   /** Edge-triggered: throw the utility toward the cursor. */
@@ -63,6 +64,8 @@ export interface PlayerSnap {
   primary: GunId;
   secondary: GunId;
   slot: 'primary' | 'secondary';
+  ammo: { primary: number; secondary: number };
+  reloadIn: number;
   utility: UtilId;
   utilCharges: number;
   /** Seconds of flash blindness left. */
@@ -118,8 +121,6 @@ export interface ThrowableSnap {
   y: number;
   /** Height above the floor. */
   z: number;
-  /** Snap Trap is live. */
-  armed: boolean;
   owner: string;
 }
 
@@ -199,6 +200,7 @@ export type GameEvent =
   | { t: 'streak'; id: string; n: number }
   | { t: 'goo'; x: number; y: number }
   | { t: 'ladder'; id: string; gun: GunId }
+  | { t: 'refill'; id: string; util: UtilId }
   | { t: 'win'; id: string };
 
 export interface Snapshot {

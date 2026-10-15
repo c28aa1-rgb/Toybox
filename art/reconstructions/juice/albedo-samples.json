@@ -1,25 +1,25 @@
 {
   "silhouetteBBoxNormalized": [
-    0.152,
-    0.227,
-    0.844,
-    0.777
+    0.293,
+    0.059,
+    0.695,
+    0.906
   ],
-  "silhouetteAspectWH": 1.255,
+  "silhouetteAspectWH": 0.475,
   "regions": {
     "body-plastic": {
       "region_px": [
-        724,
-        782,
+        550,
+        450,
         30,
         30
       ],
       "median_rgb": [
-        232,
-        116,
-        22
+        252,
+        91,
+        89
       ],
-      "hex": "#E87416"
+      "hex": "#FC5B59"
     }
   }
 }
