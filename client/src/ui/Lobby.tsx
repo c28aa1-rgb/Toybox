@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { GUNS, HATS, HEROES, abilityTag, MAPS, MODES, MODE_IDS, PARTY_MAP_IDS, SECONDARY_IDS, type GunId, type HeroId, type MapId, type ModeId, type HatId, type UtilId, UTILS } from '@gg/shared';
 import type { JoinOptions } from '../game/GameClient';
@@ -34,8 +34,11 @@ export function Lobby({ portraits, onPlay }: { portraits: Portraits; onPlay: (o:
   const invited = initialRoom() !== '';
   const [page, setPage] = useState<'home' | 'friends'>('home');
 
-  useEffect(() => {
-    fetchProfile().then((p) => {
+  const refreshProfile = useCallback(async () => {
+    setProfileReady(false);
+    setProfileError('');
+    try {
+      const p = await fetchProfile();
       setProfile(p);
       setName(p.name);
       setHero(p.hero);
@@ -43,10 +46,13 @@ export function Lobby({ portraits, onPlay }: { portraits: Portraits; onPlay: (o:
       setSecondary(p.secondary);
       setUtility(p.utility);
       setHat(p.hat);
-    }).catch((error: unknown) => {
+      setProfileReady(true);
+    } catch (error: unknown) {
       setProfileError(error instanceof Error ? error.message : 'Could not load your profile.');
-    }).finally(() => setProfileReady(true));
+    }
   }, []);
+
+  useEffect(() => { void refreshProfile(); }, [refreshProfile]);
 
   const go = async (opts: Pick<JoinOptions, 'mode' | 'room' | 'map' | 'gameMode'>) => {
     setSavingProfile(true);
@@ -57,6 +63,7 @@ export function Lobby({ portraits, onPlay }: { portraits: Portraits; onPlay: (o:
       onPlay({ ...opts, ...saved });
     } catch (error) {
       setProfileError(error instanceof Error ? error.message : 'Could not save your profile.');
+      setProfileReady(false);
     } finally {
       setSavingProfile(false);
     }
@@ -111,7 +118,7 @@ export function Lobby({ portraits, onPlay }: { portraits: Portraits; onPlay: (o:
           ))}
         </div>
         <div className="lobby__friends">
-          {profileError && <p className="lobby__hint" role="alert">{profileError}</p>}
+          {profileError && <ServerProfileNotice error={profileError} onRetry={refreshProfile} />}
           <motion.button
             type="button"
             className="btn btn--primary"
@@ -190,10 +197,10 @@ export function Lobby({ portraits, onPlay }: { portraits: Portraits; onPlay: (o:
           whileTap={{ scaleX: 1.05, scaleY: 0.93, y: 4 }}
         >
           <span>{invited ? `Join ${room}` : 'Play'}</span>
-          <small>{invited ? 'Your friend\'s private room' : 'Public arena · always on · map picked by vote'}</small>
+          <small>{profileError ? 'Profile service unavailable' : !profileReady ? 'Connecting to game server…' : invited ? 'Your friend\'s private room' : 'Public arena · always on · map picked by vote'}</small>
         </motion.button>
       </section>
-      {profileError && <p className="lobby__hint" role="alert">{profileError}</p>}
+      {profileError && <ServerProfileNotice error={profileError} onRetry={refreshProfile} />}
 
       <section className="lobby__section">
         <h2 className="section-title">Your loadout</h2>
@@ -221,6 +228,18 @@ export function Lobby({ portraits, onPlay }: { portraits: Portraits; onPlay: (o:
         <ControlsButton />
       </footer>
     </main>
+  );
+}
+
+function ServerProfileNotice({ error, onRetry }: { error: string; onRetry: () => void }) {
+  return (
+    <div className="lobby__server-error" role="alert">
+      <div>
+        <strong>Play is disabled because the game server couldn’t load or create your profile.</strong>
+        <small>{error}</small>
+      </div>
+      <button type="button" className="btn btn--ghost lobby__server-retry" onClick={onRetry}>Retry connection</button>
+    </div>
   );
 }
 

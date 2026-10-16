@@ -1014,6 +1014,30 @@ kbd {
   font-weight: 500;
 }
 
+.lobby__server-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 10px 0;
+  padding: 10px 14px;
+  border: 2px solid var(--danger);
+  border-radius: var(--radius-sm);
+  background: var(--cream);
+  color: var(--ink);
+  box-shadow: var(--lift-sm);
+}
+
+.lobby__server-error strong,
+.lobby__server-error small { display: block; }
+.lobby__server-error strong { color: var(--danger); }
+.lobby__server-error small { margin-top: 2px; }
+.lobby__server-retry { flex: 0 0 auto; padding: 6px 12px; font-size: 14px; }
+
+@media (max-width: 600px) {
+  .lobby__server-error { align-items: stretch; flex-direction: column; }
+}
+
 .maps {
   align-items: start;
   display: grid;
