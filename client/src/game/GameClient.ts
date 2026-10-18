@@ -1,13 +1,13 @@
 import * as THREE from 'three';
 import { CSS2DObject } from 'three/examples/jsm/renderers/CSS2DRenderer.js';
 import {
-  ABILITY, CHAT_MAX, GUNS, GUN_IDS, HATS, HEROES, MODES, TEAM_COLORS, PAD, THROW, UTILS, blinkTarget, grappleHit, grappleTravel, isUtilId, throwFlightTime, type HatId, type Loadout, type ModeId, type PlayerProfile, type UtilId, type WeaponId, INTERP_DELAY, MAPS, MAX_HP, MAX_INPUT_DT, PICKUP_RADIUS, POWER, POWERS, pointInRect, stepMovement,
+  ABILITY, CHAT_MAX, COSMETICS, GUNS, GUN_IDS, HEROES, PAINTS, type CosmeticKind, type KillFxId, type PaintId, type TrailId, MODES, TEAM_COLORS, PAD, THROW, UTILS, blinkTarget, grappleHit, grappleTravel, isUtilId, throwFlightTime, type Loadout, type ModeId, type PlayerProfile, type UtilId, type WeaponId, INTERP_DELAY, MAPS, MAX_HP, MAX_INPUT_DT, PICKUP_RADIUS, POWER, POWERS, pointInRect, stepMovement,
   type GameEvent, type GunId, type HeroId, type InputFrame, type MapDef, type MapId, type PlayerSnap, type PowerId,
   type Rect, type Snapshot,
 } from '@gg/shared';
 import { toon } from '../skins/toon';
 import { createGunModel, createHeroSkin, createUtilModel, type HeroSkin } from '../skins/registry';
-import { createHealModel } from '../skins/hats';
+import { createHealModel } from '../skins/heal';
 import { loadProfile, playerToken, setProfile } from '../unlocks';
 import { Sfx } from './audio';
 import { Particles, Rings, Shake, Shatter } from './fx';
@@ -31,7 +31,9 @@ export interface JoinOptions {
   gun: GunId;
   secondary: GunId;
   utility: UtilId;
-  hat: HatId;
+  paint: PaintId;
+  trail: TrailId;
+  killFx: KillFxId;
 }
 
 interface PlayerView {
@@ -123,6 +125,13 @@ export class GameClient {
   private ropeGeo = new THREE.CylinderGeometry(0.035, 0.035, 1, 6).rotateX(Math.PI / 2).translate(0, 0, 0.5);
   private hillView: THREE.Group | null = null;
   private streakKey = 0;
+  private unlockKey = 0;
+  /** When each player last dropped a trail puff. */
+  private trailAt = new Map<string, number>();
+  private trailHue = 0;
+  private balloons: { group: THREE.Group; vy: number; sway: number; born: number }[] = [];
+  /** Firework shells waiting to burst: when and where. */
+  private fireworks: { at: number; x: number; y: number; z: number; colors: string[] }[] = [];
   /** True while this player stands inside a smoke cloud. */
   private meSmoked = false;
   private arcLine: THREE.Line;
@@ -257,8 +266,8 @@ export class GameClient {
     this.hud = new HudStore({
       connected: false, error: null, room: opts.room ?? '', host: false, myId: null, me: null, players: [],
       phase: 'playing', winner: null, endsIn: 0, feed: [], ping: 0, fps: 0, killedBy: null, nearPickup: null,
-      loadout: { hero: opts.hero, gun: opts.gun, secondary: opts.secondary, utility: opts.utility, hat: opts.hat }, blind: 0, smoke: [],
-      mode: opts.gameMode ?? 'ffa', target: MODES[opts.gameMode ?? 'ffa'].target, teamScores: [0, 0], hill: null, streak: null, slowed: false, hurtTick: 0, toast: null, bots: 0,
+      loadout: { hero: opts.hero, gun: opts.gun, secondary: opts.secondary, utility: opts.utility, paint: opts.paint, trail: opts.trail, killFx: opts.killFx }, blind: 0, smoke: [],
+      mode: opts.gameMode ?? 'ffa', target: MODES[opts.gameMode ?? 'ffa'].target, teamScores: [0, 0], hill: null, streak: null, slowed: false, hurtTick: 0, toast: null, unlocks: [], bots: 0,
       isPublic: opts.mode === 'public', map: null, chat: [], chatOpen: false, banner: null, scoped: false, spectating: null,
       reconnecting: false, vote: null, myVote: null,
     });
@@ -283,8 +292,16 @@ export class GameClient {
       onProfile: (profile: PlayerProfile) => {
         const oldUnlocks = new Set(loadProfile().unlocks);
         setProfile(profile);
-        const unlocked = profile.unlocks.find((hat) => !oldUnlocks.has(hat) && HATS[hat].unlockKills > 0);
-        if (unlocked) this.toast(`Unlocked the ${HATS[unlocked].name}. Put it on from the lobby or when you respawn.`);
+        // New cosmetics from this kill: queue an unlock card for each.
+        const fresh = profile.unlocks.filter((key) => !oldUnlocks.has(key)).flatMap((key) => {
+          const [kind, id] = key.split(':') as [CosmeticKind, string];
+          const def = COSMETICS[kind]?.[id];
+          return def && def.unlockKills > 0 ? [{ key: ++this.unlockKey, kind, id, name: def.name }] : [];
+        });
+        if (fresh.length) {
+          this.hud.set({ unlocks: [...this.hud.get().unlocks, ...fresh] });
+          this.sfx.unlock();
+        }
       },
       onSnapshot: (snap) => this.onSnapshot(snap),
       onError: (message) => {
@@ -306,7 +323,7 @@ export class GameClient {
         const o = this.opts;
         return {
           type: 'join', ...this.rejoin, resume: true, idToken: await playerToken(), name: o.name,
-          hero: o.hero, gun: o.gun, secondary: o.secondary, utility: o.utility, hat: o.hat,
+          hero: o.hero, gun: o.gun, secondary: o.secondary, utility: o.utility, paint: o.paint, trail: o.trail, killFx: o.killFx,
         };
       },
       onClose: () => this.hud.set({ connected: false, reconnecting: false, error: this.hud.get().error ?? 'Disconnected from the server.' }),
@@ -323,7 +340,7 @@ export class GameClient {
     try {
       this.net.send({
         type: 'join', ...where, map: o.map, gameMode: o.gameMode, idToken: await playerToken(), name: o.name,
-        hero: o.hero, gun: o.gun, secondary: o.secondary, utility: o.utility, hat: o.hat,
+        hero: o.hero, gun: o.gun, secondary: o.secondary, utility: o.utility, paint: o.paint, trail: o.trail, killFx: o.killFx,
       });
     } catch {
       this.net.stop();
@@ -388,6 +405,11 @@ export class GameClient {
     this.spectateId = alive[next].id;
     this.spectateWaitUntil = 0;
     this.pushHud(this.latest, this.latest?.players.find((p) => p.id === this.myId) ?? null);
+  }
+
+  /** The HUD finished showing an unlock card. */
+  dismissUnlock(key: number): void {
+    this.hud.set({ unlocks: this.hud.get().unlocks.filter((u) => u.key !== key) });
   }
 
   /** Ask to come back once the respawn timer is done. Stays queued until the server spawns us. */
@@ -520,6 +542,7 @@ export class GameClient {
     this.particles.update(dt);
     this.rings.update(dt);
     this.shatter.update(dt);
+    this.updateKillFx(dt);
     if (snap && me) this.updateSpectate(snap, me);
     this.updateCamera(rawDt, me);
     this.updateDamageNumbers(rawDt);
@@ -650,7 +673,7 @@ export class GameClient {
         view = this.makeView(p.hero, p.name, p.id === this.myId);
         this.views.set(p.id, view);
       }
-      view.skin.setHat(p.hat);
+      view.skin.setPaint(p.paint ?? 'classic');
       if (view.team !== p.team) {
         // Team Brawl tints name tags and lasers by team so friend and foe read at a glance.
         view.team = p.team;
@@ -708,6 +731,7 @@ export class GameClient {
       this.updateRope(view, x, y, z, alive && look !== 'gone' ? dash : null);
       const visible = alive && look !== 'gone' && look !== 'shimmer';
       this.auras.update(p.id, x, y, visible && !smoked && view.skin.root.visible, p.powers ?? {}, moved, this.clock);
+      if (visible && !smoked && view.skin.root.visible) this.emitTrail(p.id, p.trail ?? 'none', p.paint ?? 'classic', x, y, z, moved, dt);
       this.updateLaser(view, x, y, aim, alive && scoped, p.gun, p.id === this.myId);
       this.updateLabel(view, p.hp, visible && !smoked);
       this.updateReveal(p.id, x, y, alive);
@@ -732,6 +756,101 @@ export class GameClient {
       g.removeFromParent();
       this.revealViews.delete(id);
     }
+  }
+
+  /**
+   * Cosmetic trail while running, plus the gold paint's sparkle. Puffs are rate-limited per player
+   * and only drop while actually moving.
+   */
+  private emitTrail(id: string, trail: TrailId, paint: PaintId, x: number, y: number, z: number, moved: number, dt: number): void {
+    if (paint === 'gold' && Math.random() < dt * 3) {
+      this.particles.burst({ x: x + (Math.random() - 0.5) * 0.8, y: y + (Math.random() - 0.5) * 0.8, z: 0.6 + Math.random() * 0.8 + z, count: 1, color: ['#FFF6C2', '#FFFFFF'], speed: 0.2, up: 0.4, life: 0.5, size: 0.09, gravity: 0 });
+    }
+    if (trail === 'none' || dt <= 0 || moved / dt < 1.5) return;
+    if (this.clock < (this.trailAt.get(id) ?? 0)) return;
+    this.trailAt.set(id, this.clock + (trail === 'rainbow' ? 0.03 : 0.06));
+    const fx = { x, y, z: 0.15 + z };
+    switch (trail) {
+      case 'sparkle':
+        this.particles.burst({ ...fx, z: fx.z + 0.3, count: 2, color: ['#FFFFFF', PALETTE.lemon], speed: 0.6, up: 1.2, life: 0.45, size: 0.09, gravity: 1 });
+        break;
+      case 'bubbles':
+        this.particles.burst({ ...fx, count: 1, color: ['#BFE6FF', '#E8F6FF'], speed: 0.3, up: 1.2, life: 1.0, size: 0.16, gravity: -0.6 });
+        break;
+      case 'confetti':
+        this.particles.burst({ ...fx, z: fx.z + 0.4, count: 3, color: [PALETTE.bubblegum, PALETTE.lemon, PALETTE.mint, PALETTE.sky, PALETTE.tangerine], speed: 1.2, up: 1.6, life: 0.7, size: 0.1, gravity: 4 });
+        break;
+      case 'rainbow': {
+        this.trailHue = (this.trailHue + 0.04) % 1;
+        const c = new THREE.Color().setHSL(this.trailHue, 0.85, 0.62);
+        this.particles.burst({ ...fx, count: 1, color: ['#' + c.getHexString()], speed: 0.05, up: 0.05, life: 0.7, size: 0.2, gravity: 0 });
+        break;
+      }
+    }
+  }
+
+  /** The killer's kill effect, played on top of the plastic shatter everyone gets. */
+  private playKillFx(fx: KillFxId, x: number, y: number): void {
+    const party = [PALETTE.bubblegum, PALETTE.lemon, PALETTE.mint, PALETTE.sky, PALETTE.tangerine, '#FFFFFF'];
+    const near = this.nearness(x, y);
+    switch (fx) {
+      case 'shatter':
+        return;
+      case 'confetti':
+        this.particles.burst({ x, y, z: 1, count: 70, color: party, speed: 7, up: 9, life: 1.4, size: 0.14, gravity: 7 });
+        if (near > 0.2) this.sfx.partyHorn(near);
+        return;
+      case 'squeak':
+        for (let i = 0; i < 10; i++) {
+          const a = (i / 10) * Math.PI * 2;
+          this.particles.burst({ x: x + Math.cos(a) * 0.4, y: y + Math.sin(a) * 0.4, z: 1.2, count: 2, color: [PALETTE.lemon, '#FFFFFF'], speed: 4, up: 2, life: 0.6, size: 0.16, gravity: 2, dir: a, cone: 0.3 });
+        }
+        this.rings.spawn(x, y, 2.4, PALETTE.lemon, 0.35);
+        if (near > 0.1) this.sfx.squeak(near);
+        return;
+      case 'balloons':
+        for (let i = 0; i < 5; i++) {
+          const g = new THREE.Group();
+          const color = party[i % 5];
+          const ball = new THREE.Mesh(new THREE.SphereGeometry(0.28, 14, 10), toon(color));
+          ball.scale.set(1, 1.2, 1);
+          ball.position.y = 0.6;
+          const string = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.01, 0.6, 4), toon('#FFFFFF'));
+          string.position.y = 0.1;
+          g.add(ball, string);
+          g.position.set(x + (Math.random() - 0.5) * 0.9, 0.6, y + (Math.random() - 0.5) * 0.9);
+          this.s.world.add(g);
+          this.balloons.push({ group: g, vy: 1.6 + Math.random() * 0.8, sway: Math.random() * 6, born: this.clock });
+        }
+        if (near > 0.2) this.sfx.pop();
+        return;
+      case 'fireworks':
+        for (let i = 0; i < 3; i++) {
+          this.fireworks.push({ at: this.clock + 0.35 + i * 0.22, x: x + (Math.random() - 0.5) * 2, y: y + (Math.random() - 0.5) * 2, z: 4 + Math.random() * 1.5, colors: [party[i % 6], party[(i + 2) % 6], '#FFFFFF'] });
+          this.particles.burst({ x, y, z: 0.8, count: 4, color: ['#FFE9A0', '#FFFFFF'], speed: 0.4, up: 9, life: 0.4, size: 0.1, gravity: 0 });
+        }
+        if (near > 0.2) this.sfx.whistle(near);
+        return;
+    }
+  }
+
+  private updateKillFx(dt: number): void {
+    this.balloons = this.balloons.filter((b) => {
+      const age = this.clock - b.born;
+      b.group.position.y += b.vy * dt;
+      b.group.position.x += Math.sin(this.clock * 2 + b.sway) * dt * 0.4;
+      if (age > 3) {
+        b.group.removeFromParent();
+        return false;
+      }
+      return true;
+    });
+    this.fireworks = this.fireworks.filter((f) => {
+      if (this.clock < f.at) return true;
+      this.particles.burst({ x: f.x, y: f.y, z: f.z, count: 40, color: f.colors, speed: 6, up: 2, life: 1.1, size: 0.13, gravity: 3 });
+      if (this.nearness(f.x, f.y) > 0.2) this.sfx.fireworkPop(this.nearness(f.x, f.y));
+      return false;
+    });
   }
 
   /** You, or a teammate in Team Brawl. */
@@ -1442,6 +1561,8 @@ export class GameClient {
         if (victimView && pos) {
           const from = this.viewPos(ev.killer) ?? pos;
           this.shatter.burst(victimView.skin.root, new THREE.Vector3(from.x, 0.7, from.y), ev.gun === 'rocket' || ev.gun === 'shotgun' || ev.gun === 'frag' ? 1.6 : 1);
+          const killer = this.latest?.players.find((o) => o.id === ev.killer);
+          if (killer && ev.killer !== ev.victim) this.playKillFx(killer.killFx ?? 'shatter', pos.x, pos.y);
           victimView.skin.root.visible = false;
           victimView.laser.visible = false;
           victimView.laserGlow.visible = false;

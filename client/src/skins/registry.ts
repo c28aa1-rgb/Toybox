@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
-import { HEROES, type GunId, type HatId, type HeroId, type UtilId } from '@gg/shared';
-import { createHatModel } from './hats';
+import { HEROES, PAINTS, type GunId, type HeroId, type PaintId, type UtilId } from '@gg/shared';
 import { mesh, toon } from './toon';
 
 /**
@@ -12,7 +11,8 @@ import { mesh, toon } from './toon';
 export interface HeroSkin {
   root: THREE.Group;
   setGun(gun: GunId): void;
-  setHat(hat: HatId): void;
+  /** Recolour the body and mitts; the belly, eyes and accessories keep their colours. */
+  setPaint(paint: PaintId): void;
   /**
    * moving: 0..1 movement amount this frame. moveX/moveZ: unit movement direction in the
    * model's own frame (+Z forward). Returns true on a footfall, for dust puffs and sounds.
@@ -225,24 +225,41 @@ export function createHeroSkin(hero: HeroId): HeroSkin {
       meshes.push(o);
     }
   });
+  // What each part glows like normally, so a hit flash can put it back (catchlights, lamps, paint glow).
+  const baseGlow = new Map<THREE.Mesh, { color: THREE.Color; intensity: number }>();
+  const rememberGlow = (m: THREE.Mesh) => {
+    const mat = m.material as THREE.MeshToonMaterial;
+    baseGlow.set(m, { color: mat.emissive.clone(), intensity: mat.emissiveIntensity });
+  };
+  meshes.forEach(rememberGlow);
+
+  // Paintable parts: anything moulded in the body plastic (the egg and the mitts). The egg carries its
+  // colour, and the cream belly, in vertex colours; the mitts use the material colour.
+  const heroColor = new THREE.Color(HEROES[hero].color);
+  const paintable = meshes.filter((m) => {
+    const sc = m.userData.sculptComponent as { material?: string } | undefined;
+    if (sc) return sc.material === 'body-plastic';
+    return (m.material as THREE.MeshToonMaterial).color.equals(heroColor);
+  });
+  const original = new Map<THREE.Mesh, THREE.Color | Float32Array>();
+  for (const m of paintable) {
+    const colors = m.geometry.getAttribute('color') as THREE.BufferAttribute | undefined;
+    if (colors) {
+      // Geometry is shared between clones; give this player its own copy before recolouring it.
+      m.geometry = m.geometry.clone();
+      original.set(m, Float32Array.from((m.geometry.getAttribute('color') as THREE.BufferAttribute).array as Float32Array));
+    } else {
+      original.set(m, (m.material as THREE.MeshToonMaterial).color.clone());
+    }
+  }
+  const sculptBase = (m: THREE.Mesh): THREE.Color => {
+    const vp = (m.userData.sculptComponent as { vertexPaint?: { baseColor?: string } } | undefined)?.vertexPaint;
+    return new THREE.Color(vp?.baseColor ?? HEROES[hero].color);
+  };
+  let currentPaint: PaintId = 'classic';
 
   let gunModel: THREE.Group | null = null;
   let currentGun: GunId | null = null;
-  let hatModel: THREE.Group | null = null;
-  let currentHat: HatId = 'none';
-  // Hats sit on the crown of the head. Antennae and bells are left out of the measurement
-  // so the hat doesn't float above them.
-  const hatY = (() => {
-    const box = new THREE.Box3();
-    const skip = parts.antenna;
-    body.updateMatrixWorld(true);
-    body.traverse((o) => {
-      if (!(o instanceof THREE.Mesh)) return;
-      for (let a: THREE.Object3D | null = o; a; a = a.parent) if (a === skip) return;
-      box.expandByObject(o, false);
-    });
-    return box.isEmpty() ? 1.4 : box.max.y - 0.05;
-  })();
   let phase = 0;
   let flashT = 0;
   let squash = 0;
@@ -260,20 +277,38 @@ export function createHeroSkin(hero: HeroId): HeroSkin {
       gunSocket.add(gunModel);
       squash = 1;
     },
-    setHat(hat) {
-      if (hat === currentHat) return;
-      currentHat = hat;
-      if (hatModel) bob.remove(hatModel);
-      hatModel = createHatModel(hat);
-      if (hatModel) {
-        hatModel.position.y = hatY;
-        bob.add(hatModel);
+    setPaint(paint) {
+      if (paint === currentPaint) return;
+      currentPaint = paint;
+      const def = PAINTS[paint];
+      for (const m of paintable) {
+        const mat = m.material as THREE.MeshToonMaterial;
+        const src = original.get(m)!;
+        if (src instanceof Float32Array) {
+          // Slide each vertex from the hero's colour to the paint, by how much of the hero's colour it had,
+          // so the cream belly and the soft edge around it survive.
+          const base = sculptBase(m);
+          const target = def.color ? new THREE.Color(def.color) : base;
+          const attr = m.geometry.getAttribute('color') as THREE.BufferAttribute;
+          const cream = new THREE.Color('#F3E6CC');
+          const span = new THREE.Vector3(base.r - cream.r, base.g - cream.g, base.b - cream.b);
+          const len2 = Math.max(1e-6, span.lengthSq());
+          for (let i = 0; i < attr.count; i++) {
+            const r0 = src[i * 3], g0 = src[i * 3 + 1], b0 = src[i * 3 + 2];
+            const t = Math.min(1, Math.max(0, ((r0 - cream.r) * span.x + (g0 - cream.g) * span.y + (b0 - cream.b) * span.z) / len2));
+            attr.setXYZ(i, cream.r + (target.r - cream.r) * t, cream.g + (target.g - cream.g) * t, cream.b + (target.b - cream.b) * t);
+          }
+          attr.needsUpdate = true;
+        } else {
+          mat.color.copy(def.color ? new THREE.Color(def.color) : src);
+        }
+        mat.emissive.set(def.glow ?? '#000000');
+        mat.emissiveIntensity = def.glow ? 0.35 : 0;
+        rememberGlow(m);
       }
     },
     animate(dt, moving, moveX = 0, moveZ = 1) {
       const prevSin = Math.sin(phase);
-      const spin = hatModel?.getObjectByName('spin');
-      if (spin) spin.rotation.y += dt * (6 + moving * 14);
       phase += dt * (5 + moving * 12);
       idle += dt;
       const sin = Math.sin(phase);
@@ -316,8 +351,14 @@ export function createHeroSkin(hero: HeroId): HeroSkin {
         const on = flashT > 0;
         for (const m of meshes) {
           const mat = m.material as THREE.MeshToonMaterial;
-          mat.emissive.setRGB(on ? 1 : 0, on ? 1 : 0, on ? 1 : 0);
-          mat.emissiveIntensity = on ? Math.min(1, flashT * 10) : 0;
+          const glow = baseGlow.get(m)!;
+          if (on) {
+            mat.emissive.setRGB(1, 1, 1);
+            mat.emissiveIntensity = Math.min(1, flashT * 10);
+          } else {
+            mat.emissive.copy(glow.color);
+            mat.emissiveIntensity = glow.intensity;
+          }
         }
       }
       return stepped;
@@ -335,6 +376,7 @@ export function createHeroSkin(hero: HeroId): HeroSkin {
     },
     dispose() {
       for (const m of meshes) (m.material as THREE.Material).dispose();
+      for (const m of paintable) if (original.get(m) instanceof Float32Array) m.geometry.dispose();
     },
   };
 }

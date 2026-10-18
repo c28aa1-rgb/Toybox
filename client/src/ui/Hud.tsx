@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { CHAT_MAX, GUNS, HEROES, MAPS, MAX_PLAYERS, MODES, SECONDARY_IDS, TEAM_COLORS, TEAM_NAMES, type Loadout, type PlayerSnap } from '@gg/shared';
-import type { Banner, ChatLine, HudState, StreakCall } from '../game/store';
+import type { Banner, ChatLine, HudState, StreakCall, UnlockNote } from '../game/store';
 import { itemName, type GameClient } from '../game/GameClient';
 import { useHud } from '../game/store';
 import { isRemoteServer } from '../game/server';
-import { loadProfile } from '../unlocks';
 import type { Portraits } from './App';
-import { GunRack, HatRack, HeroShelf, UtilRack } from './Pickers';
+import { GunRack, HeroShelf, UtilRack } from './Pickers';
+import { CosmeticPreview } from './Customize';
 import { MusicToggle } from './MusicToggle';
 import { CombatHud } from './CombatHud';
 import { PowerChips } from './PowerChips';
@@ -115,6 +115,7 @@ export function Hud({ client, portraits, onLeave }: { client: GameClient; portra
       </AnimatePresence>
 
       <Toast toast={s.toast} />
+      <UnlockNotice note={s.unlocks[0] ?? null} onDone={(key) => client.dismissUnlock(key)} />
       <StreakCallout call={s.streak} />
       {me.alive && s.slowed && <div className="slow-tag">Slowed</div>}
       <EliminationBanner banner={s.banner} />
@@ -422,6 +423,39 @@ function FlashOverlay({ blind }: { blind: number }) {
   return <div className="flash-overlay" style={{ opacity }} aria-hidden />;
 }
 
+const UNLOCK_KIND: Record<UnlockNote['kind'], string> = { paint: 'New paint job', trail: 'New trail', killFx: 'New kill effect' };
+
+/** One card per new cosmetic, shown in turn for a few seconds each. */
+function UnlockNotice({ note, onDone }: { note: UnlockNote | null; onDone: (key: number) => void }) {
+  useEffect(() => {
+    if (!note) return;
+    const t = setTimeout(() => onDone(note.key), 3800);
+    return () => clearTimeout(t);
+  }, [note, onDone]);
+  return (
+    <AnimatePresence>
+      {note && (
+        <motion.div
+          key={note.key}
+          className="unlock"
+          role="status"
+          initial={{ y: -40, scale: 0.7, opacity: 0, x: '-50%' }}
+          animate={{ y: 0, scale: 1, opacity: 1, x: '-50%' }}
+          exit={{ y: -20, opacity: 0, x: '-50%' }}
+          transition={{ type: 'spring', stiffness: 520, damping: 18 }}
+        >
+          <CosmeticPreview kind={note.kind} id={note.id} />
+          <div className="unlock__text">
+            <span className="unlock__kind">Unlocked · {UNLOCK_KIND[note.kind]}</span>
+            <b className="unlock__name">{note.name}</b>
+            <small>Equip it from Customize in the lobby.</small>
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
 function Toast({ toast }: { toast: { key: number; text: string } | null }) {
   const [visible, setVisible] = useState<typeof toast>(null);
   useEffect(() => {
@@ -499,7 +533,6 @@ function DeathPanel({
   loadout: Loadout;
   onLeave: () => void;
 }) {
-  const kills = loadProfile().kills;
   const [open, setOpen] = useState(() => {
     try {
       return localStorage.getItem(LOADOUT_PANEL_KEY) === 'open';
@@ -539,7 +572,6 @@ function DeathPanel({
       <GunRack compact value={loadout.gun} portraits={portraits} onChange={(gun) => client.setLoadout({ ...loadout, gun })} />
       <GunRack compact ids={SECONDARY_IDS} label="Secondary gun" value={loadout.secondary} portraits={portraits} onChange={(secondary) => client.setLoadout({ ...loadout, secondary })} />
       <UtilRack compact value={loadout.utility} portraits={portraits} onChange={(utility) => client.setLoadout({ ...loadout, utility })} />
-      <HatRack compact value={loadout.hat} kills={kills} portraits={portraits} onChange={(hat) => client.setLoadout({ ...loadout, hat })} />
       </div>}
     </motion.div>
   );

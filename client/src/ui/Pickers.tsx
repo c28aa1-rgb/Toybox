@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { GUNS, HATS, HAT_IDS, HEROES, HERO_IDS, PRIMARY_IDS, UTILS, UTIL_IDS, abilityTag, type GunId, type HatId, type HeroId, type UtilId } from '@gg/shared';
+import { GUNS, HEROES, HERO_IDS, PRIMARY_IDS, UTILS, UTIL_IDS, abilityTag, type GunId, type HeroId, type UtilId } from '@gg/shared';
 import type { Portraits } from './App';
 
 const spring = { type: 'spring', stiffness: 520, damping: 22 } as const;
@@ -107,38 +107,6 @@ export function UtilRack({
             <img src={portraits.utils[id]} alt="" draggable={false} />
             <span className="peg__name">{u.name}</span>
             {!compact && <span className="peg__meta">{u.blurb} {u.charges} per life.</span>}
-          </motion.button>
-        );
-      })}
-    </div>
-  );
-}
-
-export function HatRack({
-  value, onChange, kills, portraits, compact = false,
-}: { value: HatId; onChange: (h: HatId) => void; kills: number; portraits: Portraits; compact?: boolean }) {
-  return (
-    <div className={`rack rack--hats${compact ? ' rack--compact' : ''}`} role="radiogroup" aria-label="Hat">
-      {HAT_IDS.map((id) => {
-        const h = HATS[id];
-        const open = kills >= h.unlockKills;
-        const selected = id === value;
-        return (
-          <motion.button
-            key={id}
-            type="button"
-            role="radio"
-            aria-checked={selected}
-            aria-disabled={!open}
-            className={`peg${selected ? ' is-selected' : ''}${open ? '' : ' is-locked'}`}
-            onClick={() => open && onChange(id)}
-            whileHover={open ? { y: -4, rotate: 2 } : { x: [0, -4, 4, -2, 0] }}
-            whileTap={open ? { scale: 0.95 } : undefined}
-            transition={spring}
-          >
-            <img src={portraits.hats[id]} alt="" draggable={false} />
-            <span className="peg__name">{h.name}</span>
-            {!open && <span className="peg__meta">{compact ? `${h.unlockKills} kills` : `Unlocks at ${h.unlockKills} kills`}</span>}
           </motion.button>
         );
       })}

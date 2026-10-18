@@ -1,7 +1,7 @@
 import type { WebSocket } from 'ws';
 import {
   CHAT_MAX, MAX_PLAYERS, PUBLIC_MIN_PLAYERS, TICK_DT, TICK_RATE, abilityStatus, addPlayer, applyInput, createGame, isHidden, r2,
-  HAT_IDS, MAPS, PAD, MODES, POWER_IDS, PUBLIC_MAP_IDS, removePlayer, setLoadout, tick, type GameState, type GunId, type HeroId, type InputFrame, type MapId, type ModeId, type UtilId, type Loadout,
+  KILL_FX_IDS, PAINT_IDS, TRAIL_IDS, MAPS, PAD, MODES, POWER_IDS, PUBLIC_MAP_IDS, removePlayer, setLoadout, tick, type GameState, type GunId, type HeroId, type InputFrame, type MapId, type ModeId, type UtilId, type Loadout,
   type MapVote, type PowerId, type ServerMsg, type Snapshot, type WeaponId,
 } from '@gg/shared';
 import { botHero, botInput, botName, forgetBot } from './bots';
@@ -238,7 +238,9 @@ export class Room {
       const utils: UtilId[] = ['frag', 'flash', 'smoke', 'pad', 'juice'];
       addPlayer(this.state, {
         id, name: botName(i), hero: botHero(i), gun: guns[i % guns.length],
-        secondary: sides[(i * 2) % sides.length], utility: utils[(i * 3) % utils.length], hat: HAT_IDS[i % HAT_IDS.length], bot: true,
+        secondary: sides[(i * 2) % sides.length], utility: utils[(i * 3) % utils.length],
+        // Bots show off the cosmetics so players see what they can unlock.
+        paint: PAINT_IDS[i % PAINT_IDS.length], trail: TRAIL_IDS[(i + 1) % TRAIL_IDS.length], killFx: KILL_FX_IDS[(i + 2) % KILL_FX_IDS.length], bot: true,
       });
       this.bots.push(id);
     }
@@ -358,7 +360,9 @@ export class Room {
         ammo: p.ammo, reloadIn: r2(Math.max(0, p.reloadAt - t)),
         blindIn: r2(Math.max(0, p.blindUntil - t)),
         slowIn: r2(Math.max(0, p.slowUntil - t)),
-        hat: p.loadout.hat,
+        paint: p.loadout.paint,
+        trail: p.loadout.trail,
+        killFx: p.loadout.killFx,
         team: p.team,
         score: p.score,
         streak: p.streak,

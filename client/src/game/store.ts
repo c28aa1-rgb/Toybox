@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import type { SmokeFog } from './smoke';
-import type { HillSnap, Loadout, MapId, MapVote, ModeId, PlayerSnap, WeaponId } from '@gg/shared';
+import type { CosmeticKind, HillSnap, Loadout, MapId, MapVote, ModeId, PlayerSnap, WeaponId } from '@gg/shared';
 
 export interface FeedEntry {
   key: number;
@@ -33,6 +33,14 @@ export interface StreakCall {
   mine: boolean;
 }
 
+/** "New paint unlocked: Gold" card. */
+export interface UnlockNote {
+  key: number;
+  kind: CosmeticKind;
+  id: string;
+  name: string;
+}
+
 export interface HudState {
   connected: boolean;
   error: string | null;
@@ -63,6 +71,8 @@ export interface HudState {
   /** Bumps on each hit you take, used to flash the vignette. */
   hurtTick: number;
   toast: { key: number; text: string } | null;
+  /** Cosmetics unlocked this match that haven't been shown yet; the HUD shows them one at a time. */
+  unlocks: UnlockNote[];
   bots: number;
   isPublic: boolean;
   map: MapId | null;

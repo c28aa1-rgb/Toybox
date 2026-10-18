@@ -1350,7 +1350,7 @@ kbd {
 /* Loadout: four slot boxes, one drawer underneath. */
 .slots {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 16px;
 }
 
@@ -1735,3 +1735,172 @@ kbd {
   .hud-minimap { width: 120px !important; height: auto !important; }
   .chat { bottom: 130px; }
 }
+
+/* ---------- customize ---------- */
+
+.loadout-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.loadout-head .section-title { margin: 0; }
+.customize-btn { display: inline-flex; align-items: center; gap: 10px; padding: 8px 16px 8px 10px; }
+.customize-btn__chips { display: inline-flex; gap: 4px; }
+.customize-btn__chips .cpreview { width: 26px; height: 26px; border-width: 2px; }
+.loadout-cosmetics { margin: 10px 0 0; font-size: 13px; font-weight: 600; color: var(--cream); opacity: 0.7; }
+
+.customize {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(20, 10, 36, 0.72);
+}
+.customize__panel {
+  width: min(880px, 100%);
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  padding: 20px 22px 24px;
+  border: var(--outline);
+  border-radius: var(--radius);
+  background: var(--grape);
+  box-shadow: var(--lift);
+}
+.customize__head { display: flex; align-items: center; gap: 14px; }
+.customize__head .section-title { margin: 0; flex: 1; }
+.customize__kills { font-family: var(--font-mono); font-size: 13px; color: var(--lemon); }
+.customize__tabs { display: flex; gap: 8px; margin-top: 14px; }
+.customize__tab {
+  padding: 8px 18px;
+  border: var(--outline);
+  border-radius: 999px;
+  background: var(--grape-deep);
+  color: var(--cream);
+  font-family: var(--font-display);
+  font-size: 15px;
+  cursor: pointer;
+}
+.customize__tab.is-on { background: var(--lemon); color: var(--ink); box-shadow: var(--lift-sm); }
+.customize__tab:focus-visible { outline: 3px solid var(--lemon); outline-offset: 2px; }
+.customize__hint { margin: 10px 0 14px; font-size: 14px; color: var(--cream); opacity: 0.85; }
+.customize__grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
+
+.ccard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 10px 14px;
+  border: var(--outline);
+  border-radius: var(--radius-sm);
+  background: var(--cream);
+  color: var(--ink);
+  box-shadow: var(--lift-sm);
+  text-align: center;
+  cursor: pointer;
+}
+.ccard.is-selected { background: var(--lemon); outline: 3px solid var(--tangerine); outline-offset: 2px; }
+.ccard.is-locked { background: #D9D0E6; cursor: default; }
+.ccard.is-locked .cpreview { opacity: 0.7; }
+.ccard:focus-visible { outline: 3px solid var(--lemon); outline-offset: 2px; }
+.ccard__name { font-family: var(--font-display); font-size: 16px; }
+.ccard__blurb { font-size: 12px; line-height: 1.3; }
+.ccard__lock {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--cream);
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+/* Previews */
+.cpreview {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 92px;
+  height: 92px;
+  border: 3px solid var(--ink);
+  border-radius: 50%;
+  background: var(--grape-deep);
+  overflow: hidden;
+}
+.cpreview--empty { color: var(--cream); font-size: 22px; }
+.cpreview--paint { background: radial-gradient(circle at 35% 30%, #ffffff55, transparent 45%), var(--swatch); }
+.cpreview--paint img { width: 118%; height: 118%; object-fit: cover; margin-top: 12%; }
+.cpreview--paint i { display: none; }
+.cpreview--gold::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg, transparent 35%, #ffffffaa 50%, transparent 65%);
+  animation: cshine 2.2s ease-in-out infinite;
+}
+@keyframes cshine { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+
+.cpreview--trail i, .cpreview--killFx i {
+  position: absolute;
+  width: 10%;
+  height: 10%;
+  border-radius: 50%;
+  background: var(--c);
+}
+.cpreview--trail i {
+  left: calc(14% + var(--i) * 10%);
+  top: 55%;
+  opacity: calc(1 - var(--i) * 0.12);
+  animation: ctrail 1.4s ease-in-out infinite;
+  animation-delay: calc(var(--i) * -0.18s);
+}
+@keyframes ctrail { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-40%); } }
+.cpreview--trail-bubbles i { border: 1px solid #ffffffcc; background: #bfe6ff66; width: 14%; height: 14%; animation-name: cbubble; }
+@keyframes cbubble { from { transform: translateY(20%); opacity: 1; } to { transform: translateY(-220%); opacity: 0; } }
+.cpreview--trail-confetti i { border-radius: 2px; animation-name: cconfetti; }
+@keyframes cconfetti { from { transform: translateY(-80%) rotate(0); } to { transform: translateY(160%) rotate(220deg); } }
+.cpreview--trail-rainbow i { border-radius: 30%; width: 13%; animation: none; top: 46%; height: 16%; }
+
+.cpreview--killFx i {
+  left: 45%;
+  top: 45%;
+  animation: cburst 1.3s ease-out infinite;
+  --a: calc(var(--i) * 36deg);
+}
+@keyframes cburst {
+  0% { transform: rotate(var(--a)) translateY(0) scale(0.4); opacity: 1; }
+  70% { opacity: 1; }
+  100% { transform: rotate(var(--a)) translateY(-300%) scale(1); opacity: 0; }
+}
+.cpreview--killFx-shatter i { border-radius: 2px; }
+.cpreview--killFx-balloons i { width: 16%; height: 20%; border-radius: 50% 50% 48% 48%; animation-name: cballoon; left: calc(18% + var(--i) * 7%); top: 70%; }
+@keyframes cballoon { from { transform: translateY(0); opacity: 1; } to { transform: translateY(-260%); opacity: 0; } }
+.cpreview--killFx-fireworks i { animation-duration: 1.6s; }
+
+@media (max-width: 760px) {
+  .customize__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* Unlock card: drops in under the score bar when a kill unlocks something. */
+.unlock {
+  position: absolute;
+  left: 50%;
+  top: 92px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 20px 10px 10px;
+  border: var(--outline);
+  border-radius: var(--radius);
+  background: var(--lemon);
+  color: var(--ink);
+  box-shadow: var(--lift);
+  pointer-events: none;
+}
+.unlock .cpreview { width: 64px; height: 64px; }
+.unlock__text { display: flex; flex-direction: column; gap: 1px; }
+.unlock__kind { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; }
+.unlock__name { font-family: var(--font-display); font-weight: 400; font-size: 24px; }
+.unlock small { font-weight: 600; font-size: 12px; }

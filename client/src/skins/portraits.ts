@@ -1,12 +1,12 @@
 import * as THREE from 'three';
-import { GUN_IDS, HAT_IDS, HERO_IDS, UTIL_IDS, type GunId, type HatId, type HeroId, type UtilId } from '@gg/shared';
+import { GUN_IDS, HERO_IDS, PAINT_IDS, UTIL_IDS, type GunId, type HeroId, type PaintId, type UtilId } from '@gg/shared';
 import { createGunModel, createHeroSkin, createUtilModel } from './registry';
 
 /**
  * Renders each hero and gun once into a PNG data URL for the lobby cards.
  * Uses the same skin registry as the game, so new models show up here automatically.
  */
-export function renderPortraits(): { heroes: Record<HeroId, string>; guns: Record<GunId, string>; utils: Record<UtilId, string>; hats: Record<HatId, string> } {
+export function renderPortraits(): { heroes: Record<HeroId, string>; guns: Record<GunId, string>; utils: Record<UtilId, string> } {
   const size = 256;
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
   renderer.setSize(size, size);
@@ -51,22 +51,6 @@ export function renderPortraits(): { heroes: Record<HeroId, string>; guns: Recor
   };
   const utils = {} as Record<UtilId, string>;
   for (const id of UTIL_IDS) utils[id] = shoot(createUtilModel(id), 0.5);
-  // Hats are shown on the default hero so you can see how they sit.
-  const hats = {} as Record<HatId, string>;
-  for (const id of HAT_IDS) {
-    const skin = createHeroSkin('blink');
-    skin.setGun('pistol');
-    skin.setHat(id);
-    skin.root.rotation.y = -0.45;
-    scene.add(skin.root);
-    camera.position.set(0, 1.5, 3.6);
-    camera.lookAt(0, 1.05, 0);
-    renderer.render(scene, camera);
-    hats[id] = renderer.domElement.toDataURL('image/png');
-    scene.remove(skin.root);
-    skin.dispose();
-  }
-
   for (const id of GUN_IDS) {
     const g = createGunModel(id);
     const box = new THREE.Box3().setFromObject(g);
@@ -86,5 +70,42 @@ export function renderPortraits(): { heroes: Record<HeroId, string>; guns: Recor
 
   renderer.dispose();
   renderer.forceContextLoss();
-  return { heroes, guns, utils, hats };
+  return { heroes, guns, utils };
+}
+
+const paintCache = new Map<HeroId, Record<PaintId, string>>();
+
+/** One hero in every paint job, for the Customize panel. Rendered on first ask and cached. */
+export function renderPaintPortraits(hero: HeroId): Record<PaintId, string> {
+  const cached = paintCache.get(hero);
+  if (cached) return cached;
+  const size = 220;
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+  renderer.setSize(size, size);
+  renderer.setPixelRatio(1);
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  const scene = new THREE.Scene();
+  scene.add(new THREE.HemisphereLight('#FFF1E0', '#5B2A86', 1.8));
+  const sun = new THREE.DirectionalLight('#FFFFFF', 2.4);
+  sun.position.set(2, 4, 5);
+  scene.add(sun);
+  const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 50);
+  camera.position.set(0, 1.2, 4.6);
+  camera.lookAt(0, 0.8, 0);
+  const out = {} as Record<PaintId, string>;
+  for (const paint of PAINT_IDS) {
+    const skin = createHeroSkin(hero);
+    skin.setGun('pistol');
+    skin.setPaint(paint);
+    skin.root.rotation.y = -0.45;
+    scene.add(skin.root);
+    renderer.render(scene, camera);
+    out[paint] = renderer.domElement.toDataURL('image/png');
+    scene.remove(skin.root);
+    skin.dispose();
+  }
+  renderer.dispose();
+  renderer.forceContextLoss();
+  paintCache.set(hero, out);
+  return out;
 }

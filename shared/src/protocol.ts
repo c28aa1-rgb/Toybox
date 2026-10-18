@@ -1,6 +1,6 @@
 import type { GunId } from './guns';
 import type { HeroId } from './heroes';
-import type { HatId } from './cosmetics';
+import type { KillFxId, PaintId, TrailId } from './cosmetics';
 import type { MapId } from './map';
 import type { PowerId } from './powers';
 import type { ModeId } from './modes';
@@ -42,7 +42,9 @@ export interface Loadout {
   gun: GunId;
   secondary: GunId;
   utility: UtilId;
-  hat: HatId;
+  paint: PaintId;
+  trail: TrailId;
+  killFx: KillFxId;
 }
 
 export interface PlayerProfile extends Loadout {
@@ -50,17 +52,18 @@ export interface PlayerProfile extends Loadout {
   kills: number;
   deaths: number;
   wins: number;
-  unlocks: HatId[];
+  /** Cosmetics unlocked so far, as "kind:id" keys. */
+  unlocks: string[];
 }
 
 // ---- client -> server ----
 
 export type ClientMsg =
   /** public: the always-on lobby. create: a new private room on `map`. join: a private room by code. */
-  | { type: 'join'; mode: 'public' | 'create' | 'join'; room?: string; map?: MapId; gameMode?: ModeId; idToken: string; /** Move an existing player onto this (healthier) socket instead of adding a new one. */ resume?: boolean; name: string; hero: HeroId; gun: GunId; secondary: GunId; utility: UtilId; hat: HatId }
+  | { type: 'join'; mode: 'public' | 'create' | 'join'; room?: string; map?: MapId; gameMode?: ModeId; idToken: string; /** Move an existing player onto this (healthier) socket instead of adding a new one. */ resume?: boolean; name: string; hero: HeroId; gun: GunId; secondary: GunId; utility: UtilId; paint: PaintId; trail: TrailId; killFx: KillFxId }
   | { type: 'chat'; text: string }
   | { type: 'input'; frames: InputFrame[] }
-  | { type: 'loadout'; hero: HeroId; gun: GunId; secondary: GunId; utility: UtilId; hat: HatId }
+  | { type: 'loadout'; hero: HeroId; gun: GunId; secondary: GunId; utility: UtilId; paint: PaintId; trail: TrailId; killFx: KillFxId }
   | { type: 'bots'; count: number }
   /** Public lobby, on the results screen: vote for the next map. */
   | { type: 'vote'; map: MapId }
@@ -85,7 +88,9 @@ export interface PlayerSnap {
   blindIn: number;
   /** Seconds left on a Stinger slow. */
   slowIn: number;
-  hat: HatId;
+  paint: PaintId;
+  trail: TrailId;
+  killFx: KillFxId;
   /** 0 red, 1 blue, -1 when there are no teams. */
   team: number;
   /** What counts toward winning in this mode: kills, hill points or ladder step. */

@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { GUNS, HATS, HEROES, abilityTag, MAPS, MODES, MODE_IDS, PARTY_MAP_IDS, SECONDARY_IDS, type GunId, type HeroId, type MapId, type ModeId, type HatId, type UtilId, UTILS } from '@gg/shared';
+import { COSMETICS, GUNS, HEROES, abilityTag, MAPS, MODES, MODE_IDS, PARTY_MAP_IDS, SECONDARY_IDS, type GunId, type HeroId, type MapId, type ModeId, type UtilId, UTILS } from '@gg/shared';
 import type { JoinOptions } from '../game/GameClient';
 import { fetchProfile, loadProfile, patchProfile } from '../unlocks';
 import { apiUrl } from '../game/server';
 import type { Portraits } from './App';
-import { GunRack, HatRack, HeroShelf, UtilRack } from './Pickers';
+import { GunRack, HeroShelf, UtilRack } from './Pickers';
+import { CosmeticPreview, CustomizePanel, type CosmeticPicks } from './Customize';
 import { MiniMap } from './MapPreview';
 import { MusicToggle } from './MusicToggle';
 import { music } from '../game/audio';
@@ -27,7 +28,8 @@ export function Lobby({ portraits, onPlay }: { portraits: Portraits; onPlay: (o:
   const [gun, setGun] = useState<GunId>(profile.gun);
   const [secondary, setSecondary] = useState<GunId>(profile.secondary);
   const [utility, setUtility] = useState<UtilId>(profile.utility);
-  const [hat, setHat] = useState<HatId>(profile.hat);
+  const [picks, setPicks] = useState<CosmeticPicks>({ paint: profile.paint, trail: profile.trail, killFx: profile.killFx });
+  const [customizing, setCustomizing] = useState(false);
   const [gameMode, setGameMode] = useState<ModeId>('ffa');
   useEffect(() => music.play('lobby'), []);
   const [room, setRoom] = useState(initialRoom);
@@ -60,7 +62,7 @@ export function Lobby({ portraits, onPlay }: { portraits: Portraits; onPlay: (o:
       setGun(p.gun);
       setSecondary(p.secondary);
       setUtility(p.utility);
-      setHat(p.hat);
+      setPicks({ paint: p.paint, trail: p.trail, killFx: p.killFx });
       setProfileReady(true);
     } catch (error: unknown) {
       setProfileError(error instanceof Error ? error.message : 'Could not load your profile.');
@@ -73,7 +75,7 @@ export function Lobby({ portraits, onPlay }: { portraits: Portraits; onPlay: (o:
     setSavingProfile(true);
     setProfileError('');
     try {
-      const saved = await patchProfile({ name: name.trim() || 'Player', hero, gun, secondary, utility, hat });
+      const saved = await patchProfile({ name: name.trim() || 'Player', hero, gun, secondary, utility, ...picks });
       setProfile(saved);
       onPlay({ ...opts, ...saved });
     } catch (error) {
@@ -224,14 +226,48 @@ export function Lobby({ portraits, onPlay }: { portraits: Portraits; onPlay: (o:
       {profileError && <ServerProfileNotice error={profileError} onRetry={refreshProfile} />}
 
       <section className="lobby__section">
-        <h2 className="section-title">Your loadout</h2>
+        <div className="loadout-head">
+          <h2 className="section-title">Your loadout</h2>
+          <motion.button
+            type="button"
+            className="btn btn--ghost customize-btn"
+            onClick={() => setCustomizing(true)}
+            disabled={!profileReady}
+            whileHover={{ y: -2 }}
+            whileTap={{ scale: 0.96 }}
+          >
+            <span className="customize-btn__chips" aria-hidden>
+              <CosmeticPreview kind="paint" id={picks.paint} />
+              <CosmeticPreview kind="trail" id={picks.trail} />
+              <CosmeticPreview kind="killFx" id={picks.killFx} />
+            </span>
+            Customize
+          </motion.button>
+        </div>
         <LoadoutPicker
           portraits={portraits}
-          kills={profile.kills}
-          hero={hero} gun={gun} secondary={secondary} utility={utility} hat={hat}
-          setHero={setHero} setGun={setGun} setSecondary={setSecondary} setUtility={setUtility} setHat={setHat}
+          hero={hero} gun={gun} secondary={secondary} utility={utility}
+          setHero={setHero} setGun={setGun} setSecondary={setSecondary} setUtility={setUtility}
         />
+        <p className="loadout-cosmetics">
+          {COSMETICS.paint[picks.paint].name} paint · {COSMETICS.trail[picks.trail].name} · {COSMETICS.killFx[picks.killFx].name}
+        </p>
       </section>
+      <AnimatePresence>
+        {customizing && (
+          <CustomizePanel
+            hero={hero}
+            kills={profile.kills}
+            picks={picks}
+            onChange={setPicks}
+            onClose={() => {
+              setCustomizing(false);
+              // Save right away so the picks stick even without pressing Play.
+              patchProfile({ name: name.trim() || 'Player', hero, gun, secondary, utility, ...picks }).then(setProfile).catch(() => {});
+            }}
+          />
+        )}
+      </AnimatePresence>
 
       <motion.button
         type="button"
@@ -265,22 +301,21 @@ function ServerProfileNotice({ error, onRetry }: { error: string; onRetry: () =>
 }
 
 /** Top-down sketch of a map's walls, drawn from the same data the server uses. */
-type SlotKey = 'hero' | 'primary' | 'secondary' | 'utility' | 'hat';
+type SlotKey = 'hero' | 'primary' | 'secondary' | 'utility';
 
 /** Four boxes showing the current pick. Clicking one opens a drawer under the row with every option for that slot. */
 function LoadoutPicker(props: {
-  portraits: Portraits; kills: number;
-  hero: HeroId; gun: GunId; secondary: GunId; utility: UtilId; hat: HatId;
-  setHero: (h: HeroId) => void; setGun: (g: GunId) => void; setSecondary: (g: GunId) => void; setUtility: (u: UtilId) => void; setHat: (h: HatId) => void;
+  portraits: Portraits;
+  hero: HeroId; gun: GunId; secondary: GunId; utility: UtilId;
+  setHero: (h: HeroId) => void; setGun: (g: GunId) => void; setSecondary: (g: GunId) => void; setUtility: (u: UtilId) => void;
 }) {
-  const { portraits, kills } = props;
+  const { portraits } = props;
   const [open, setOpen] = useState<SlotKey | null>(null);
   const slots: { key: SlotKey; label: string; name: string; detail: string; img: string; color?: string }[] = [
     { key: 'hero', label: 'Hero', name: HEROES[props.hero].name, detail: abilityTag(HEROES[props.hero]), img: portraits.heroes[props.hero], color: HEROES[props.hero].color },
     { key: 'primary', label: 'Primary', name: GUNS[props.gun].name, detail: GUNS[props.gun].blurb, img: portraits.guns[props.gun] },
     { key: 'secondary', label: 'Secondary', name: GUNS[props.secondary].name, detail: GUNS[props.secondary].blurb, img: portraits.guns[props.secondary] },
     { key: 'utility', label: 'Utility', name: UTILS[props.utility].name, detail: `${UTILS[props.utility].charges} per life`, img: portraits.utils[props.utility] },
-    { key: 'hat', label: 'Hat', name: HATS[props.hat].name, detail: 'Unlock more with kills', img: portraits.hats[props.hat] },
   ];
   // Picking something closes the drawer so the whole loadout is visible again.
   const pick = <T,>(set: (v: T) => void) => (v: T) => { set(v); setOpen(null); };
@@ -329,7 +364,6 @@ function LoadoutPicker(props: {
               {open === 'primary' && <GunRack value={props.gun} onChange={pick(props.setGun)} portraits={portraits} />}
               {open === 'secondary' && <GunRack ids={SECONDARY_IDS} label="Secondary gun" value={props.secondary} onChange={pick(props.setSecondary)} portraits={portraits} />}
               {open === 'utility' && <UtilRack value={props.utility} onChange={pick(props.setUtility)} portraits={portraits} />}
-              {open === 'hat' && <HatRack value={props.hat} onChange={pick(props.setHat)} kills={kills} portraits={portraits} />}
             </div>
           </motion.div>
         )}

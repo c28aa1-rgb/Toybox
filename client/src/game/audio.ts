@@ -118,6 +118,16 @@ export class Sfx {
     this.noise(0.25, 0.35 * near, 900, 1);
     this.tone(500, 90, 0.35, 'triangle', 0.14 * near);
   }
+  /** New cosmetic unlocked: a bright little fanfare. */
+  unlock(): void { [784, 988, 1175, 1568].forEach((f, i) => this.tone(f, f, 0.14, 'triangle', 0.13, i * 0.08)); }
+  /** Confetti Pop kill: a party horn. */
+  partyHorn(near: number): void { this.tone(420, 520, 0.4, 'sawtooth', 0.09 * near); this.tone(840, 1040, 0.4, 'square', 0.04 * near); }
+  /** Squeaky Toy kill: a rubber squeak. */
+  squeak(near: number): void { this.tone(900, 1700, 0.09, 'sine', 0.2 * near); this.tone(1700, 1100, 0.12, 'sine', 0.16 * near, 0.09); }
+  /** Fireworks kill: rockets whistling up... */
+  whistle(near: number): void { this.tone(800, 2400, 0.35, 'sine', 0.06 * near); }
+  /** ...and bursting. */
+  fireworkPop(near: number): void { this.noise(0.25, 0.3 * near, 1400, 0.8); this.tone(160, 60, 0.2, 'sine', 0.15 * near); }
   /** Bounce Pad launch: a big cartoon boing. */
   boing(near: number): void {
     this.tone(180, 720, 0.35, 'sine', 0.22 * near);

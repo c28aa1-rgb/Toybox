@@ -3,17 +3,19 @@ import { createServer, type IncomingMessage } from 'node:http';
 import { extname, join, normalize, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { WebSocketServer, type WebSocket } from 'ws';
-import { DEFAULT_MAP, MAPS, PUBLIC_MAP, PUBLIC_ROOM, isHatId, isHeroId, isMapId, isModeId, isPrimary, isSecondary, isUtilId, type ClientMsg, type Loadout } from '@gg/shared';
+import { DEFAULT_MAP, MAPS, PUBLIC_MAP, PUBLIC_ROOM, isHeroId, isKillFxId, isPaintId, isTrailId, isMapId, isModeId, isPrimary, isSecondary, isUtilId, type ClientMsg, type Loadout } from '@gg/shared';
 import { getPlayerProfile, recordPlayerStats, updatePlayerProfile, verifyPlayerToken } from './profile';
 
-function loadoutFrom(msg: { hero: unknown; gun: unknown; secondary: unknown; utility: unknown; hat?: unknown }): Loadout | null {
+function loadoutFrom(msg: { hero: unknown; gun: unknown; secondary: unknown; utility: unknown; paint?: unknown; trail?: unknown; killFx?: unknown }): Loadout | null {
   if (!isHeroId(msg.hero) || !isPrimary(msg.gun)) return null;
   return {
     hero: msg.hero,
     gun: msg.gun,
     secondary: isSecondary(msg.secondary) ? msg.secondary : 'pistol',
     utility: isUtilId(msg.utility) ? msg.utility : 'frag',
-    hat: isHatId(msg.hat) ? msg.hat : 'none',
+    paint: isPaintId(msg.paint) ? msg.paint : 'classic',
+    trail: isTrailId(msg.trail) ? msg.trail : 'none',
+    killFx: isKillFxId(msg.killFx) ? msg.killFx : 'shatter',
   };
 }
 import { Room } from './room';
@@ -86,12 +88,12 @@ const http = createServer(async (req, res) => {
         if (bytes > 4096) throw new Error('Profile request is too large.');
         chunks.push(Buffer.from(chunk));
       }
-      const patch = JSON.parse(Buffer.concat(chunks).toString('utf8')) as { name?: unknown; hero?: unknown; gun?: unknown; secondary?: unknown; utility?: unknown; hat?: unknown };
+      const patch = JSON.parse(Buffer.concat(chunks).toString('utf8')) as { name?: unknown; hero?: unknown; gun?: unknown; secondary?: unknown; utility?: unknown; paint?: unknown; trail?: unknown; killFx?: unknown };
       const update: { name?: string; loadout?: Loadout } = {};
       if ('name' in patch && typeof patch.name !== 'string') throw new Error('Invalid name.');
       if (typeof patch.name === 'string') update.name = cleanName(patch.name);
-      if (['hero', 'gun', 'secondary', 'utility', 'hat'].some((key) => key in patch)) {
-        const loadout = loadoutFrom({ hero: patch.hero, gun: patch.gun, secondary: patch.secondary, utility: patch.utility, hat: patch.hat });
+      if (['hero', 'gun', 'secondary', 'utility', 'paint', 'trail', 'killFx'].some((key) => key in patch)) {
+        const loadout = loadoutFrom({ hero: patch.hero, gun: patch.gun, secondary: patch.secondary, utility: patch.utility, paint: patch.paint, trail: patch.trail, killFx: patch.killFx });
         if (!loadout) throw new Error('Invalid loadout.');
         update.loadout = loadout;
       }
@@ -224,7 +226,7 @@ wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
         ws.close(1008, 'Authentication required');
         return;
       }
-      const loadout: Loadout = { hero: profile.hero, gun: profile.gun, secondary: profile.secondary, utility: profile.utility, hat: profile.hat };
+      const loadout: Loadout = { hero: profile.hero, gun: profile.gun, secondary: profile.secondary, utility: profile.utility, paint: profile.paint, trail: profile.trail, killFx: profile.killFx };
       let r: Room | undefined;
       if (msg.mode === 'public') {
         r = rooms.get(PUBLIC_ROOM);
@@ -268,7 +270,7 @@ wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
           if (l && uid) {
             try {
               const profile = await updatePlayerProfile(uid, { loadout: l });
-              room.onLoadout(playerId, { hero: profile.hero, gun: profile.gun, secondary: profile.secondary, utility: profile.utility, hat: profile.hat });
+              room.onLoadout(playerId, { hero: profile.hero, gun: profile.gun, secondary: profile.secondary, utility: profile.utility, paint: profile.paint, trail: profile.trail, killFx: profile.killFx });
               ws.send(JSON.stringify({ type: 'profile', profile }));
             } catch (error) {
               ws.send(JSON.stringify({ type: 'error', message: error instanceof Error ? error.message : 'Could not save loadout.' }));

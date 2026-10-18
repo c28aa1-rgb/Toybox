@@ -1,11 +1,11 @@
 import { signInAnonymously } from 'firebase/auth';
-import type { Loadout, PlayerProfile } from '@gg/shared';
+import { COSMETIC_DEFAULTS, unlockedCosmetics, type Loadout, type PlayerProfile } from '@gg/shared';
 import { firebaseAuth } from './firebase';
 import { apiUrl } from './game/server';
 
 const DEFAULT: PlayerProfile = {
-  name: '', hero: 'blink', gun: 'smg', secondary: 'pistol', utility: 'frag', hat: 'none',
-  kills: 0, deaths: 0, wins: 0, unlocks: ['none'],
+  name: '', hero: 'blink', gun: 'smg', secondary: 'pistol', utility: 'frag', ...COSMETIC_DEFAULTS,
+  kills: 0, deaths: 0, wins: 0, unlocks: unlockedCosmetics(0),
 };
 let profile: PlayerProfile = { ...DEFAULT };
 

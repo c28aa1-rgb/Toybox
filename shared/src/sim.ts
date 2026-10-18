@@ -352,7 +352,7 @@ export function abilityStatus(state: GameState, p: PlayerState): { readyIn: numb
 
 export function addPlayer(
   state: GameState,
-  opts: { id: string; name: string; hero: HeroId; gun: GunId; secondary: GunId; utility: UtilId; hat?: Loadout['hat']; bot?: boolean },
+  opts: { id: string; name: string; hero: HeroId; gun: GunId; secondary: GunId; utility: UtilId; paint?: Loadout['paint']; trail?: Loadout['trail']; killFx?: Loadout['killFx']; bot?: boolean },
 ): PlayerState {
   let team = -1;
   if (MODES[state.mode].teams) {
@@ -364,7 +364,8 @@ export function addPlayer(
     id: opts.id,
     name: opts.name,
     bot: !!opts.bot,
-    loadout: { hero: opts.hero, gun: opts.gun, secondary: opts.secondary, utility: opts.utility, hat: opts.hat ?? 'none' },
+    loadout: { hero: opts.hero, gun: opts.gun, secondary: opts.secondary, utility: opts.utility,
+      paint: opts.paint ?? 'classic', trail: opts.trail ?? 'none', killFx: opts.killFx ?? 'shatter' },
     hero: opts.hero,
     gun: opts.gun,
     primary: opts.gun,
