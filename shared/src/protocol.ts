@@ -55,7 +55,7 @@ export interface PlayerProfile extends Loadout {
 
 export type ClientMsg =
   /** public: the always-on lobby. create: a new private room on `map`. join: a private room by code. */
-  | { type: 'join'; mode: 'public' | 'create' | 'join'; room?: string; map?: MapId; gameMode?: ModeId; idToken: string; name: string; hero: HeroId; gun: GunId; secondary: GunId; utility: UtilId; hat: HatId }
+  | { type: 'join'; mode: 'public' | 'create' | 'join'; room?: string; map?: MapId; gameMode?: ModeId; idToken: string; /** Move an existing player onto this (healthier) socket instead of adding a new one. */ resume?: boolean; name: string; hero: HeroId; gun: GunId; secondary: GunId; utility: UtilId; hat: HatId }
   | { type: 'chat'; text: string }
   | { type: 'input'; frames: InputFrame[] }
   | { type: 'loadout'; hero: HeroId; gun: GunId; secondary: GunId; utility: UtilId; hat: HatId }

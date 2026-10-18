@@ -29,7 +29,8 @@ const MIME: Record<string, string> = {
 
 // Browsers allowed to open a socket (the GitHub Pages site). Comma-separated; empty allows any origin.
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS ?? '').split(',').map((o) => o.trim().replace(/\/+$/, '')).filter(Boolean);
-const MAX_CONNECTIONS_PER_IP = 8;
+// Behind a tunnel every socket can look like it comes from the same address if the proxy sends no forwarding header, so this is tunable.
+const MAX_CONNECTIONS_PER_IP = Number(process.env.GG_MAX_CONN_PER_IP ?? 8);
 // Token bucket per socket. Clients send at most ~60 messages/s, but a lag spike can deliver a
 // backlog all at once, so bursts are absorbed and excess messages are dropped rather than kicked.
 // Only a sustained flood (the bucket far in debt) closes the socket.
@@ -38,6 +39,8 @@ const MSG_BURST = 600;
 const connectionsByIp = new Map<string, number>();
 
 function clientIp(req: IncomingMessage): string {
+  const cf = req.headers['cf-connecting-ip'];
+  if (typeof cf === 'string' && cf) return cf;
   const fwd = req.headers['x-forwarded-for'];
   const first = (Array.isArray(fwd) ? fwd[0] : fwd)?.split(',')[0]?.trim();
   return first || req.socket.remoteAddress || 'unknown';
@@ -57,6 +60,11 @@ const http = createServer(async (req, res) => {
     res.setHeader('vary', 'origin');
     if (req.method === 'OPTIONS') {
       res.writeHead(204).end();
+      return;
+    }
+    if (req.url?.split('?')[0] === '/api/online' && req.method === 'GET') {
+      res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' });
+      res.end(JSON.stringify({ count: [...rooms.values()].reduce((total, room) => total + room.humanCount, 0) }));
       return;
     }
     if (req.url?.split('?')[0] !== '/api/profile' || !['GET', 'PATCH'].includes(req.method ?? '')) {
@@ -198,6 +206,18 @@ wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
       let profile;
       try {
         uid = await verifyPlayerToken(msg.idToken);
+        if (msg.resume) {
+          // Swap an existing player onto this socket (no profile read, no new player).
+          const target = rooms.get(String(msg.room ?? ''));
+          const id = target?.rebind(ws, uid);
+          if (!target || !id) {
+            ws.close(4002, 'Nothing to resume');
+            return;
+          }
+          room = target;
+          playerId = id;
+          return;
+        }
         profile = await getPlayerProfile(uid);
       } catch (error) {
         ws.send(JSON.stringify({ type: 'error', message: error instanceof Error ? error.message : 'Could not sign in.' }));
@@ -275,10 +295,12 @@ wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
     const left = (connectionsByIp.get(ip) ?? 1) - 1;
     if (left <= 0) connectionsByIp.delete(ip);
     else connectionsByIp.set(ip, left);
-    if (room && playerId) room.leave(playerId);
+    if (room && playerId && room.owns(playerId, ws)) room.leave(playerId);
   });
 });
 
-http.listen(PORT, process.env.GG_LOCAL_PROFILE_FALLBACK === '1' && process.env.GG_PORT === '3001' ? '127.0.0.1' : undefined, () => {
+// GG_HOST=127.0.0.1 keeps the server off the network so only a local tunnel can reach it.
+const HOST = process.env.GG_HOST ?? (process.env.GG_LOCAL_PROFILE_FALLBACK === '1' && process.env.GG_PORT === '3001' ? '127.0.0.1' : undefined);
+http.listen(PORT, HOST, () => {
   console.log(`Toybox Brawl server on http://localhost:${PORT}`);
 });

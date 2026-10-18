@@ -271,6 +271,14 @@ export class GameClient {
         this.outbox = [];
         this.hud.set({ connected: false, reconnecting: true });
       },
+      resumeJoin: async () => {
+        if (!this.welcomed || !this.rejoin) return null;
+        const o = this.opts;
+        return {
+          type: 'join', ...this.rejoin, resume: true, idToken: await playerToken(), name: o.name,
+          hero: o.hero, gun: o.gun, secondary: o.secondary, utility: o.utility, hat: o.hat,
+        };
+      },
       onClose: () => this.hud.set({ connected: false, reconnecting: false, error: this.hud.get().error ?? 'Disconnected from the server.' }),
     });
 

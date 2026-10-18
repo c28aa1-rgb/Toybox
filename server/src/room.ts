@@ -112,6 +112,27 @@ export class Room {
     return id;
   }
 
+  /**
+   * Move an already-joined player onto a new socket, keeping their player, position and score.
+   * Used when the old connection has gone laggy; the old socket is closed without a leave.
+   */
+  rebind(ws: WebSocket, uid: string): string | null {
+    for (const c of this.clients.values()) {
+      if (c.uid !== uid) continue;
+      const old = c.ws;
+      c.ws = ws;
+      this.welcome(c);
+      if (old !== ws) old.close(4001, 'Moved to a better connection');
+      return c.id;
+    }
+    return null;
+  }
+
+  /** Whether `ws` is still this player's live socket (a replaced socket must not remove the player when it closes). */
+  owns(id: string, ws: WebSocket): boolean {
+    return this.clients.get(id)?.ws === ws;
+  }
+
   private welcome(c: Client): void {
     this.send(c.ws, { type: 'welcome', id: c.id, room: this.code, host: this.hostId === c.id, map: this.mapId, mode: this.mode, isPublic: this.isPublic });
   }

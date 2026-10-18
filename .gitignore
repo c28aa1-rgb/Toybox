@@ -5,3 +5,4 @@ dist/
 .vite/
 art/reconstructions/**/renders/
 art/reconstructions/*/detail-inventory/
+deploy-bundle/
