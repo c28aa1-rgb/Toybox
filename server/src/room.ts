@@ -1,7 +1,7 @@
 import type { WebSocket } from 'ws';
 import {
   CHAT_MAX, MAX_PLAYERS, PUBLIC_MIN_PLAYERS, TICK_DT, TICK_RATE, abilityStatus, addPlayer, applyInput, createGame, isHidden, r2,
-  HAT_IDS, MAPS, MODES, POWER_IDS, PUBLIC_MAP_IDS, TURRET, removePlayer, setLoadout, tick, type GameState, type GunId, type HeroId, type InputFrame, type MapId, type ModeId, type UtilId, type Loadout,
+  HAT_IDS, MAPS, MODES, POWER_IDS, PUBLIC_MAP_IDS, removePlayer, setLoadout, tick, type GameState, type GunId, type HeroId, type InputFrame, type MapId, type ModeId, type UtilId, type Loadout,
   type MapVote, type PowerId, type ServerMsg, type Snapshot, type WeaponId,
 } from '@gg/shared';
 import { botHero, botInput, botName, forgetBot } from './bots';
@@ -235,7 +235,7 @@ export class Room {
       const id = `b${i}`;
       const guns: GunId[] = ['smg', 'shotgun', 'burst', 'sniper', 'smg'];
       const sides: GunId[] = ['pistol', 'minismg', 'thumper', 'bouncer', 'stinger'];
-      const utils: UtilId[] = ['frag', 'flash', 'smoke', 'turret', 'juice'];
+      const utils: UtilId[] = ['frag', 'flash', 'smoke', 'pad', 'juice'];
       addPlayer(this.state, {
         id, name: botName(i), hero: botHero(i), gun: guns[i % guns.length],
         secondary: sides[(i * 2) % sides.length], utility: utils[(i * 3) % utils.length], hat: HAT_IDS[i % HAT_IDS.length], bot: true,
@@ -373,6 +373,8 @@ export class Room {
         abilityReadyIn: r2(ability.readyIn),
         abilityCharge: r2(ability.charge),
         hidden: isHidden(s, p),
+        z: r2(p.z),
+        dash: p.dash ? { kind: p.dash.kind, tx: r2(p.dash.tx), ty: r2(p.dash.ty) } : null,
         overcharge: p.alive && t < p.overchargeUntil ? p.overchargeShots : 0,
         powers: p.alive ? activePowers(p.powers, t) : {},
         };
@@ -383,12 +385,8 @@ export class Room {
         ...(k.readyAt !== undefined && k.readyAt > t ? { readyIn: r2(k.readyAt - t) } : {}),
       })),
       throwables: s.throwables.map((g) => ({ id: g.id, util: g.util, x: r2(g.x), y: r2(g.y), z: r2(g.z), owner: g.owner })),
-      turrets: s.turrets.map((tr) => ({
-        id: tr.id, owner: tr.owner, team: tr.team, x: r2(tr.x), y: r2(tr.y), aim: r2(tr.aim),
-        hp: Math.round((tr.hp / TURRET.hp) * 100) / 100, endsIn: r2(tr.expiresAt - t),
-      })),
+      pads: s.pads.map((d) => ({ id: d.id, owner: d.owner, x: r2(d.x), y: r2(d.y), endsIn: r2(d.expiresAt - t) })),
       smokes: s.smokes.map((sm) => ({ id: sm.id, x: r2(sm.x), y: r2(sm.y), r: sm.r, endsIn: r2(sm.expiresAt - t) })),
-      decoys: s.decoys.map((d) => ({ id: d.id, owner: d.owner, x: r2(d.x), y: r2(d.y), aim: r2(d.aim) })),
       events: s.events,
     };
     // Everything except `ack` is shared, so serialize once and splice the ack in per client.

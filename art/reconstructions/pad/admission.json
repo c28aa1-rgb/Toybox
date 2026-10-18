@@ -1,0 +1,14 @@
+{
+  "admitted": true,
+  "reasons": [],
+  "provenance": {
+    "viewpoint": "reference",
+    "sourcePath": "/Users/c28aa1/Desktop/Gun Game/art/concepts/pad.png",
+    "width": 1254,
+    "height": 1254,
+    "foregroundCoverage": 0.3773,
+    "largestComponentFraction": 0.9039,
+    "pHash": 17922816520930126506,
+    "duplicateOfHash": null
+  }
+}

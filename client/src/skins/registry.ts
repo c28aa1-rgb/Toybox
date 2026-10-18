@@ -89,11 +89,10 @@ function placeholderHero(hero: HeroId): { body: THREE.Group; gunSocket: THREE.Ob
       body.add(crest, tail);
       break;
     }
-    case 'decoy': {
-      const mask = mesh(new THREE.BoxGeometry(0.6, 0.16, 0.12), toon(INK), [0, 1.02, 0.42]);
-      const hatBrim = mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.04, 20), toon('#5B2A86'), [0, 1.28, 0]);
-      const hatTop = mesh(new THREE.CylinderGeometry(0.26, 0.28, 0.32, 20), toon('#5B2A86'), [0, 1.45, 0]);
-      body.add(mask, hatBrim, hatTop);
+    case 'grapple': {
+      const helmet = mesh(new THREE.SphereGeometry(0.42, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2), toon('#FFE45C'), [0, 1.16, 0]);
+      const rope = mesh(new THREE.TorusGeometry(0.42, 0.06, 8, 24), toon('#5B2A86'), [0, 0.7, 0], [Math.PI / 2.4, 0, 0.5]);
+      body.add(helmet, rope);
       break;
     }
     case 'echo': {
@@ -173,7 +172,7 @@ function placeholderGun(gun: GunId): THREE.Group {
 
 function placeholderUtil(util: UtilId): THREE.Group {
   const g = new THREE.Group();
-  const colors: Record<UtilId, string> = { frag: '#3DDBB4', flash: '#FFE45C', smoke: '#B48CFF', turret: '#FF8A1F', juice: '#FF5F6D' };
+  const colors: Record<UtilId, string> = { frag: '#3DDBB4', flash: '#FFE45C', smoke: '#B48CFF', pad: '#4FB3FF', juice: '#FF5F6D' };
   if (util === 'juice') {
     g.add(mesh(new RoundedBoxGeometry(0.2, 0.28, 0.14, 2, 0.04), toon(colors.juice), [0, 0.14, 0]));
     g.add(mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.16), toon('#FFFFFF'), [0.05, 0.34, 0], [0, 0, -0.3]));

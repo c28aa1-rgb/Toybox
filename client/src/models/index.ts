@@ -3,8 +3,8 @@ import type { GunId, HeroId, UtilId } from '@gg/shared';
 import { createFlickerModel } from '../../../art/reconstructions/blink/src/createFlickerModel';
 import { createVoltModel } from '../../../art/reconstructions/volt/src/createVoltModel';
 import { createChameleonModel } from '../../../art/reconstructions/chameleon/src/createChameleonModel';
-import { createMirageModel } from '../../../art/reconstructions/decoy/src/createMirageModel';
 import { createEchoModel } from '../../../art/reconstructions/echo/src/createEchoModel';
+import { createSnagModel } from '../../../art/reconstructions/grapple/src/createSnagModel';
 import { createPeaShooterModel } from '../../../art/reconstructions/pistol/src/createPeaShooterModel';
 import { createBuzzboxModel } from '../../../art/reconstructions/smg/src/createBuzzboxModel';
 import { createBoomstickModel } from '../../../art/reconstructions/shotgun/src/createBoomstickModel';
@@ -19,8 +19,8 @@ import { createTriPopModel } from '../../../art/reconstructions/burst/src/create
 import { createBouncerModel } from '../../../art/reconstructions/bouncer/src/createBouncerModel';
 import { createStingerModel } from '../../../art/reconstructions/stinger/src/createStingerModel';
 import { createJuiceBoxModel } from '../../../art/reconstructions/juice/src/createJuiceBoxModel';
+import { createBouncePadModel } from '../../../art/reconstructions/pad/src/createBouncePadModel';
 import { registerGunModel, registerHeroModel, registerUtilModel } from '../skins/registry';
-import { createTurretModel } from '../skins/turret';
 import { toonify } from './toonify';
 
 /**
@@ -31,8 +31,8 @@ const FACTORIES: Record<HeroId, { make: () => THREE.Group; wobble: string | null
   blink: { make: () => createFlickerModel({ textureSize: 8 }), wobble: 'Antenna Stalk__pivot' },
   volt: { make: () => createVoltModel({ textureSize: 8 }), wobble: 'Plug__pivot' },
   chameleon: { make: () => createChameleonModel({ textureSize: 8 }), wobble: 'Crest__pivot' },
-  decoy: { make: () => createMirageModel({ textureSize: 8 }), wobble: 'Hat Crown__pivot' },
   echo: { make: () => createEchoModel({ textureSize: 8 }), wobble: 'Dish L__pivot' },
+  grapple: { make: () => createSnagModel({ textureSize: 8 }), wobble: null },
 };
 
 const templates = new Map<HeroId, THREE.Object3D>();
@@ -107,8 +107,8 @@ const UTIL_FACTORIES: Record<UtilId, () => THREE.Group> = {
   frag: () => createFizzBombModel({ textureSize: 8 }),
   flash: () => createFlashPopModel({ textureSize: 8 }),
   smoke: () => createPuffCanModel({ textureSize: 8 }),
-  turret: () => createTurretModel(),
   juice: () => createJuiceBoxModel({ textureSize: 8 }),
+  pad: () => createBouncePadModel({ textureSize: 8 }),
 };
 
 const UTIL_SIZE = 0.42;

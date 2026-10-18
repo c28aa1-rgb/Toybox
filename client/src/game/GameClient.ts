@@ -1,10 +1,11 @@
 import * as THREE from 'three';
 import { CSS2DObject } from 'three/examples/jsm/renderers/CSS2DRenderer.js';
 import {
-  ABILITY, CHAT_MAX, GUNS, GUN_IDS, HATS, HEROES, MODES, TEAM_COLORS, THROW, TURRET, UTILS, isUtilId, throwFlightTime, type HatId, type Loadout, type ModeId, type PlayerProfile, type UtilId, type WeaponId, INTERP_DELAY, MAPS, MAX_HP, MAX_INPUT_DT, PICKUP_RADIUS, POWER, POWERS, pointInRect, stepMovement,
-  type DecoySnap, type GameEvent, type GunId, type HeroId, type InputFrame, type MapDef, type MapId, type PlayerSnap, type PowerId,
+  ABILITY, CHAT_MAX, GUNS, GUN_IDS, HATS, HEROES, MODES, TEAM_COLORS, PAD, THROW, UTILS, isUtilId, throwFlightTime, type HatId, type Loadout, type ModeId, type PlayerProfile, type UtilId, type WeaponId, INTERP_DELAY, MAPS, MAX_HP, MAX_INPUT_DT, PICKUP_RADIUS, POWER, POWERS, pointInRect, stepMovement,
+  type GameEvent, type GunId, type HeroId, type InputFrame, type MapDef, type MapId, type PlayerSnap, type PowerId,
   type Rect, type Snapshot,
 } from '@gg/shared';
+import { toon } from '../skins/toon';
 import { createGunModel, createHeroSkin, createUtilModel, type HeroSkin } from '../skins/registry';
 import { createHealModel } from '../skins/hats';
 import { loadProfile, playerToken, setProfile } from '../unlocks';
@@ -14,7 +15,6 @@ import { Input } from './input';
 import { smokeFog, type SmokeFog } from './smoke';
 import { Net } from './net';
 import { POWER_ICONS, PowerAuras, PowerDrops } from './powerFx';
-import { TURRET_COLOR, createTurretModel } from '../skins/turret';
 import { Minimap } from './minimap';
 import { createScene, PALETTE, type SceneBundle } from './scene';
 import { HudStore, type HudState } from './store';
@@ -47,6 +47,9 @@ interface PlayerView {
   laserGlow: THREE.Mesh;
   laserDot: THREE.Mesh;
   team: number;
+  /** Grapple rope from the gun to the hook, shown while zipping. */
+  rope: THREE.Mesh;
+  hook: THREE.Mesh;
 }
 
 interface DamageNumber {
@@ -68,7 +71,8 @@ const BULLET_COLORS: Record<GunId, string> = {
   rocket: PALETTE.bubblegum,
 };
 
-const UTIL_COLORS: Record<UtilId, string> = { frag: PALETTE.mint, flash: PALETTE.lemon, smoke: '#B48CFF', turret: TURRET_COLOR, juice: '#FF5F6D' };
+const PAD_COLOR = '#4FB3FF';
+const UTIL_COLORS: Record<UtilId, string> = { frag: PALETTE.mint, flash: PALETTE.lemon, smoke: '#B48CFF', pad: PAD_COLOR, juice: '#FF5F6D' };
 
 const MAX_INTERP_DELAY = 0.25;
 
@@ -105,10 +109,11 @@ export class GameClient {
   private laserDotGeo = new THREE.SphereGeometry(0.12, 12, 8);
   private throwViews = new Map<number, { obj: THREE.Object3D; born: number }>();
   private smokeViews = new Map<number, THREE.Group>();
-  private turretViews = new Map<number, {
-    root: THREE.Object3D; head: THREE.Object3D; key: THREE.Object3D; ringMat: THREE.Material;
-    born: number; hp: number; hitAt: number; aim: number;
-  }>();
+  private padViews = new Map<number, { root: THREE.Object3D; ringMat: THREE.MeshBasicMaterial; born: number; bounceAt: number }>();
+  /** A missed grapple: the rope flicks out and snaps back. */
+  private missRopes: { rope: THREE.Mesh; born: number; x0: number; y0: number; x1: number; y1: number }[] = [];
+  /** Unit-length cord along +Z; stretched and turned to span two points. */
+  private ropeGeo = new THREE.CylinderGeometry(0.035, 0.035, 1, 6).rotateX(Math.PI / 2).translate(0, 0, 0.5);
   private hillView: THREE.Group | null = null;
   private streakKey = 0;
   /** True while this player stands inside a smoke cloud. */
@@ -132,7 +137,6 @@ export class GameClient {
   private aimPoint = new THREE.Vector3();
 
   private views = new Map<string, PlayerView>();
-  private decoyViews = new Map<number, PlayerView>();
   private bulletMeshes = new Map<number, THREE.Mesh>();
   private pickupViews = new Map<number, THREE.Group>();
   /** Sonar Ping: enemies our team can see through walls, until this clock time. */
@@ -419,7 +423,8 @@ export class GameClient {
 
     const me = snap.players.find((p) => p.id === this.myId);
     if (!me) return;
-    if (!me.alive || snap.phase !== 'playing') {
+    // Dead, between rounds, or being moved by a grapple or a pad: take the server's position as is.
+    if (!me.alive || snap.phase !== 'playing' || me.dash) {
       this.pending = [];
       this.pred = { x: me.x, y: me.y };
       this.predOffset.set(0, 0);
@@ -477,12 +482,12 @@ export class GameClient {
     if (snap) {
       this.renderPlayers(renderTime, dt, snap);
       this.renderBullets(renderTime);
-      this.renderDecoys(renderTime, dt, snap);
       this.renderPickups(snap, dt);
       this.powerDrops.update(snap, this.clock, dt);
       this.renderThrowables(renderTime, dt);
       this.renderSmokes(snap);
-      this.renderTurrets(snap, dt);
+      this.renderPads(snap);
+      this.updateMissRopes();
       this.renderHill(snap);
     }
 
@@ -560,7 +565,7 @@ export class GameClient {
     if (want === 'toggle') frame.slot = me.slot === 'primary' ? 2 : 1;
     else if (want) frame.slot = want;
     this.updateThrowPreview(me, aimDist);
-    if (me.alive && snap.phase === 'playing') {
+    if (me.alive && snap.phase === 'playing' && !me.dash) {
       stepMovement(this.pred, mx, my, frame.dt, this.mapWalls(), frame.scope, this.isSlowed(me), boost(me));
       this.pending.push(frame);
       if (this.pending.length > 120) this.pending.shift();
@@ -622,7 +627,10 @@ export class GameClient {
       let alive: boolean;
       let shield = p.shield;
       let scoped = p.scoped;
-      if (p.id === this.myId && p.alive && snap.phase === 'playing') {
+      let z = 0;
+      let dash = p.dash;
+      // Mid-grapple or mid-launch the server moves us, so our own player is drawn like everyone else's.
+      if (p.id === this.myId && p.alive && snap.phase === 'playing' && !p.dash) {
         scoped = this.isScoping();
         x = this.pred.x + this.predOffset.x;
         y = this.pred.y + this.predOffset.y;
@@ -636,9 +644,17 @@ export class GameClient {
         x = pa.x + (pb.x - pa.x) * k;
         y = pa.y + (pb.y - pa.y) * k;
         aim = lerpAngle(pa.aim, pb.aim, k);
+        z = (pa.z ?? 0) + ((pb.z ?? 0) - (pa.z ?? 0)) * k;
+        dash = pb.dash;
         alive = pb.alive;
         shield = pb.shield;
         scoped = pb.scoped;
+        if (p.id === this.myId) {
+          aim = this.aim;
+          // Keep prediction (and the camera) with us so landing doesn't snap.
+          this.pred = { x, y };
+          this.predOffset.set(0, 0);
+        }
       } else {
         x = p.x;
         y = p.y;
@@ -650,6 +666,8 @@ export class GameClient {
       const moved = Number.isNaN(view.lastX) ? 0 : Math.hypot(x - view.lastX, y - view.lastY);
       const look = alive ? this.hiddenLook(p, x, y, snap) : 'normal';
       this.placeView(view, x, y, aim, alive, dt, p.gun, shield, look);
+      view.skin.root.position.y = z;
+      this.updateRope(view, x, y, z, alive && look !== 'gone' ? dash : null);
       const visible = alive && look !== 'gone' && look !== 'shimmer';
       this.auras.update(p.id, x, y, visible && !smoked && view.skin.root.visible, p.powers ?? {}, moved, this.clock);
       this.updateLaser(view, x, y, aim, alive && scoped, p.gun, p.id === this.myId);
@@ -759,38 +777,6 @@ export class GameClient {
     mat.opacity = Math.min(1, (until - this.clock) / 0.5) * (0.75 + Math.sin(this.clock * 10) * 0.25);
   }
 
-  private renderDecoys(renderTime: number, dt: number, snap: Snapshot): void {
-    const br = this.bracket(renderTime);
-    const list: DecoySnap[] = br ? br.b.decoys : snap.decoys;
-    const seen = new Set<number>();
-    for (const d of list) {
-      const owner = snap.players.find((p) => p.id === d.owner);
-      if (!owner) continue;
-      seen.add(d.id);
-      let view = this.decoyViews.get(d.id);
-      if (!view) {
-        view = this.makeView(owner.hero, owner.name, false);
-        this.decoyViews.set(d.id, view);
-        view.lastX = d.x;
-        view.lastY = d.y;
-      }
-      const da = br?.a.decoys.find((o) => o.id === d.id) ?? d;
-      const k = br?.k ?? 1;
-      const x = da.x + (d.x - da.x) * k;
-      const y = da.y + (d.y - da.y) * k;
-      const blocked = !this.isAlly(d.owner) && this.smokeBlocks(snap, x, y);
-      this.placeView(view, x, y, lerpAngle(da.aim, d.aim, k), true, dt, owner.gun, false, blocked ? 'gone' : 'normal');
-      // Decoys copy the owner's health bar so they can't be told apart by it.
-      this.updateLabel(view, owner.hp, !blocked && !inSmoke(snap, x, y));
-    }
-    for (const [id, view] of this.decoyViews) {
-      if (!seen.has(id)) {
-        this.removeView(view);
-        this.decoyViews.delete(id);
-      }
-    }
-  }
-
   private makeView(hero: HeroId, name: string, mine: boolean): PlayerView {
     const skin = createHeroSkin(hero);
     this.s.world.add(skin.root);
@@ -833,7 +819,13 @@ export class GameClient {
     (laserDot.material as THREE.Material).userData.outlineParameters = { visible: false };
     laserDot.visible = false;
     this.s.world.add(laserDot);
-    return { skin, hero, label, nameEl, hpEl, lastX: NaN, lastY: NaN, lastHp: MAX_HP, laser, laserGlow, laserDot, team: -1 };
+    const rope = new THREE.Mesh(this.ropeGeo, toon('#5B2A86'));
+    rope.visible = false;
+    this.s.world.add(rope);
+    const hook = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.3, 8), toon('#C9CED6'));
+    hook.visible = false;
+    this.s.world.add(hook);
+    return { skin, hero, label, nameEl, hpEl, lastX: NaN, lastY: NaN, lastHp: MAX_HP, laser, laserGlow, laserDot, team: -1, rope, hook };
   }
 
   private removeView(view: PlayerView): void {
@@ -841,6 +833,8 @@ export class GameClient {
       m.removeFromParent();
       (m.material as THREE.Material).dispose();
     }
+    view.rope.removeFromParent();
+    view.hook.removeFromParent();
     view.label.element.remove();
     view.skin.root.removeFromParent();
     view.skin.dispose();
@@ -1067,50 +1061,79 @@ export class GameClient {
     }
   }
 
-  /** Wind-Up Turrets: pop up with a spring, turn to aim, and wobble as the spring runs out. */
-  private renderTurrets(snap: Snapshot, dt: number): void {
+  /** Stretch a rope mesh from (x0, h0, y0) to (x1, h1, y1). */
+  private spanRope(rope: THREE.Mesh, x0: number, h0: number, y0: number, x1: number, h1: number, y1: number): void {
+    const len = Math.hypot(x1 - x0, h1 - h0, y1 - y0);
+    rope.position.set(x0, h0, y0);
+    rope.lookAt(x1, h1, y1);
+    rope.scale.set(1, 1, Math.max(0.01, len));
+  }
+
+  /** Draw the grapple rope from the hand to where the hook caught, with the hook at the end. */
+  private updateRope(view: PlayerView, x: number, y: number, z: number, dash: PlayerSnap['dash']): void {
+    const on = dash?.kind === 'grapple';
+    view.rope.visible = on;
+    view.hook.visible = on;
+    if (!on || !dash) return;
+    this.spanRope(view.rope, x, z + 0.8, y, dash.tx, 0.8, dash.ty);
+    view.hook.position.set(dash.tx, 0.8, dash.ty);
+    // Point the hook along the rope, away from the player.
+    view.hook.lookAt(dash.tx + (dash.tx - x), 0.8, dash.ty + (dash.ty - y));
+    view.hook.rotateX(Math.PI / 2);
+  }
+
+  private updateMissRopes(): void {
+    this.missRopes = this.missRopes.filter((m) => {
+      const age = this.clock - m.born;
+      // Out and back in a quarter second.
+      const reach = age < 0.12 ? age / 0.12 : Math.max(0, 1 - (age - 0.12) / 0.13);
+      this.spanRope(m.rope, m.x0, 0.8, m.y0, m.x0 + (m.x1 - m.x0) * reach, 0.8, m.y0 + (m.y1 - m.y0) * reach);
+      if (age > 0.25) {
+        m.rope.removeFromParent();
+        return false;
+      }
+      return true;
+    });
+  }
+
+  /** Bounce Pads: pop out of the floor, squash when someone is launched, blink before folding up. */
+  private renderPads(snap: Snapshot): void {
     const seen = new Set<number>();
-    for (const t of snap.turrets) {
-      seen.add(t.id);
-      let v = this.turretViews.get(t.id);
+    for (const d of snap.pads) {
+      seen.add(d.id);
+      let v = this.padViews.get(d.id);
       if (!v) {
-        const root = createTurretModel();
-        const owner = snap.players.find((p) => p.id === t.owner);
-        const color = t.team >= 0 ? TEAM_COLORS[t.team] : owner ? HEROES[owner.hero].color : TURRET_COLOR;
-        const ringMat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.7, depthWrite: false });
+        const root = new THREE.Group();
+        const model = createUtilModel('pad');
+        model.name = 'model';
+        // The hand-held model is 0.42 m across; set down it fills the trigger circle.
+        model.scale.setScalar((PAD.radius * 2) / 0.42);
+        root.add(model);
+        const ringMat = new THREE.MeshBasicMaterial({ color: PAD_COLOR, transparent: true, opacity: 0.55, depthWrite: false });
         ringMat.userData.outlineParameters = { visible: false };
-        const ring = new THREE.Mesh(new THREE.RingGeometry(0.55, 0.68, 32), ringMat);
+        const ring = new THREE.Mesh(new THREE.RingGeometry(PAD.radius - 0.1, PAD.radius, 40), ringMat);
         ring.rotation.x = -Math.PI / 2;
         ring.position.y = 0.04;
         root.add(ring);
-        root.position.set(t.x, 0, t.y);
+        root.position.set(d.x, 0, d.y);
         root.scale.setScalar(0.01);
         this.s.world.add(root);
-        v = { root, head: root.getObjectByName('head')!, key: root.getObjectByName('key')!, ringMat, born: this.clock, hp: t.hp, hitAt: -1, aim: t.aim };
-        this.turretViews.set(t.id, v);
+        v = { root, ringMat, born: this.clock, bounceAt: -1 };
+        this.padViews.set(d.id, v);
       }
-      const age = this.clock - v.born;
-      // Spring up out of the floor.
-      const k = Math.min(1, age / 0.35);
+      const k = Math.min(1, (this.clock - v.born) / 0.3);
       const pop = 1 + 2.4 * (k - 1) ** 3 + 1.4 * (k - 1) ** 2;
-      if (t.hp < v.hp) {
-        v.hp = t.hp;
-        v.hitAt = this.clock;
-      }
-      const punch = Math.max(0, 1 - (this.clock - v.hitAt) / 0.15) * 0.15;
-      v.root.scale.set(pop * (1 + punch), pop * (1 - punch), pop * (1 + punch));
-      v.aim = lerpAngle(v.aim, t.aim, Math.min(1, dt * 18));
-      // Spring left, 0..1: the key slows and the body wobbles as it runs down.
-      const wind = Math.min(1, t.endsIn / TURRET.windDown);
-      v.head.rotation.y = Math.PI / 2 - v.aim + (1 - wind) * Math.sin(this.clock * 22) * 0.08;
-      v.key.rotation.z += dt * (2 + 10 * wind);
-      v.ringMat.opacity = t.endsIn < 1.2 && Math.floor(this.clock * 8) % 2 === 0 ? 0.2 : 0.7;
+      // Squash flat then spring tall when it launches someone.
+      const b = this.clock - v.bounceAt;
+      const sq = b < 0.35 ? Math.sin((b / 0.35) * Math.PI) * (b < 0.12 ? -0.45 : 0.35) : 0;
+      v.root.scale.set(pop * (1 - sq * 0.3), pop * (1 + sq), pop * (1 - sq * 0.3));
+      v.ringMat.opacity = d.endsIn < 2 && Math.floor(this.clock * 8) % 2 === 0 ? 0.15 : 0.55;
     }
-    for (const [id, v] of this.turretViews) {
+    for (const [id, v] of this.padViews) {
       if (seen.has(id)) continue;
       v.root.removeFromParent();
       v.ringMat.dispose();
-      this.turretViews.delete(id);
+      this.padViews.delete(id);
     }
   }
 
@@ -1383,14 +1406,6 @@ export class GameClient {
         if (pinged) this.toast(`${this.nameOf(ev.id)}'s sonar spotted you. They can see you through walls for a few seconds.`);
         break;
       }
-      case 'decoy':
-        if (ev.id === me) this.sfx.pop();
-        break;
-      case 'decoyPop':
-        this.particles.burst({ x: ev.x, y: ev.y, count: 20, color: ['#B48CFF', '#FFFFFF'], speed: 4, up: 4, life: 0.5 });
-        this.rings.spawn(ev.x, ev.y, 1.4, '#B48CFF', 0.3);
-        if (this.nearness(ev.x, ev.y) > 0.3) this.sfx.pop();
-        break;
       case 'explode': {
         const n = this.nearness(ev.x, ev.y);
         this.particles.burst({
@@ -1433,22 +1448,36 @@ export class GameClient {
         this.hud.set({ streak: { key: ++this.streakKey, name: this.nameOf(ev.id), n: ev.n, mine: ev.id === me } });
         if (ev.id === me) this.sfx.streak(ev.n);
         break;
-      case 'turret': {
-        this.rings.spawn(ev.x, ev.y, 1.5, TURRET_COLOR, 0.3);
-        this.particles.burst({ x: ev.x, y: ev.y, z: 0.1, count: 12, color: ['#C9B6E8', '#FFFFFF'], speed: 3, up: 2, life: 0.4, size: 0.14 });
+      case 'padSet': {
+        this.rings.spawn(ev.x, ev.y, 1.4, PAD_COLOR, 0.3);
+        this.particles.burst({ x: ev.x, y: ev.y, z: 0.1, count: 12, color: [PAD_COLOR, '#FFFFFF'], speed: 3, up: 2, life: 0.4, size: 0.14 });
         const near = ev.id === me ? 1 : this.nearness(ev.x, ev.y);
-        if (near > 0.2) this.sfx.windUp(near);
+        if (near > 0.2) this.sfx.padSet(near);
         break;
       }
-      case 'turretEnd': {
-        const near = this.nearness(ev.x, ev.y);
-        if (ev.broken) {
-          this.particles.burst({ x: ev.x, y: ev.y, z: 0.5, count: 26, color: [TURRET_COLOR, '#C9CED6', '#FFE45C', '#2E1A4F'], speed: 6, up: 6, life: 0.8, size: 0.2 });
-          this.rings.spawn(ev.x, ev.y, 1.8, '#FFFFFF', 0.3);
+      case 'padEnd':
+        this.particles.burst({ x: ev.x, y: ev.y, z: 0.2, count: 10, color: [PAD_COLOR, '#FFFFFF'], speed: 2, up: 2, life: 0.4, size: 0.14, gravity: 2 });
+        break;
+      case 'bounce': {
+        const v = this.padViews.get(ev.pad);
+        if (v) v.bounceAt = this.clock;
+        this.particles.burst({ x: ev.x, y: ev.y, z: 0.2, count: 18, color: [PAD_COLOR, PALETTE.lemon, '#FFFFFF'], speed: 4, up: 5, life: 0.5, size: 0.16 });
+        this.rings.spawn(ev.x, ev.y, 2, '#FFFFFF', 0.3);
+        const near = ev.id === me ? 1 : this.nearness(ev.x, ev.y);
+        if (near > 0.15) this.sfx.boing(near);
+        break;
+      }
+      case 'grapple': {
+        const near = ev.id === me ? 1 : this.nearness(ev.x1, ev.y1);
+        if (near > 0.2) this.sfx.grapple(ev.hit, near);
+        if (ev.hit) {
+          this.particles.burst({ x: ev.x2, y: ev.y2, z: 0.8, count: 10, color: ['#C9CED6', '#FFFFFF'], speed: 3, up: 1.5, life: 0.3, size: 0.12 });
         } else {
-          this.particles.burst({ x: ev.x, y: ev.y, z: 0.4, count: 10, color: ['#C9B6E8', '#FFFFFF'], speed: 2, up: 2, life: 0.5, size: 0.16, gravity: 2 });
+          const rope = new THREE.Mesh(this.ropeGeo, toon('#5B2A86'));
+          this.s.world.add(rope);
+          this.missRopes.push({ rope, born: this.clock, x0: ev.x1, y0: ev.y1, x1: ev.x2, y1: ev.y2 });
+          if (ev.id === me) this.toast('Nothing to hook onto. Aim the grapple at a wall within 15 m.');
         }
-        if (near > 0.2) this.sfx.windDown(near, ev.broken);
         break;
       }
       case 'refill':

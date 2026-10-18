@@ -177,8 +177,10 @@ export function botInput(state: GameState, p: PlayerState): InputFrame {
 function shouldUseAbility(p: PlayerState, d: number): boolean {
   switch (p.hero) {
     case 'blink':
-    case 'decoy':
       return true;
+    // Zip at the target; the hook usually catches the cover behind them.
+    case 'grapple':
+      return d > 8;
     case 'volt':
       return d < 11;
     case 'echo':

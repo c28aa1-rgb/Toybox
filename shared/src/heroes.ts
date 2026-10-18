@@ -1,4 +1,4 @@
-export type HeroId = 'blink' | 'volt' | 'chameleon' | 'decoy' | 'echo';
+export type HeroId = 'blink' | 'volt' | 'chameleon' | 'grapple' | 'echo';
 
 /**
  * cooldown: press to use, then wait `cooldown` seconds.
@@ -33,9 +33,9 @@ export const HEROES: Record<HeroId, HeroDef> = {
     id: 'chameleon', name: 'Chameleon', ability: 'Hide and Seek', kind: 'passive', cooldown: 0, color: '#3DDBB4',
     description: 'Passive. Stand still for 1.5 s to turn invisible. Moving, shooting, throwing or getting hit gives you away.',
   },
-  decoy: {
-    id: 'decoy', name: 'Mirage', ability: 'Decoy', kind: 'charge', charge: 120, cooldown: 0, color: '#B48CFF',
-    description: 'Charges as you deal damage. When full, send out a fake copy of yourself that runs and shoots blanks for 5 s.',
+  grapple: {
+    id: 'grapple', name: 'Snag', ability: 'Grapple', kind: 'cooldown', cooldown: 6, color: '#FF5FA2',
+    description: 'Fire a hook at your cursor. If it catches a wall within 15 m, zip straight to it.',
   },
   echo: {
     id: 'echo', name: 'Echo', ability: 'Sonar Ping', kind: 'cooldown', cooldown: 12, color: '#FF8A1F',
@@ -53,7 +53,7 @@ export function abilityTag(h: HeroDef): string {
 }
 
 /** Heroes that were replaced, mapped to their successors so saved loadouts keep working. */
-export const RETIRED_HEROES: Record<string, HeroId> = { swap: 'volt', chrono: 'chameleon', builder: 'echo' };
+export const RETIRED_HEROES: Record<string, HeroId> = { swap: 'volt', chrono: 'chameleon', builder: 'echo', decoy: 'grapple' };
 
 export function isHeroId(v: unknown): v is HeroId {
   return typeof v === 'string' && v in HEROES;
@@ -61,12 +61,12 @@ export function isHeroId(v: unknown): v is HeroId {
 
 export const ABILITY = {
   blinkDistance: 6.5,
-  decoyDuration: 5,
-  decoyHp: 40,
-  decoyFireCooldown: 0.4,
+  /** Grapple: how far the hook reaches and how fast you zip along the rope (m/s). */
+  grappleRange: 15,
+  grappleSpeed: 30,
   /** Hide and Seek: seconds standing still before you vanish. */
   hideDelay: 1.5,
-  /** Bots and turrets notice a hidden player this close. Players see a faint shimmer at the same range. */
+  /** Bots notice a hidden player this close. Players see a faint shimmer at the same range. */
   hiddenSpotRange: 3,
   /** Sonar Ping: reaches the whole map. */
   sonarReveal: 3,

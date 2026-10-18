@@ -114,6 +114,10 @@ export interface PlayerSnap {
   overcharge: number;
   /** Seconds left on each active power-up. Missing keys are inactive. */
   powers: Partial<Record<PowerId, number>>;
+  /** Height above the floor while launched by a Bounce Pad. */
+  z: number;
+  /** Grappling or launched: the server moves this player. `tx/ty` is where a grapple hook caught. */
+  dash: { kind: 'grapple' | 'bounce'; tx: number; ty: number } | null;
 }
 
 export interface BulletSnap {
@@ -147,18 +151,13 @@ export interface ThrowableSnap {
   owner: string;
 }
 
-export interface TurretSnap {
+export interface PadSnap {
   id: number;
   owner: string;
-  team: number;
   x: number;
   y: number;
-  aim: number;
-  /** Health left, 0..1. */
-  hp: number;
   endsIn: number;
 }
-
 export interface HillSnap {
   x: number;
   y: number;
@@ -176,14 +175,6 @@ export interface SmokeSnap {
   endsIn: number;
 }
 
-export interface DecoySnap {
-  id: number;
-  owner: string;
-  x: number;
-  y: number;
-  aim: number;
-}
-
 export type GameEvent =
   | { t: 'shot'; id: string; gun: GunId; x: number; y: number; a: number; charged?: boolean }
   | { t: 'hit'; target: string; by: string; dmg: number; x: number; y: number }
@@ -193,8 +184,6 @@ export type GameEvent =
   | { t: 'hide'; id: string; x: number; y: number }
   /** `hits`: enemies the ping reached; the pinger's team sees them for ABILITY.sonarReveal seconds. */
   | { t: 'sonar'; id: string; x: number; y: number; r: number; hits: string[] }
-  | { t: 'decoy'; id: string }
-  | { t: 'decoyPop'; x: number; y: number }
   | { t: 'explode'; x: number; y: number; r: number }
   | { t: 'pickup'; id: string; item: WeaponId }
   | { t: 'throw'; id: string; util: UtilId }
@@ -203,8 +192,11 @@ export type GameEvent =
   | { t: 'weaponSwap'; id: string }
   | { t: 'heal'; id: string; x: number; y: number }
   | { t: 'streak'; id: string; n: number }
-  | { t: 'turret'; id: string; x: number; y: number }
-  | { t: 'turretEnd'; x: number; y: number; broken: boolean }
+  /** `hit`: the hook caught a wall at (x2, y2) and the player is zipping there. */
+  | { t: 'grapple'; id: string; x1: number; y1: number; x2: number; y2: number; hit: boolean }
+  | { t: 'padSet'; id: string; x: number; y: number }
+  | { t: 'padEnd'; x: number; y: number }
+  | { t: 'bounce'; id: string; pad: number; x: number; y: number }
   | { t: 'ladder'; id: string; gun: GunId }
   | { t: 'refill'; id: string; util: UtilId }
   | { t: 'powerDrop'; power: PowerId; x: number; y: number }
@@ -237,10 +229,9 @@ export interface Snapshot {
   players: PlayerSnap[];
   bullets: BulletSnap[];
   pickups: PickupSnap[];
-  decoys: DecoySnap[];
   throwables: ThrowableSnap[];
   smokes: SmokeSnap[];
-  turrets: TurretSnap[];
+  pads: PadSnap[];
   events: GameEvent[];
 }
 

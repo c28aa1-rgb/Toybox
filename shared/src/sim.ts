@@ -6,7 +6,7 @@ import { GUNS, bulletDamage, type GunId } from './guns';
 import { ABILITY, HEROES, type HeroId } from './heroes';
 import { DEFAULT_MAP, MAPS, type MapDef, type MapId, type Rect } from './map';
 import type { GameEvent, InputFrame, Loadout, WeaponId } from './protocol';
-import { FLASH, SLOW_FACTOR, THROW, TURRET, UTILS, throwFlightTime, type UtilId } from './utilities';
+import { FLASH, PAD, SLOW_FACTOR, THROW, UTILS, throwFlightTime, type UtilId } from './utilities';
 import { GUN_LADDER, MODES, type ModeId } from './modes';
 import { POWER, POWERS, POWER_IDS, type PowerId } from './powers';
 
@@ -76,6 +76,28 @@ export interface PlayerState {
   /** Overcharge: this many shots left that hit harder, if fired before `overchargeUntil`. */
   overchargeShots: number;
   overchargeUntil: number;
+  /** Height above the floor while launched by a Bounce Pad. */
+  z: number;
+  /** A grapple zip or pad launch in progress; movement input is ignored until it ends. */
+  dash: Dash | null;
+  /** Last direction this player walked, so a Bounce Pad knows where to send them. */
+  moveX: number;
+  moveY: number;
+  /** Bounce Pads ignore this player until then, so landing next to one doesn't relaunch them. */
+  padReadyAt: number;
+}
+
+export interface Dash {
+  kind: 'grapple' | 'bounce';
+  vx: number;
+  vy: number;
+  startAt: number;
+  endsAt: number;
+  /** Peak height of the arc; 0 for a grapple, which drags you along the floor. */
+  height: number;
+  /** Grapple: where the hook caught. */
+  tx: number;
+  ty: number;
 }
 
 export interface Bullet {
@@ -91,8 +113,6 @@ export interface Bullet {
   bounces: number;
   /** Damage multiplier (Overcharge). */
   mult?: number;
-  /** Fired by a Wind-Up Turret: fixed damage, and kills credit the turret. */
-  turret?: boolean;
 }
 
 export interface Pickup {
@@ -104,19 +124,6 @@ export interface Pickup {
   expiresAt: number;
   /** Power-ups are marked before they land and can't be taken until this time. */
   readyAt?: number;
-}
-
-export interface Decoy {
-  id: number;
-  owner: string;
-  x: number;
-  y: number;
-  aim: number;
-  dirX: number;
-  dirY: number;
-  hp: number;
-  expiresAt: number;
-  fireReadyAt: number;
 }
 
 export interface Throwable {
@@ -133,16 +140,12 @@ export interface Throwable {
   fuseAt: number;
 }
 
-export interface Turret {
+export interface Pad {
   id: number;
   owner: string;
-  team: number;
   x: number;
   y: number;
-  aim: number;
-  hp: number;
   expiresAt: number;
-  fireReadyAt: number;
 }
 
 export interface Hill {
@@ -174,11 +177,10 @@ export interface GameState {
   pickups: Pickup[];
   throwables: Throwable[];
   smokes: Smoke[];
-  turrets: Turret[];
+  pads: Pad[];
   mode: ModeId;
   teamScores: [number, number];
   hill: Hill | null;
-  decoys: Decoy[];
   events: GameEvent[];
   map: MapDef;
   rng: () => number;
@@ -212,11 +214,10 @@ export function createGame(seed = Date.now(), mapId: MapId = DEFAULT_MAP, mode: 
     pickups: [],
     throwables: [],
     smokes: [],
-    turrets: [],
+    pads: [],
     mode,
     teamScores: [0, 0],
     hill: mode === 'hill' ? { x: map.w / 2, y: map.h / 2, r: Math.min(map.w, map.h) * 0.12, holder: null, contested: false, progress: 0 } : null,
-    decoys: [],
     events: [],
     map,
     rng: mulberry32(seed),
@@ -403,6 +404,11 @@ export function addPlayer(
     hidden: false,
     overchargeShots: 0,
     overchargeUntil: 0,
+    z: 0,
+    dash: null,
+    moveX: 0,
+    moveY: 1,
+    padReadyAt: 0,
   };
   state.players.set(p.id, p);
   spawn(state, p);
@@ -411,8 +417,7 @@ export function addPlayer(
 
 export function removePlayer(state: GameState, id: string): void {
   state.players.delete(id);
-  state.decoys = state.decoys.filter((d) => d.owner !== id);
-  state.turrets = state.turrets.filter((t) => t.owner !== id);
+  state.pads = state.pads.filter((d) => d.owner !== id);
 }
 
 function spawn(state: GameState, p: PlayerState): void {
@@ -472,6 +477,9 @@ function spawn(state: GameState, p: PlayerState): void {
   p.hidden = false;
   p.overchargeShots = 0;
   p.overchargeUntil = 0;
+  p.z = 0;
+  p.dash = null;
+  p.padReadyAt = 0;
 }
 
 export function setLoadout(state: GameState, p: PlayerState, loadout: Loadout): void {
@@ -491,8 +499,14 @@ export function applyInput(state: GameState, p: PlayerState, frame: InputFrame):
   const my = clamp(frame.my || 0, -1, 1);
   // No scoping while invisible: the server drops it too, so a modded client can't keep the slow, steady aim.
   p.scoped = !!frame.scope && !p.hidden;
-  if (mx !== 0 || my !== 0) reveal(state, p);
-  stepMovement(p, mx, my, dt, state.map.walls, p.scoped, isSlowed(state, p), hasPower(state, p, 'speed') ? POWER.speedFactor : 1);
+  if (mx !== 0 || my !== 0) {
+    reveal(state, p);
+    const len = Math.hypot(mx, my);
+    p.moveX = mx / len;
+    p.moveY = my / len;
+  }
+  // Mid-grapple or mid-launch the rope or the arc does the moving.
+  if (!p.dash) stepMovement(p, mx, my, dt, state.map.walls, p.scoped, isSlowed(state, p), hasPower(state, p, 'speed') ? POWER.speedFactor : 1);
   p.fire = !!frame.fire;
   if (frame.ability) p.wantAbility = true;
   if (frame.pickup) p.wantPickup = true;
@@ -547,6 +561,8 @@ function killPlayer(state: GameState, victim: PlayerState, killerId: string, gun
   victim.deaths++;
   victim.streak = 0;
   victim.wantRespawn = false;
+  victim.dash = null;
+  victim.z = 0;
   state.events.push({ t: 'kill', killer: killerId, victim: victim.id, gun });
   // Gun Ladder hands out fixed guns, so nothing drops there.
   if (state.mode !== 'ladder') {
@@ -610,11 +626,6 @@ function endMatch(state: GameState, winner: string): void {
   state.events.push({ t: 'win', id: winner });
 }
 
-function popDecoy(state: GameState, d: Decoy): void {
-  state.decoys = state.decoys.filter((o) => o !== d);
-  state.events.push({ t: 'decoyPop', x: r2(d.x), y: r2(d.y) });
-}
-
 function explodeGun(state: GameState, x: number, y: number, owner: string, gun: GunId, mult = 1): void {
   const def = GUNS[gun];
   explode(state, x, y, owner, gun, def.damage * mult, def.splashRadius ?? 0, def.knockback ?? 0);
@@ -636,21 +647,6 @@ function explode(state: GameState, x: number, y: number, owner: string, gun: Wea
     // Your own rockets push you (rocket jumps) but don't hurt.
     if (p.id !== owner) damagePlayer(state, p, def.damage * falloff, owner, gun);
   }
-  for (const d of [...state.decoys]) {
-    if (d.owner !== owner && Math.hypot(d.x - x, d.y - y) < radius) popDecoy(state, d);
-  }
-  for (const t of [...state.turrets]) {
-    if (t.owner === owner || sameTeam(state, t.owner, owner)) continue;
-    const d = Math.hypot(t.x - x, t.y - y);
-    if (d < radius + TURRET.radius) damageTurret(state, t, def.damage * (1 - 0.5 * Math.min(1, d / radius)));
-  }
-}
-
-function damageTurret(state: GameState, t: Turret, dmg: number): void {
-  t.hp -= dmg;
-  if (t.hp > 0) return;
-  state.turrets = state.turrets.filter((o) => o !== t);
-  state.events.push({ t: 'turretEnd', x: r2(t.x), y: r2(t.y), broken: true });
 }
 
 // ---------- actions ----------
@@ -733,14 +729,35 @@ function useAbility(state: GameState, p: PlayerState): boolean {
       state.events.push({ t: 'overcharge', id: p.id });
       return true;
     }
-    case 'decoy': {
-      state.decoys = state.decoys.filter((d) => d.owner !== p.id);
-      state.decoys.push({
-        id: state.nextId++, owner: p.id, x: p.x, y: p.y, aim: p.aim,
-        dirX: Math.cos(p.aim), dirY: Math.sin(p.aim), hp: ABILITY.decoyHp,
-        expiresAt: state.time + ABILITY.decoyDuration, fireReadyAt: state.time + 0.2,
-      });
-      state.events.push({ t: 'decoy', id: p.id });
+    case 'grapple': {
+      // Walk the hook out along the aim; the first wall it touches is where it catches.
+      const dx = Math.cos(p.aim);
+      const dy = Math.sin(p.aim);
+      let hit = -1;
+      for (let d = 0.3; d <= ABILITY.grappleRange; d += 0.15) {
+        if (walls.some((w) => pointInRect(p.x + dx * d, p.y + dy * d, w))) {
+          hit = d;
+          break;
+        }
+      }
+      if (hit < 0) {
+        const far = ABILITY.grappleRange;
+        state.events.push({ t: 'grapple', id: p.id, x1: r2(p.x), y1: r2(p.y), x2: r2(p.x + dx * far), y2: r2(p.y + dy * far), hit: false });
+        return false;
+      }
+      // Stop just short of the wall. Already touching it: nothing to zip, so it costs only the short retry wait.
+      const travel = hit - PLAYER_RADIUS - 0.05;
+      if (travel <= 0.3) return false;
+      const hx = p.x + dx * hit;
+      const hy = p.y + dy * hit;
+      state.events.push({ t: 'grapple', id: p.id, x1: r2(p.x), y1: r2(p.y), x2: r2(hx), y2: r2(hy), hit: true });
+      const speed = ABILITY.grappleSpeed;
+      p.dash = {
+        kind: 'grapple', vx: dx * speed, vy: dy * speed, startAt: state.time, endsAt: state.time + travel / speed,
+        height: 0, tx: hx, ty: hy,
+      };
+      p.vx = p.vy = 0;
+      reveal(state, p);
       return true;
     }
     // Passive abilities have nothing to press.
@@ -837,7 +854,7 @@ function throwUtil(state: GameState, p: PlayerState): void {
     return;
   }
   if (UTILS[p.utility].deploy) {
-    deployTurret(state, p);
+    deployPad(state, p);
     reveal(state, p);
     p.utilCharges--;
     p.throwReadyAt = state.time + THROW.cooldown;
@@ -863,63 +880,68 @@ function throwUtil(state: GameState, p: PlayerState): void {
   state.events.push({ t: 'throw', id: p.id, util: p.utility });
 }
 
-/** Set a turret down just in front of the player, or at their feet if that spot is blocked. One each. */
-function deployTurret(state: GameState, p: PlayerState): void {
+/** Set a pad down just in front of the player, or at their feet if that spot is blocked. */
+function deployPad(state: GameState, p: PlayerState): void {
   const walls = state.map.walls;
-  const r = TURRET.radius;
-  let x = p.x + Math.cos(p.aim) * TURRET.placeDistance;
-  let y = p.y + Math.sin(p.aim) * TURRET.placeDistance;
-  const blocked = x < r || y < r || x > state.map.w - r || y > state.map.h - r || walls.some((w) => circleOverlapsRect(x, y, r, w));
+  const r = PAD.radius;
+  let x = p.x + Math.cos(p.aim) * PAD.placeDistance;
+  let y = p.y + Math.sin(p.aim) * PAD.placeDistance;
+  const blocked = x < r || y < r || x > state.map.w - r || y > state.map.h - r || walls.some((w) => circleOverlapsRect(x, y, r * 0.6, w));
   if (blocked) {
     x = p.x;
     y = p.y;
   }
-  for (const old of state.turrets.filter((t) => t.owner === p.id)) {
-    state.events.push({ t: 'turretEnd', x: r2(old.x), y: r2(old.y), broken: false });
+  // Too many down: the oldest one folds up.
+  const mine = state.pads.filter((d) => d.owner === p.id);
+  if (mine.length >= PAD.maxPerPlayer) {
+    const old = mine[0];
+    state.pads = state.pads.filter((d) => d !== old);
+    state.events.push({ t: 'padEnd', x: r2(old.x), y: r2(old.y) });
   }
-  state.turrets = state.turrets.filter((t) => t.owner !== p.id);
-  state.turrets.push({
-    id: state.nextId++, owner: p.id, team: p.team, x, y, aim: p.aim, hp: TURRET.hp,
-    expiresAt: state.time + TURRET.duration, fireReadyAt: state.time + 0.5,
-  });
-  state.events.push({ t: 'turret', id: p.id, x: r2(x), y: r2(y) });
+  state.pads.push({ id: state.nextId++, owner: p.id, x, y, expiresAt: state.time + PAD.duration });
+  // The one who set it down shouldn't be launched by it straight away.
+  p.padReadyAt = Math.max(p.padReadyAt, state.time + 0.6);
+  state.events.push({ t: 'padSet', id: p.id, x: r2(x), y: r2(y) });
 }
 
-/** Turn toward the nearest enemy in sight and fire once lined up. The spring slows it near the end. */
-function updateTurrets(state: GameState, dt: number): void {
-  for (const t of state.turrets) {
-    let target: PlayerState | null = null;
-    let best = TURRET.range;
+/** Anyone who steps on a pad, friend or foe, is thrown over walls the way they were walking. */
+function updatePads(state: GameState): void {
+  for (const pad of state.pads) {
     for (const p of state.players.values()) {
-      if (!p.alive || p.id === t.owner || sameTeam(state, p.id, t.owner)) continue;
-      const d = Math.hypot(p.x - t.x, p.y - t.y);
-      // Hidden players slip past unless they walk right up to it.
-      if (isHidden(state, p) && d > ABILITY.hiddenSpotRange) continue;
-      if (d < best && hasLineOfSight(state, t.x, t.y, p.x, p.y)) {
-        best = d;
-        target = p;
-      }
+      if (!p.alive || p.dash || state.time < p.padReadyAt) continue;
+      if (Math.hypot(p.x - pad.x, p.y - pad.y) > PAD.radius) continue;
+      const speed = PAD.launchDistance / PAD.launchTime;
+      p.dash = {
+        kind: 'bounce', vx: p.moveX * speed, vy: p.moveY * speed, startAt: state.time, endsAt: state.time + PAD.launchTime,
+        height: PAD.launchHeight, tx: 0, ty: 0,
+      };
+      p.vx = p.vy = 0;
+      p.padReadyAt = state.time + PAD.launchTime + PAD.reuseDelay;
+      reveal(state, p);
+      state.events.push({ t: 'bounce', id: p.id, pad: pad.id, x: r2(pad.x), y: r2(pad.y) });
     }
-    if (!target) continue;
-    const want = Math.atan2(target.y - t.y, target.x - t.x);
-    let diff = want - t.aim;
-    while (diff > Math.PI) diff -= Math.PI * 2;
-    while (diff < -Math.PI) diff += Math.PI * 2;
-    const step = TURRET.turnRate * dt;
-    t.aim += Math.abs(diff) <= step ? diff : Math.sign(diff) * step;
-    if (Math.abs(diff) > TURRET.fireCone || state.time < t.fireReadyAt) continue;
-    const left = t.expiresAt - state.time;
-    const slow = left < TURRET.windDown ? 2 - left / TURRET.windDown : 1;
-    t.fireReadyAt = state.time + TURRET.cooldown * slow;
-    const a = t.aim + (state.rng() - 0.5) * TURRET.spread;
-    const dx = Math.cos(a);
-    const dy = Math.sin(a);
-    state.bullets.push({
-      id: state.nextId++, owner: t.owner, gun: 'pistol',
-      x: t.x + dx * (TURRET.radius + 0.2), y: t.y + dy * (TURRET.radius + 0.2),
-      dx, dy, travelled: 0, fake: false, bounces: 0, turret: true,
-    });
-    state.events.push({ t: 'shot', id: `turret:${t.id}`, gun: 'pistol', x: r2(t.x), y: r2(t.y), a: r2(t.aim) });
+  }
+}
+
+/**
+ * Move a grappling or launched player. High in a pad arc they pass over inner walls (only the
+ * arena border stops them); low down, walls block as usual. A grapple ends early if something
+ * stops it, and both settle out of any wall they land in.
+ */
+function updateDash(state: GameState, p: PlayerState, dt: number): void {
+  const d = p.dash;
+  if (!d) return;
+  const k = Math.min(1, (state.time - d.startAt) / Math.max(1e-6, d.endsAt - d.startAt));
+  p.z = d.height * 4 * k * (1 - k);
+  const before = { x: p.x, y: p.y };
+  const walls = p.z > THROW.wallHeight ? state.map.walls.slice(0, 4) : state.map.walls;
+  moveCircle(p, d.vx * dt, d.vy * dt, walls);
+  const expected = Math.hypot(d.vx, d.vy) * dt;
+  const stuck = Math.hypot(p.x - before.x, p.y - before.y) < expected * 0.3;
+  if (k >= 1 || (d.kind === 'grapple' && stuck)) {
+    p.dash = null;
+    p.z = 0;
+    moveCircle(p, 0, 0, state.map.walls);
   }
 }
 
@@ -1011,6 +1033,7 @@ export function tick(state: GameState, dt: number): void {
       if (state.time >= p.respawnAt && (p.bot || p.wantRespawn)) spawn(state, p);
       continue;
     }
+    updateDash(state, p, dt);
     if (p.vx !== 0 || p.vy !== 0) {
       moveCircle(p, p.vx * dt, p.vy * dt, walls);
       const decay = Math.exp(-7 * dt);
@@ -1068,19 +1091,15 @@ export function tick(state: GameState, dt: number): void {
   if (state.time >= state.nextPowerAt) dropPower(state);
   if (state.hill) updateHill(state, state.hill, dt);
 
-  updateDecoys(state, dt, walls);
-  updateTurrets(state, dt);
+  updatePads(state);
   updateBullets(state, dt);
   updateThrowables(state, dt);
 
   const t = state.time;
   state.pickups = state.pickups.filter((k) => k.expiresAt > t);
   state.smokes = state.smokes.filter((sm) => sm.expiresAt > t);
-  for (const tr of state.turrets) {
-    if (tr.expiresAt <= t) state.events.push({ t: 'turretEnd', x: r2(tr.x), y: r2(tr.y), broken: false });
-  }
-  state.turrets = state.turrets.filter((tr) => tr.expiresAt > t);
-  for (const d of [...state.decoys]) if (d.expiresAt <= t) popDecoy(state, d);
+  for (const pad of state.pads) if (pad.expiresAt <= t) state.events.push({ t: 'padEnd', x: r2(pad.x), y: r2(pad.y) });
+  state.pads = state.pads.filter((pad) => pad.expiresAt > t);
 
 }
 
@@ -1151,47 +1170,6 @@ function updateHill(state: GameState, hill: Hill, dt: number): void {
   }
 }
 
-function updateDecoys(state: GameState, dt: number, walls: Rect[]): void {
-  for (const d of state.decoys) {
-    const before = { x: d.x, y: d.y };
-    moveCircle(d, d.dirX * PLAYER_SPEED * dt, d.dirY * PLAYER_SPEED * dt, walls);
-    const moved = Math.hypot(d.x - before.x, d.y - before.y);
-    if (moved < PLAYER_SPEED * dt * 0.3) {
-      // Stuck on a wall: turn 90 degrees, alternating direction for variety.
-      const turn = state.rng() < 0.5 ? 1 : -1;
-      const nx = -d.dirY * turn;
-      const ny = d.dirX * turn;
-      d.dirX = nx;
-      d.dirY = ny;
-    }
-    // Aim at the nearest enemy in range, otherwise where it's running.
-    let target: PlayerState | null = null;
-    let bestD = 10;
-    for (const p of state.players.values()) {
-      if (!p.alive || p.id === d.owner) continue;
-      const dd = Math.hypot(p.x - d.x, p.y - d.y);
-      if (dd < bestD) {
-        bestD = dd;
-        target = p;
-      }
-    }
-    d.aim = target ? Math.atan2(target.y - d.y, target.x - d.x) : Math.atan2(d.dirY, d.dirX);
-    if (target && state.time >= d.fireReadyAt) {
-      d.fireReadyAt = state.time + ABILITY.decoyFireCooldown;
-      const owner = state.players.get(d.owner);
-      const gun = owner?.gun ?? 'pistol';
-      const dx = Math.cos(d.aim);
-      const dy = Math.sin(d.aim);
-      state.bullets.push({
-        id: state.nextId++, owner: d.owner, gun,
-        x: d.x + dx * (PLAYER_RADIUS + 0.15), y: d.y + dy * (PLAYER_RADIUS + 0.15),
-        dx, dy, travelled: 0, fake: true, bounces: 0,
-      });
-      state.events.push({ t: 'shot', id: `decoy:${d.id}`, gun, x: r2(d.x), y: r2(d.y), a: r2(d.aim) });
-    }
-  }
-}
-
 const BULLET_RADIUS = 0.12;
 
 function updateBullets(state: GameState, dt: number): void {
@@ -1200,7 +1178,7 @@ function updateBullets(state: GameState, dt: number): void {
     const def = GUNS[b.gun];
     const move = def.speed * dt;
     const mult = b.mult ?? 1;
-    const hitDamage = () => (b.turret ? TURRET.damage : bulletDamage(b.gun, b.travelled)) * mult;
+    const hitDamage = () => bulletDamage(b.gun, b.travelled) * mult;
     const steps = Math.max(1, Math.ceil(move / 0.35));
     const stepLen = move / steps;
     for (let s = 0; s < steps; s++) {
@@ -1224,35 +1202,12 @@ function updateBullets(state: GameState, dt: number): void {
             if (def.splashRadius) explodeGun(state, b.x, b.y, b.owner, b.gun, mult);
             else {
               if (def.slow && state.time >= p.shieldUntil) p.slowUntil = Math.max(p.slowUntil, state.time + def.slow);
-              damagePlayer(state, p, hitDamage(), b.owner, b.turret ? 'turret' : b.gun);
+              damagePlayer(state, p, hitDamage(), b.owner, b.gun);
               if (def.knockback) {
                 p.vx += b.dx * def.knockback;
                 p.vy += b.dy * def.knockback;
               }
             }
-          }
-          continue outer;
-        }
-      }
-      for (const d of state.decoys) {
-        if (d.owner === b.owner) continue;
-        if ((d.x - b.x) ** 2 + (d.y - b.y) ** 2 < (PLAYER_RADIUS + BULLET_RADIUS) ** 2) {
-          if (!b.fake) {
-            if (def.splashRadius) explodeGun(state, b.x, b.y, b.owner, b.gun, mult);
-            else {
-              d.hp -= hitDamage();
-              if (d.hp <= 0) popDecoy(state, d);
-            }
-          }
-          continue outer;
-        }
-      }
-      for (const t of state.turrets) {
-        if (t.owner === b.owner || sameTeam(state, t.owner, b.owner)) continue;
-        if ((t.x - b.x) ** 2 + (t.y - b.y) ** 2 < (TURRET.radius + BULLET_RADIUS) ** 2) {
-          if (!b.fake) {
-            if (def.splashRadius) explodeGun(state, b.x, b.y, b.owner, b.gun, mult);
-            else damageTurret(state, t, hitDamage());
           }
           continue outer;
         }
@@ -1297,7 +1252,7 @@ export function resetMatch(state: GameState): void {
   state.pickups = [];
   state.throwables = [];
   state.smokes = [];
-  state.turrets = [];
+  state.pads = [];
   state.teamScores = [0, 0];
   state.nextPowerAt = state.time + POWER.firstAfter;
   if (state.hill) {
@@ -1305,7 +1260,6 @@ export function resetMatch(state: GameState): void {
     state.hill.contested = false;
     state.hill.progress = 0;
   }
-  state.decoys = [];
   for (const p of state.players.values()) {
     p.kills = 0;
     p.deaths = 0;

@@ -101,18 +101,22 @@ export class Sfx {
       this.tone(f, f, 0.16, 'square', 0.1, i * 0.07);
     });
   }
-  /** Ratchet clicks while the turret is wound up. */
-  windUp(near: number): void {
-    for (let i = 0; i < 5; i++) this.tone(1400 + i * 120, 900, 0.03, 'square', 0.07 * near, i * 0.05);
+  /** Grapple: a launch twang, then a clank if it caught or a limp slap if it missed. */
+  grapple(hit: boolean, near: number): void {
+    this.tone(900, 300, 0.12, 'square', 0.08 * near);
+    this.noise(0.08, 0.15 * near, 3000, 2);
+    if (hit) this.tone(1800, 1500, 0.08, 'triangle', 0.12 * near, 0.1);
+    else this.tone(250, 150, 0.12, 'sine', 0.08 * near, 0.18);
   }
-  /** A clunk when a turret is shot apart, a sprong when its spring simply runs out. */
-  windDown(near: number, broken: boolean): void {
-    if (broken) {
-      this.noise(0.2, 0.3 * near, 900, 1);
-      this.tone(300, 80, 0.25, 'square', 0.12 * near);
-    } else {
-      this.tone(600, 180, 0.35, 'triangle', 0.12 * near);
-    }
+  /** Bounce Pad set down: a plasticky thunk. */
+  padSet(near: number): void {
+    this.tone(320, 140, 0.12, 'triangle', 0.14 * near);
+    this.noise(0.06, 0.12 * near, 1200, 1);
+  }
+  /** Bounce Pad launch: a big cartoon boing. */
+  boing(near: number): void {
+    this.tone(180, 720, 0.35, 'sine', 0.22 * near);
+    this.tone(360, 1100, 0.25, 'triangle', 0.08 * near, 0.03);
   }
   death(): void { this.tone(400, 60, 0.6, 'sawtooth', 0.15); }
   explode(near: number): void { this.noise(0.6, 0.6 * (0.2 + near * 0.8), 300, 0.5); this.tone(110, 35, 0.5, 'sine', 0.35 * near); }

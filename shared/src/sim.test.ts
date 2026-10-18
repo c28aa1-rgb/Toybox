@@ -10,7 +10,7 @@ import {
 } from './sim';
 import { HEAL_AMOUNT, KILLS_TO_WIN, MAX_HP, PLAYER_RADIUS, SPAWN_SHIELD, TICK_DT } from './constants';
 import { GUN_LADDER, MODES } from './modes';
-import { THROW, TURRET } from './utilities';
+import { PAD, THROW } from './utilities';
 import type { ModeId } from './modes';
 import { POWER, POWERS } from './powers';
 
@@ -339,7 +339,7 @@ describe('abilities', () => {
     expect(HEROES.blink.cooldown).toBeGreaterThanOrEqual(10);
   });
 
-  it('hide and seek: standing still hides you, moving or shooting reveals you, turrets ignore you unless close', () => {
+  it('hide and seek: standing still hides you, moving or shooting reveals you', () => {
     const { s, a } = setup();
     a.hero = 'chameleon';
     a.stillSince = s.time;
@@ -347,10 +347,6 @@ describe('abilities', () => {
     expect(isHidden(s, a)).toBe(false);
     run(s, 0.3);
     expect(isHidden(s, a)).toBe(true);
-    s.turrets.push({ id: 5, owner: 'b', team: -1, x: a.x + 6, y: a.y, aim: Math.PI, hp: 60, expiresAt: 99, fireReadyAt: 0 });
-    run(s, 1);
-    expect(a.hp).toBe(MAX_HP);
-    s.turrets = [];
     applyInput(s, a, frame(1, { mx: 1 }));
     expect(isHidden(s, a)).toBe(false);
     run(s, ABILITY.hideDelay + 0.1);
@@ -379,17 +375,29 @@ describe('abilities', () => {
     expect(a.abilityReadyAt).toBeCloseTo(s.time + HEROES.echo.cooldown - TICK_DT, 1);
   });
 
-  it('decoy shoots blanks', () => {
-    const { s, a, b } = setup();
-    a.hero = 'decoy';
-    a.abilityCharge = HEROES.decoy.charge!;
+  it('grapple zips you to the wall the hook catches, and a miss costs only a short wait', () => {
+    const { s, a } = setup();
+    a.hero = 'grapple';
+    a.x = 10; a.y = 18; a.aim = 0; a.abilityReadyAt = 0;
     a.wantAbility = true;
     tick(s, TICK_DT);
-    expect(s.decoys.length).toBe(1);
-    a.x = 3; a.y = 3; // owner steps away; decoy keeps shooting at b
-    run(s, 2);
-    expect(s.bullets.some((x) => x.fake) || b.hp === 100).toBe(true);
-    expect(b.hp).toBe(100);
+    const ev = s.events.find((e) => e.t === 'grapple');
+    expect(ev && ev.t === 'grapple' && ev.hit).toBe(true);
+    expect(a.dash?.kind).toBe('grapple');
+    run(s, 0.5);
+    expect(a.dash).toBeNull();
+    expect(a.x).toBeGreaterThan(16.5);
+    expect(a.x).toBeLessThan(17.5 - PLAYER_RADIUS + 0.01);
+
+    const { s: s2, a: m } = setup();
+    m.hero = 'grapple';
+    m.x = 10; m.y = 18; m.aim = (2 / 16) * Math.PI * 2; m.abilityReadyAt = 0; // open floor that way
+    m.wantAbility = true;
+    tick(s2, TICK_DT);
+    const miss = s2.events.find((e) => e.t === 'grapple');
+    expect(miss && miss.t === 'grapple' && miss.hit).toBe(false);
+    expect(m.dash).toBeNull();
+    expect(m.abilityReadyAt - s2.time).toBeLessThan(1);
   });
 });
 
@@ -516,56 +524,44 @@ describe('new weapons', () => {
     expect(b.slowUntil).toBeGreaterThan(s.time);
   });
 
-  it('a wind-up turret is set down in front, shoots enemies, and credits kills to the turret', () => {
-    const { s, a, b } = setup();
-    a.utility = 'turret';
-    a.utilCharges = 1;
+  it('a bounce pad is set down in front and launches whoever steps on it over walls', () => {
+    const { s, a } = setup();
+    a.utility = 'pad';
+    a.utilCharges = 2;
+    a.x = 19.6; a.y = 18; a.aim = 0;
     a.wantThrow = true;
     tick(s, TICK_DT);
-    expect(a.utilCharges).toBe(0);
-    expect(s.turrets).toHaveLength(1);
-    const t = s.turrets[0];
-    expect(t.x).toBeCloseTo(a.x + TURRET.placeDistance, 5);
-    // Get A out of the way so only the turret is fighting.
-    a.x = 19; a.y = 5;
-    b.hp = TURRET.damage * 2;
-    let killedBy: string | null = null;
-    for (let i = 0; i < 60 && b.alive; i++) {
-      tick(s, TICK_DT);
-      for (const e of s.events) if (e.t === 'kill') killedBy = e.gun;
-    }
-    expect(b.alive).toBe(false);
-    expect(killedBy).toBe('turret');
-    expect(a.kills).toBe(1);
+    expect(a.utilCharges).toBe(1);
+    expect(s.pads).toHaveLength(1);
+    const pad = s.pads[0];
+    expect(pad.x).toBeCloseTo(19.6 + PAD.placeDistance, 5);
+    // Walk onto it heading +x: the centre block (x 24-28 at this height) is in the way.
+    run(s, 0.7);
+    a.moveX = 1; a.moveY = 0;
+    a.x = pad.x; a.y = pad.y;
+    tick(s, TICK_DT);
+    expect(a.dash?.kind).toBe('bounce');
+    run(s, PAD.launchTime / 2);
+    expect(a.z).toBeGreaterThan(THROW.wallHeight);
+    run(s, PAD.launchTime);
+    expect(a.dash).toBeNull();
+    expect(a.z).toBe(0);
+    expect(a.x).toBeGreaterThan(28 + PLAYER_RADIUS);
   });
 
-  it('turrets wind down, break when shot, and only one stands per player', () => {
-    const { s, a, b } = setup();
-    a.utility = 'turret';
-    a.utilCharges = 2;
-    a.wantThrow = true;
-    tick(s, TICK_DT);
-    run(s, THROW.cooldown + 0.1);
-    a.wantThrow = true;
-    tick(s, TICK_DT);
-    expect(s.turrets).toHaveLength(1);
-
-    // B shoots it down with the pistol (19 a hit) before the 60 hp runs out.
-    const t = s.turrets[0];
-    b.x = t.x + 4; b.y = t.y; b.aim = Math.PI; b.fire = true;
-    b.shieldUntil = -1;
-    a.x = 19; a.y = 5;
-    run(s, 2);
-    expect(s.turrets).toHaveLength(0);
-
-    // A fresh one expires on its own after its duration.
-    const { s: s2, a: a2 } = setup();
-    a2.utility = 'turret';
-    a2.utilCharges = 1;
-    a2.wantThrow = true;
-    tick(s2, TICK_DT);
-    run(s2, TURRET.duration + 0.1);
-    expect(s2.turrets).toHaveLength(0);
+  it('only two pads per player, and they fold up after their time', () => {
+    const { s, a } = setup();
+    a.utility = 'pad';
+    a.utilCharges = 3;
+    for (let i = 0; i < 3; i++) {
+      a.wantThrow = true;
+      tick(s, TICK_DT);
+      run(s, THROW.cooldown + 0.1);
+      a.y += 3;
+    }
+    expect(s.pads).toHaveLength(2);
+    run(s, PAD.duration);
+    expect(s.pads).toHaveLength(0);
   });
 
   it('juice box heals on the spot and is not wasted at full health', () => {

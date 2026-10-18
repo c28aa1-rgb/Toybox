@@ -1,4 +1,4 @@
-export type UtilId = 'frag' | 'flash' | 'smoke' | 'turret' | 'juice';
+export type UtilId = 'frag' | 'flash' | 'smoke' | 'pad' | 'juice';
 
 export interface UtilDef {
   id: UtilId;
@@ -29,9 +29,9 @@ export const UTILS: Record<UtilId, UtilDef> = {
     id: 'smoke', name: 'Puff Can', blurb: 'Thick smoke for 7 s. Nobody can see into, out of or through it.',
     fuseAfterLanding: 0.1, radius: 3.6, damage: 0, knockback: 0, charges: 2,
   },
-  turret: {
-    id: 'turret', name: 'Wind-Up Turret', blurb: 'Press G to set it down. Shoots the nearest enemy until it winds down.',
-    fuseAfterLanding: 0, radius: 0, damage: 8, knockback: 0, charges: 1, deploy: true,
+  pad: {
+    id: 'pad', name: 'Bounce Pad', blurb: 'Press G to set it down. Anyone who steps on it gets launched over walls the way they are moving.',
+    fuseAfterLanding: 0, radius: 0, damage: 0, knockback: 0, charges: 2, deploy: true,
   },
   juice: {
     id: 'juice', name: 'Juice Box', blurb: 'Press G to drink it. Heals 45 straight away.',
@@ -59,23 +59,20 @@ export const THROW = {
 /** Flash Pop blindness in seconds: `max` right next to it, `min` at the edge of its radius. The thrower gets half. */
 export const FLASH = { min: 1.5, max: 5 };
 
-/** Wind-Up Turret: one per player, shoots enemies it can see, slows down as the spring runs out. */
-export const TURRET = {
-  duration: 8,
-  hp: 60,
-  range: 11,
-  /** Seconds between shots at full wind; doubles over the last `windDown` seconds. */
-  cooldown: 0.3,
-  windDown: 2.5,
-  damage: 8,
-  spread: 0.07,
-  /** Radians per second the head turns toward its target. */
-  turnRate: 7,
-  /** Fires once the target is within this angle of the barrel. */
-  fireCone: 0.25,
-  radius: 0.45,
-  /** How far in front of you it is set down. */
-  placeDistance: 1.2,
+/** Bounce Pad: set down in front of you, launches whoever steps on it. */
+export const PAD = {
+  /** Seconds a pad stays out. Each player can have this many down at once; a new one replaces the oldest. */
+  duration: 25,
+  maxPerPlayer: 2,
+  /** Step within this distance of the centre to trigger it. */
+  radius: 0.85,
+  placeDistance: 1.4,
+  /** The launch: metres travelled, seconds in the air and peak height (high enough to clear walls). */
+  launchDistance: 10,
+  launchTime: 0.75,
+  launchHeight: 3.2,
+  /** After landing, a short wait before the same player can be launched again. */
+  reuseDelay: 0.5,
 };
 
 /** Movement multiplier while slowed by a Stinger hit. */

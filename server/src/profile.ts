@@ -39,9 +39,10 @@ export async function getPlayerProfile(uid: string): Promise<PlayerProfile> {
       return defaultProfile;
     }
     const stored = { ...defaultProfile, ...snap.data(), unlocks: Array.isArray(snap.get('unlocks')) ? snap.get('unlocks') : ['none'] } as PlayerProfile;
-    // Utilities get retired (Goo Bomb became the Wind-Up Turret); fall back rather than send a dead id.
+    // Utilities get retired (the Wind-Up Turret became the Bounce Pad); carry them over or fall back.
+    if ((stored.utility as string) === 'turret') stored.utility = 'pad';
     if (!isUtilId(stored.utility)) stored.utility = defaultProfile.utility;
-    // Retired heroes (Switch, Tock, Brick) carry over to their replacements (Volt, Chameleon, Echo).
+    // Retired heroes (Switch, Tock, Brick, Mirage) carry over to their replacements (Volt, Chameleon, Echo, Snag).
     if (!isHeroId(stored.hero)) stored.hero = RETIRED_HEROES[stored.hero as string] ?? defaultProfile.hero;
     return stored;
   });
