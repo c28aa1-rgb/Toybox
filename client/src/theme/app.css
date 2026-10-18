@@ -437,6 +437,9 @@ kbd {
 
 @media (max-width: 600px) {
   .lobby__utility { flex-wrap: wrap; }
+  /* The two-word title is wider than a phone; let it stack instead of pushing the page sideways. */
+  .wordmark { white-space: normal; }
+  .lobby__head > * { min-width: 0; }
 }
 
 /* ---------- game ---------- */
@@ -988,7 +991,9 @@ kbd {
   display: grid;
   justify-items: center;
   gap: 2px;
-  min-width: min(420px, 100%);
+  /* A fixed floor, not a percentage: 100% here resolved against .playbar__action, which sizes itself
+     from this button, so the button took the whole row and pushed itself past the page edge. */
+  min-width: 340px;
   padding: 16px 48px 14px;
   font-size: 44px;
   line-height: 1;
@@ -999,6 +1004,7 @@ kbd {
   display: flex;
   align-items: center;
   gap: 14px;
+  max-width: 100%;
 }
 
 .playbar__online {

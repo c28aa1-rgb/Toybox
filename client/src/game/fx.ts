@@ -108,7 +108,40 @@ export class Rings {
     this.items.push({ mesh: m, life, maxLife: life, maxR: radius });
   }
 
+  private waves: { mesh: THREE.Mesh; age: number; maxR: number; speed: number; width: number }[] = [];
+
+  /**
+   * A thin ring that travels outward at a steady speed and keeps its width, so it stays readable
+   * across a whole map (a scaled ring would get fat and faint). Used by Sonar Ping.
+   */
+  spawnWave(x: number, y: number, radius: number, color: THREE.ColorRepresentation, speed = 45, width = 0.7): void {
+    const mat = new THREE.MeshBasicMaterial({ color, transparent: true, side: THREE.DoubleSide, depthWrite: false, opacity: 0.9 });
+    (mat.userData as Record<string, unknown>).outlineParameters = { visible: false };
+    const m = new THREE.Mesh(new THREE.RingGeometry(0.01, width, 96), mat);
+    m.rotation.x = -Math.PI / 2;
+    m.position.set(x, 0.08, y);
+    m.renderOrder = 2;
+    this.scene.add(m);
+    this.waves.push({ mesh: m, age: 0, maxR: radius, speed, width });
+  }
+
   update(dt: number): void {
+    this.waves = this.waves.filter((w) => {
+      w.age += dt;
+      const r = w.speed * w.age;
+      const done = r >= w.maxR + w.width;
+      if (done) {
+        this.scene.remove(w.mesh);
+        w.mesh.geometry.dispose();
+        (w.mesh.material as THREE.Material).dispose();
+        return false;
+      }
+      w.mesh.geometry.dispose();
+      w.mesh.geometry = new THREE.RingGeometry(Math.max(0.01, r - w.width), Math.max(w.width, r), 96);
+      // Full strength most of the way, fading over the last fifth.
+      (w.mesh.material as THREE.MeshBasicMaterial).opacity = 0.9 * Math.min(1, (w.maxR - r) / (w.maxR * 0.2) + 0.15);
+      return true;
+    });
     this.items = this.items.filter((it) => {
       it.life -= dt;
       const k = 1 - Math.max(0, it.life) / it.maxLife;

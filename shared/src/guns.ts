@@ -70,8 +70,8 @@ export const GUNS: Record<GunId, GunDef> = {
   },
   shotgun: {
     magazine: 6, reloadTime: 1.9,
-    id: 'shotgun', slot: 'primary', name: 'Boomstick', blurb: 'Six pellets. Get close.',
-    damage: 11, cooldown: 0.85, speed: 22, range: 7.5, pellets: 6, spread: 0.42, knockback: 1.2,
+    id: 'shotgun', slot: 'primary', name: 'Boomstick', blurb: 'Six heavy pellets. A one-shot up close.',
+    damage: 18, cooldown: 0.85, speed: 24, range: 8, pellets: 6, spread: 0.36, knockback: 1.2,
   },
   sniper: {
     magazine: 4, reloadTime: 2.1,

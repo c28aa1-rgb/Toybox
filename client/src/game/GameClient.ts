@@ -521,9 +521,15 @@ export class GameClient {
     const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.7);
     ray.ray.intersectPlane(plane, this.aimPoint);
     this.cursorRing.position.set(this.aimPoint.x, 0.05, this.aimPoint.z);
-    const scoping = this.input.scopeHeld && !this.hud.get().chatOpen && !!this.hud.get().me?.alive;
+    const scoping = this.isScoping();
     this.reticle.style.transform = `translate(${this.input.mouseX}px, ${this.input.mouseY}px)`;
     this.reticle.classList.toggle('is-on', scoping);
+  }
+
+  /** Scope held, alive and not typing. Hide and Seek players can't scope while invisible. */
+  private isScoping(): boolean {
+    const me = this.latest?.players.find((p) => p.id === this.myId);
+    return !!me?.alive && !me.hidden && this.input.scopeHeld && !this.hud.get().chatOpen;
   }
 
   private sendInput(dt: number, me: PlayerSnap, snap: Snapshot): void {
@@ -540,7 +546,7 @@ export class GameClient {
       aim: this.aim,
       aimDist,
       fire: !typing && this.input.fireHeld,
-      scope: !typing && this.input.scopeHeld,
+      scope: !typing && this.isScoping(),
       ability: !typing && this.input.takeAbility(),
       pickup: !typing && this.input.takePickup(),
       reload: !typing && this.input.takeReload(),
@@ -617,7 +623,7 @@ export class GameClient {
       let shield = p.shield;
       let scoped = p.scoped;
       if (p.id === this.myId && p.alive && snap.phase === 'playing') {
-        scoped = this.input.scopeHeld && !this.hud.get().chatOpen;
+        scoped = this.isScoping();
         x = this.pred.x + this.predOffset.x;
         y = this.pred.y + this.predOffset.y;
         aim = this.aim;
@@ -1217,7 +1223,7 @@ export class GameClient {
       const lead = new THREE.Vector3(this.aimPoint.x - target.x, 0, this.aimPoint.z - target.z);
       // Scoping pushes the view far out along the aim so long shots stay on screen.
       // The Longshot reaches 34 m, so its scope pushes further than the others.
-      const scoping = this.input.scopeHeld && !st.chatOpen;
+      const scoping = this.isScoping();
       const longScope = scoping && me.gun === 'sniper';
       lead.clampLength(0, longScope ? 24 : scoping ? 18 : 10).multiplyScalar(longScope ? 0.6 : scoping ? 0.5 : 0.18);
       target.add(lead);
@@ -1233,7 +1239,7 @@ export class GameClient {
       this.camTarget.lerp(target, 1 - Math.exp(-7 * dt));
     }
     const shake = this.shake.offset(dt, reducedMotion());
-    const wantZoom = me?.alive && this.input.scopeHeld && !st.chatOpen ? (me.gun === 'sniper' ? 1.4 : 1) : 0;
+    const wantZoom = me && this.isScoping() ? (me.gun === 'sniper' ? 1.4 : 1) : 0;
     this.scopeZoom += (wantZoom - this.scopeZoom) * (1 - Math.exp(-6 * dt));
     const offset = CAMERA_OFFSET.clone().multiplyScalar(1 + this.scopeZoom * 0.22);
     this.s.camera.position.copy(this.camTarget).add(offset).add(shake);
@@ -1362,8 +1368,10 @@ export class GameClient {
         break;
       case 'sonar': {
         // Everyone sees the rings; only the pinger's team gets the through-wall reveal.
-        this.rings.spawn(ev.x, ev.y, ev.r, PALETTE.tangerine, 0.9);
-        this.rings.spawn(ev.x, ev.y, ev.r * 0.6, '#FFFFFF', 0.6);
+        // Two waves sweep the whole map so everyone sees the ping pass them.
+        this.rings.spawnWave(ev.x, ev.y, ev.r, PALETTE.tangerine, 45, 0.8);
+        this.rings.spawnWave(ev.x, ev.y, ev.r, '#FFFFFF', 38, 0.35);
+        this.rings.spawn(ev.x, ev.y, 3, PALETTE.tangerine, 0.4);
         const pinged = !!me && ev.hits.includes(me) && !this.isAlly(ev.id);
         if (this.isAlly(ev.id)) {
           const until = this.clock + ABILITY.sonarReveal;
@@ -1648,7 +1656,7 @@ export class GameClient {
       fps: this.fps,
       nearPickup,
       bots: snap.players.filter((p) => p.bot).length,
-      scoped: !!me?.alive && this.input.scopeHeld && !this.hud.get().chatOpen,
+      scoped: this.isScoping(),
       blind: me?.blindIn ?? 0,
       smoke,
       spectating: me && !me.alive ? snap.players.find((p) => p.id === this.spectateId && p.alive) ?? null : null,

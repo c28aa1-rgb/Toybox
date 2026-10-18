@@ -708,3 +708,33 @@ describe('power-ups', () => {
     expect(rush.b.powers.damage).toBe(0);
   });
 });
+
+describe('balance changes', () => {
+  it('cannot scope while invisible', () => {
+    const { s, a } = setup();
+    a.hero = 'chameleon';
+    a.hidden = true;
+    applyInput(s, a, frame(900, { scope: true }));
+    expect(a.scoped).toBe(false);
+    a.hidden = false;
+    applyInput(s, a, frame(901, { scope: true }));
+    expect(a.scoped).toBe(true);
+  });
+
+  it('sonar ping reaches enemies anywhere on the map', () => {
+    const { s, a, b } = setup();
+    a.hero = 'echo';
+    a.x = 3; a.y = 3;
+    b.x = s.map.w - 3; b.y = s.map.h - 3;
+    a.wantAbility = true;
+    a.abilityReadyAt = 0;
+    tick(s, TICK_DT);
+    const ev = s.events.find((e) => e.t === 'sonar');
+    expect(ev && ev.t === 'sonar' && ev.hits).toContain('b');
+    expect(ev && ev.t === 'sonar' && ev.r).toBeGreaterThanOrEqual(Math.hypot(s.map.w - 6, s.map.h - 6));
+  });
+
+  it('boomstick kills in one shot when every pellet lands', () => {
+    expect(GUNS.shotgun.damage * GUNS.shotgun.pellets).toBeGreaterThanOrEqual(MAX_HP);
+  });
+});

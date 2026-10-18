@@ -39,7 +39,7 @@ export const HEROES: Record<HeroId, HeroDef> = {
   },
   echo: {
     id: 'echo', name: 'Echo', ability: 'Sonar Ping', kind: 'cooldown', cooldown: 12, color: '#FF8A1F',
-    description: 'Ping every enemy within 22 m. You and your team see them through walls for 3 s.',
+    description: 'Ping every enemy on the map. You and your team see them through walls for 3 s.',
   },
 };
 
@@ -68,8 +68,7 @@ export const ABILITY = {
   hideDelay: 1.5,
   /** Bots and turrets notice a hidden player this close. Players see a faint shimmer at the same range. */
   hiddenSpotRange: 3,
-  /** Sonar Ping. */
-  sonarRadius: 22,
+  /** Sonar Ping: reaches the whole map. */
   sonarReveal: 3,
   /** Overcharge. */
   overchargeShots: 3,

@@ -489,7 +489,8 @@ export function applyInput(state: GameState, p: PlayerState, frame: InputFrame):
   const dt = clamp(Number.isFinite(frame.dt) ? frame.dt : 0, 0, MAX_INPUT_DT);
   const mx = clamp(frame.mx || 0, -1, 1);
   const my = clamp(frame.my || 0, -1, 1);
-  p.scoped = !!frame.scope;
+  // No scoping while invisible: the server drops it too, so a modded client can't keep the slow, steady aim.
+  p.scoped = !!frame.scope && !p.hidden;
   if (mx !== 0 || my !== 0) reveal(state, p);
   stepMovement(p, mx, my, dt, state.map.walls, p.scoped, isSlowed(state, p), hasPower(state, p, 'speed') ? POWER.speedFactor : 1);
   p.fire = !!frame.fire;
@@ -746,9 +747,14 @@ function useAbility(state: GameState, p: PlayerState): boolean {
     case 'echo': {
       // Everyone the ping reaches shows up for the pinger's team, walls or not.
       const hits = [...state.players.values()]
-        .filter((o) => o.alive && o.id !== p.id && !sameTeam(state, o.id, p.id) && Math.hypot(o.x - p.x, o.y - p.y) <= ABILITY.sonarRadius)
+        .filter((o) => o.alive && o.id !== p.id && !sameTeam(state, o.id, p.id))
         .map((o) => o.id);
-      state.events.push({ t: 'sonar', id: p.id, x: r2(p.x), y: r2(p.y), r: ABILITY.sonarRadius, hits });
+      // The wave covers the whole map: its radius reaches the far corner from wherever Echo stands.
+      const reach = Math.max(
+        Math.hypot(p.x, p.y), Math.hypot(state.map.w - p.x, p.y),
+        Math.hypot(p.x, state.map.h - p.y), Math.hypot(state.map.w - p.x, state.map.h - p.y),
+      );
+      state.events.push({ t: 'sonar', id: p.id, x: r2(p.x), y: r2(p.y), r: r2(reach), hits });
       return true;
     }
     // A passive has nothing to press.
