@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { GUNS, HATS, HEROES, abilityTag, MAPS, MODES, MODE_IDS, PARTY_MAP_IDS, SECONDARY_IDS, type GunId, type HeroId, type MapId, type ModeId, type HatId, type UtilId, UTILS } from '@gg/shared';
 import type { JoinOptions } from '../game/GameClient';
 import { fetchProfile, loadProfile, patchProfile } from '../unlocks';
+import { apiUrl } from '../game/server';
 import type { Portraits } from './App';
 import { GunRack, HatRack, HeroShelf, UtilRack } from './Pickers';
 import { MiniMap } from './MapPreview';
@@ -33,6 +34,20 @@ export function Lobby({ portraits, onPlay }: { portraits: Portraits; onPlay: (o:
   const [map, setMap] = useState<MapId>('playmat');
   const invited = initialRoom() !== '';
   const [page, setPage] = useState<'home' | 'friends'>('home');
+  const [onlineCount, setOnlineCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    const refreshOnlineCount = () => {
+      fetch(apiUrl('/api/online'), { cache: 'no-store' })
+        .then((response) => response.ok ? response.json() as Promise<{ count: number }> : null)
+        .then((result) => { if (active && result && Number.isFinite(result.count)) setOnlineCount(result.count); })
+        .catch(() => {});
+    };
+    refreshOnlineCount();
+    const timer = window.setInterval(refreshOnlineCount, 15_000);
+    return () => { active = false; window.clearInterval(timer); };
+  }, []);
 
   const refreshProfile = useCallback(async () => {
     setProfileReady(false);
@@ -188,17 +203,23 @@ export function Lobby({ portraits, onPlay }: { portraits: Portraits; onPlay: (o:
             onChange={(e) => setName(e.target.value)}
           />
         </label>
-        <motion.button
-          type="button"
-          className="btn btn--primary btn--play"
-          disabled={!profileReady || savingProfile}
-          onClick={() => (invited ? go({ mode: 'join', room }) : go({ mode: 'public' }))}
-          whileHover={{ y: -3 }}
-          whileTap={{ scaleX: 1.05, scaleY: 0.93, y: 4 }}
-        >
-          <span>{invited ? `Join ${room}` : 'Play'}</span>
-          <small>{profileError ? 'Profile service unavailable' : !profileReady ? 'Connecting to game server…' : invited ? 'Your friend\'s private room' : 'Public arena · always on · map picked by vote'}</small>
-        </motion.button>
+        <div className="playbar__action">
+          <div className="playbar__online" aria-live="polite">
+            <strong>{onlineCount ?? '—'}</strong>
+            <span>online</span>
+          </div>
+          <motion.button
+            type="button"
+            className="btn btn--primary btn--play"
+            disabled={!profileReady || savingProfile}
+            onClick={() => (invited ? go({ mode: 'join', room }) : go({ mode: 'public' }))}
+            whileHover={{ y: -3 }}
+            whileTap={{ scaleX: 1.05, scaleY: 0.93, y: 4 }}
+          >
+            <span>{invited ? `Join ${room}` : 'Play'}</span>
+            <small>{profileError ? 'Profile service unavailable' : !profileReady ? 'Connecting to game server…' : invited ? 'Your friend\'s private room' : 'Public arena · always on · map picked by vote'}</small>
+          </motion.button>
+        </div>
       </section>
       {profileError && <ServerProfileNotice error={profileError} onRetry={refreshProfile} />}
 

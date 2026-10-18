@@ -1,0 +1,9 @@
+name = "toybox-proxy"
+main = "worker.ts"
+compatibility_date = "2026-10-03"
+account_id = "344d1ddceb093ee4dd447ab6aec7d5dc"
+workers_dev = true
+
+[vars]
+UPSTREAM = "https://larrys-mac-mini.tailb7d055.ts.net"
+ALLOWED_ORIGINS = "https://c28aa1-rgb.github.io"

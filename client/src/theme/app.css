@@ -995,6 +995,33 @@ kbd {
   box-shadow: 0 8px 0 var(--ink);
 }
 
+.playbar__action {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.playbar__online {
+  display: grid;
+  min-width: 78px;
+  justify-items: center;
+  padding: 8px 12px;
+  border: var(--outline);
+  border-radius: var(--radius-sm);
+  background: var(--cream);
+  color: var(--ink);
+  box-shadow: var(--lift-sm);
+  line-height: 1.1;
+}
+
+.playbar__online strong { font: 24px var(--font-display); }
+.playbar__online span { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; }
+
+@media (max-width: 600px) {
+  .playbar__action { width: 100%; }
+  .playbar__action .btn--play { flex: 1; min-width: 0; padding-inline: 18px; }
+}
+
 .btn--play small {
   font-family: var(--font-body);
   font-size: 15px;
