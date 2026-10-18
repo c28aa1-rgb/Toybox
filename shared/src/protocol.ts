@@ -159,8 +159,6 @@ export interface PadSnap {
   x: number;
   y: number;
   endsIn: number;
-  /** Live and able to launch. */
-  armed: boolean;
   /** Health left, 0..1. */
   hp: number;
 }

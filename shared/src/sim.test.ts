@@ -524,7 +524,7 @@ describe('new weapons', () => {
     expect(b.slowUntil).toBeGreaterThan(s.time);
   });
 
-  it('a tap sets a bounce pad down in front; once armed it launches whoever steps on it over walls', () => {
+  it('a tap sets a bounce pad down in front and it launches whoever steps on it over walls', () => {
     const { s, a } = setup();
     a.utility = 'pad';
     a.utilCharges = 2;
@@ -536,16 +536,9 @@ describe('new weapons', () => {
     expect(s.pads).toHaveLength(1);
     const pad = s.pads[0];
     expect(pad.x).toBeCloseTo(19.6 + PAD.placeDistance, 5);
-    // Not armed yet: stepping on it does nothing.
+    // Live at once: walk on heading +x and you're launched over the centre block (x 24-28 at this height).
     a.moveX = 1; a.moveY = 0;
     a.x = pad.x; a.y = pad.y;
-    tick(s, TICK_DT);
-    expect(a.dash).toBeNull();
-    // Off again while it arms, then walk back on: launched heading +x over the centre block (x 24-28 at this height).
-    a.x = pad.x - 2;
-    run(s, PAD.armTime);
-    expect(a.dash).toBeNull();
-    a.x = pad.x;
     tick(s, TICK_DT);
     expect(a.dash?.kind).toBe('bounce');
     run(s, PAD.launchTime / 2);
@@ -582,6 +575,27 @@ describe('new weapons', () => {
     s.pads.push({ id: 78, owner: 'a', x: 22, y: 13.5, expiresAt: 99, armedAt: 0, hp: PAD.hp, ignore: [], live: true });
     run(s, 2);
     expect(s.pads).toHaveLength(1);
+  });
+
+  it('walking, a tapped pad lands in your path and launches you without stopping', () => {
+    const { s, a } = setup();
+    a.utility = 'pad';
+    a.utilCharges = 2;
+    a.x = 6; a.y = 18; a.aim = -Math.PI / 2; // aiming up, walking right
+    let seq = 1000;
+    applyInput(s, a, frame(seq++, { mx: 1, aim: -Math.PI / 2 }));
+    applyInput(s, a, frame(seq++, { mx: 1, aim: -Math.PI / 2, throw: true, place: true }));
+    tick(s, TICK_DT);
+    expect(s.pads).toHaveLength(1);
+    expect(s.pads[0].y).toBeCloseTo(a.y, 1);
+    expect(s.pads[0].x).toBeGreaterThan(a.x + 1);
+    let launched = false;
+    for (let i = 0; i < 20 && !launched; i++) {
+      applyInput(s, a, frame(seq++, { mx: 1, aim: -Math.PI / 2 }));
+      tick(s, TICK_DT);
+      launched = a.dash?.kind === 'bounce';
+    }
+    expect(launched).toBe(true);
   });
 
   it('a pad placed at your feet waits for you to step off and back on', () => {

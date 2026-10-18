@@ -115,7 +115,7 @@ export class GameClient {
   private smokeViews = new Map<number, THREE.Group>();
   private padViews = new Map<number, {
     root: THREE.Object3D; model: THREE.Object3D; ringMat: THREE.MeshBasicMaterial; glowMat: THREE.MeshBasicMaterial;
-    born: number; bounceAt: number; armedAt: number; hp: number; hitAt: number;
+    born: number; bounceAt: number; hp: number; hitAt: number;
   }>();
   /** A missed grapple: the rope flicks out and snaps back. */
   private missRopes: { rope: THREE.Mesh; born: number; x0: number; y0: number; x1: number; y1: number }[] = [];
@@ -1210,13 +1210,8 @@ export class GameClient {
         root.position.set(d.x, 0, d.y);
         root.scale.setScalar(0.01);
         this.s.world.add(root);
-        v = { root, model, ringMat, glowMat, born: this.clock, bounceAt: -1, armedAt: d.armed ? this.clock - 1 : -1, hp: d.hp, hitAt: -1 };
+        v = { root, model, ringMat, glowMat, born: this.clock, bounceAt: -1, hp: d.hp, hitAt: -1 };
         this.padViews.set(d.id, v);
-      }
-      if (d.armed && v.armedAt < 0) {
-        v.armedAt = this.clock;
-        this.rings.spawn(d.x, d.y, PAD.radius * 1.6, PAD_COLOR, 0.35);
-        if (this.nearness(d.x, d.y) > 0.3) this.sfx.padArm();
       }
       if (d.hp < v.hp) {
         v.hp = d.hp;
@@ -1224,22 +1219,29 @@ export class GameClient {
       }
       const k = Math.min(1, (this.clock - v.born) / 0.3);
       v.root.scale.setScalar(1 + 2.4 * (k - 1) ** 3 + 1.4 * (k - 1) ** 2);
-      // The spring is held down until armed, then pops up with a little overshoot.
-      const sinceArm = v.armedAt < 0 ? -1 : this.clock - v.armedAt;
-      const u = Math.min(1, Math.max(0, sinceArm) / 0.3);
-      const armY = sinceArm < 0 ? 0.55 : 0.55 + 0.45 * u + Math.sin(u * Math.PI) * 0.2;
-      // Squash flat then spring tall when it launches someone; a jolt when it's shot.
+      // At rest the spring is pressed down. When it launches someone it shoots up, holds a beat,
+      // then sinks back with a little wobble.
       const b = this.clock - v.bounceAt;
-      const sq = b < 0.35 ? Math.sin((b / 0.35) * Math.PI) * (b < 0.12 ? -0.45 : 0.35) : 0;
+      let lift = 0;
+      if (v.bounceAt >= 0 && b < 0.6) {
+        if (b < 0.07) lift = b / 0.07;
+        else if (b < 0.18) lift = 1;
+        else {
+          const u = (b - 0.18) / 0.42;
+          lift = Math.max(0, (1 - u) * (1 - u)) + Math.sin(u * Math.PI * 2) * 0.08 * (1 - u);
+        }
+      }
+      const restY = 0.5;
       const hit = Math.max(0, 1 - (this.clock - v.hitAt) / 0.15);
-      v.model.scale.set(base * (1 - sq * 0.3 + hit * 0.12), base * armY * (1 + sq - hit * 0.15), base * (1 - sq * 0.3 + hit * 0.12));
+      const sy = restY + (1.35 - restY) * lift;
+      const sxz = 1 - lift * 0.12 + hit * 0.12;
+      v.model.scale.set(base * sxz, base * sy * (1 - hit * 0.15), base * sxz);
       v.model.rotation.z = hit * Math.sin(this.clock * 60) * 0.08;
-      const armed = sinceArm >= 0;
       const blinkOut = d.endsIn < 2 && Math.floor(this.clock * 8) % 2 === 0;
       // Damage shifts the ring from blue toward red.
-      v.ringMat.color.set(armed ? PAD_COLOR : '#8A8296').lerp(new THREE.Color('#FF3B5C'), armed ? 1 - d.hp : 0);
-      v.ringMat.opacity = blinkOut ? 0.15 : armed ? 0.6 + Math.sin(this.clock * 6) * 0.2 : 0.35;
-      v.glowMat.opacity = armed && !blinkOut ? 0.22 + Math.sin(this.clock * 6) * 0.1 : 0;
+      v.ringMat.color.set(PAD_COLOR).lerp(new THREE.Color('#FF3B5C'), 1 - d.hp);
+      v.ringMat.opacity = blinkOut ? 0.15 : 0.55 + Math.sin(this.clock * 5) * 0.15;
+      v.glowMat.opacity = blinkOut ? 0 : 0.14 + Math.sin(this.clock * 5) * 0.06 + lift * 0.4;
     }
     for (const [id, v] of this.padViews) {
       if (seen.has(id)) continue;

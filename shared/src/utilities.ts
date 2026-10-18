@@ -68,8 +68,8 @@ export const PAD = {
   radius: 0.85,
   /** A tap of G sets it this far in front of you, so you can walk straight onto it. */
   placeDistance: 2.0,
-  /** Seconds after landing before it can launch anyone. */
-  armTime: 0.6,
+  /** Seconds after it is set down before it can launch anyone. 0: live at once, so you can tap G and run straight onto it. */
+  armTime: 0,
   /** Bullets and blasts can break it. */
   hp: 60,
   hitRadius: 0.6,

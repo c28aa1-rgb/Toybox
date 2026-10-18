@@ -387,7 +387,7 @@ export class Room {
       throwables: s.throwables.map((g) => ({ id: g.id, util: g.util, x: r2(g.x), y: r2(g.y), z: r2(g.z), owner: g.owner })),
       pads: s.pads.map((d) => ({
         id: d.id, owner: d.owner, x: r2(d.x), y: r2(d.y), endsIn: r2(d.expiresAt - t),
-        armed: t >= d.armedAt, hp: Math.round((d.hp / PAD.hp) * 100) / 100,
+        hp: Math.round((d.hp / PAD.hp) * 100) / 100,
       })),
       smokes: s.smokes.map((sm) => ({ id: sm.id, x: r2(sm.x), y: r2(sm.y), r: sm.r, endsIn: r2(sm.expiresAt - t) })),
       events: s.events,

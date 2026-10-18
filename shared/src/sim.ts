@@ -85,6 +85,8 @@ export interface PlayerState {
   /** Last direction this player walked, so a Bounce Pad knows where to send them. */
   moveX: number;
   moveY: number;
+  /** Last time this player was walking; a tapped pad goes where they're heading if this is recent. */
+  lastMoveAt: number;
   /** Bounce Pads ignore this player until then, so landing next to one doesn't relaunch them. */
   padReadyAt: number;
 }
@@ -417,6 +419,7 @@ export function addPlayer(
     dash: null,
     moveX: 0,
     moveY: 1,
+    lastMoveAt: -1,
     padReadyAt: 0,
   };
   state.players.set(p.id, p);
@@ -514,6 +517,7 @@ export function applyInput(state: GameState, p: PlayerState, frame: InputFrame):
     const len = Math.hypot(mx, my);
     p.moveX = mx / len;
     p.moveY = my / len;
+    p.lastMoveAt = state.time;
   }
   // Mid-grapple or mid-launch the rope or the arc does the moving.
   if (!p.dash) stepMovement(p, mx, my, dt, state.map.walls, p.scoped, isSlowed(state, p), hasPower(state, p, 'speed') ? POWER.speedFactor : 1);
@@ -887,12 +891,16 @@ function throwUtil(state: GameState, p: PlayerState): void {
     return;
   }
   if (UTILS[p.utility].deploy && p.wantPlace) {
-    // Up to placeDistance ahead; closer if a wall is in the way, so it never lands under your feet unless it has to.
+    // Ahead of you: the way you're walking if you're on the move (so you run straight onto it), else where
+    // you're aiming. Up to placeDistance; closer if a wall is in the way, so it never lands under your feet unless it has to.
+    const walking = state.time - p.lastMoveAt < 0.15;
+    const fx = walking ? p.moveX : Math.cos(p.aim);
+    const fy = walking ? p.moveY : Math.sin(p.aim);
     let x = p.x;
     let y = p.y;
     for (let d = PAD.placeDistance; d >= 0.8; d -= 0.2) {
-      const cx = p.x + Math.cos(p.aim) * d;
-      const cy = p.y + Math.sin(p.aim) * d;
+      const cx = p.x + fx * d;
+      const cy = p.y + fy * d;
       if (padSpotClear(state, cx, cy)) {
         x = cx;
         y = cy;
