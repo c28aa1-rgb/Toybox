@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { CSS2DObject } from 'three/examples/jsm/renderers/CSS2DRenderer.js';
 import {
-  ABILITY, CHAT_MAX, GUNS, GUN_IDS, HATS, HEROES, MODES, TEAM_COLORS, PAD, THROW, UTILS, isUtilId, throwFlightTime, type HatId, type Loadout, type ModeId, type PlayerProfile, type UtilId, type WeaponId, INTERP_DELAY, MAPS, MAX_HP, MAX_INPUT_DT, PICKUP_RADIUS, POWER, POWERS, pointInRect, stepMovement,
+  ABILITY, CHAT_MAX, GUNS, GUN_IDS, HATS, HEROES, MODES, TEAM_COLORS, PAD, THROW, UTILS, blinkTarget, grappleHit, grappleTravel, isUtilId, throwFlightTime, type HatId, type Loadout, type ModeId, type PlayerProfile, type UtilId, type WeaponId, INTERP_DELAY, MAPS, MAX_HP, MAX_INPUT_DT, PICKUP_RADIUS, POWER, POWERS, pointInRect, stepMovement,
   type GameEvent, type GunId, type HeroId, type InputFrame, type MapDef, type MapId, type PlayerSnap, type PowerId,
   type Rect, type Snapshot,
 } from '@gg/shared';
@@ -72,6 +72,10 @@ const BULLET_COLORS: Record<GunId, string> = {
 };
 
 const PAD_COLOR = '#4FB3FF';
+/** Abilities you aim: holding the key shows where it will go, releasing fires it. */
+const AIMED_ABILITIES = new Set<HeroId>(['blink', 'grapple']);
+/** Hold the grenade key at least this long to throw a deployable instead of setting it down in front. */
+const DEPLOY_HOLD_MS = 220;
 const UTIL_COLORS: Record<UtilId, string> = { frag: PALETTE.mint, flash: PALETTE.lemon, smoke: '#B48CFF', pad: PAD_COLOR, juice: '#FF5F6D' };
 
 const MAX_INTERP_DELAY = 0.25;
@@ -109,7 +113,10 @@ export class GameClient {
   private laserDotGeo = new THREE.SphereGeometry(0.12, 12, 8);
   private throwViews = new Map<number, { obj: THREE.Object3D; born: number }>();
   private smokeViews = new Map<number, THREE.Group>();
-  private padViews = new Map<number, { root: THREE.Object3D; ringMat: THREE.MeshBasicMaterial; born: number; bounceAt: number }>();
+  private padViews = new Map<number, {
+    root: THREE.Object3D; model: THREE.Object3D; ringMat: THREE.MeshBasicMaterial; glowMat: THREE.MeshBasicMaterial;
+    born: number; bounceAt: number; armedAt: number; hp: number; hitAt: number;
+  }>();
   /** A missed grapple: the rope flicks out and snaps back. */
   private missRopes: { rope: THREE.Mesh; born: number; x0: number; y0: number; x1: number; y1: number }[] = [];
   /** Unit-length cord along +Z; stretched and turned to span two points. */
@@ -120,6 +127,9 @@ export class GameClient {
   private meSmoked = false;
   private arcLine: THREE.Line;
   private arcRing: THREE.Mesh;
+  /** Aim preview for Blink and Grapple while the ability key is held. */
+  private abilityLine: THREE.Line;
+  private abilityMark: THREE.Mesh;
   private reticle: HTMLDivElement;
   private shake = new Shake();
   private sfx = new Sfx();
@@ -215,6 +225,22 @@ export class GameClient {
     this.arcRing.rotation.x = -Math.PI / 2;
     this.arcRing.visible = false;
     this.s.scene.add(this.arcRing);
+
+    this.abilityLine = new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]),
+      new THREE.LineDashedMaterial({ color: '#FFFFFF', dashSize: 0.4, gapSize: 0.22, transparent: true, opacity: 0.9 }),
+    );
+    this.abilityLine.visible = false;
+    this.abilityLine.frustumCulled = false;
+    this.s.scene.add(this.abilityLine);
+    this.abilityMark = new THREE.Mesh(
+      new THREE.RingGeometry(0.42, 0.6, 32),
+      new THREE.MeshBasicMaterial({ color: '#FFFFFF', transparent: true, opacity: 0.8, depthWrite: false, side: THREE.DoubleSide }),
+    );
+    (this.abilityMark.material as THREE.Material).userData.outlineParameters = { visible: false };
+    this.abilityMark.rotation.x = -Math.PI / 2;
+    this.abilityMark.visible = false;
+    this.s.scene.add(this.abilityMark);
 
     // Scope reticle: follows the mouse, tightens while you hold the scope.
     this.reticle = document.createElement('div');
@@ -552,19 +578,31 @@ export class GameClient {
       aimDist,
       fire: !typing && this.input.fireHeld,
       scope: !typing && this.isScoping(),
-      ability: !typing && this.input.takeAbility(),
+      // Aimed abilities fire on release, after the preview; the rest fire on press.
+      ability: !typing && (AIMED_ABILITIES.has(me.hero) ? this.input.takeAbilityRelease() : this.input.takeAbility()),
       pickup: !typing && this.input.takePickup(),
       reload: !typing && this.input.takeReload(),
       slot: 0,
-      // Drinkables and deployables fire on key down; throwables wait for release so you can aim the arc.
-      throw: !typing && (UTILS[me.utility].heal || UTILS[me.utility].deploy ? this.input.takeThrowPress() : this.input.takeThrow()),
+      throw: false,
       respawn: this.respawnQueued,
     };
+    // Drinkables fire on key down. Deployables: a tap sets it down in front, a hold throws it on an arc.
+    // Throwables wait for release so you can aim the arc.
+    const util = UTILS[me.utility];
+    if (!typing && util.heal) frame.throw = this.input.takeThrowPress();
+    else if (!typing && util.deploy) {
+      const held = this.input.takeThrowRelease();
+      if (held !== null) {
+        frame.throw = true;
+        frame.place = held < DEPLOY_HOLD_MS;
+      }
+    } else if (!typing) frame.throw = this.input.takeThrow();
     if (me.alive) this.respawnQueued = false;
     const want = typing ? null : this.input.takeSlot();
     if (want === 'toggle') frame.slot = me.slot === 'primary' ? 2 : 1;
     else if (want) frame.slot = want;
     this.updateThrowPreview(me, aimDist);
+    this.updateAbilityPreview(me, aimDist, typing);
     if (me.alive && snap.phase === 'playing' && !me.dash) {
       stepMovement(this.pred, mx, my, frame.dt, this.mapWalls(), frame.scope, this.isSlowed(me), boost(me));
       this.pending.push(frame);
@@ -869,9 +907,56 @@ export class GameClient {
     }
   }
 
+  /**
+   * While an aimed ability's key is held: a dashed line and a ring showing exactly what will happen,
+   * using the same targeting code as the server. Grey when it would miss or isn't ready.
+   */
+  private updateAbilityPreview(me: PlayerSnap, aimDist: number, typing: boolean): void {
+    const show = !typing && this.input.abilityHeld && AIMED_ABILITIES.has(me.hero) && me.alive && !me.dash && !!this.map;
+    this.abilityLine.visible = show;
+    this.abilityMark.visible = show;
+    if (!show || !this.map) return;
+    const x0 = this.pred.x;
+    const y0 = this.pred.y;
+    let tx: number;
+    let ty: number;
+    let good: boolean;
+    if (me.hero === 'grapple') {
+      const hit = grappleHit(this.mapWalls(), x0, y0, this.aim);
+      const reach = hit < 0 ? ABILITY.grappleRange : hit;
+      tx = x0 + Math.cos(this.aim) * reach;
+      ty = y0 + Math.sin(this.aim) * reach;
+      good = hit >= 0 && grappleTravel(hit) > 0;
+    } else {
+      ({ x: tx, y: ty } = blinkTarget(this.map, x0, y0, this.aim, aimDist));
+      good = Math.hypot(tx - x0, ty - y0) > 0.5;
+    }
+    const ready = me.abilityReadyIn <= 0.05;
+    const color = good && ready ? HEROES[me.hero].color : '#8A8296';
+    const pos = this.abilityLine.geometry.getAttribute('position') as THREE.BufferAttribute;
+    pos.setXYZ(0, x0, 0.8, y0);
+    pos.setXYZ(1, tx, 0.8, ty);
+    pos.needsUpdate = true;
+    this.abilityLine.computeLineDistances();
+    const lineMat = this.abilityLine.material as THREE.LineDashedMaterial;
+    lineMat.color.set(color);
+    lineMat.opacity = ready ? 0.95 : 0.4;
+    const markMat = this.abilityMark.material as THREE.MeshBasicMaterial;
+    markMat.color.set(color);
+    markMat.opacity = ready ? 0.85 : 0.35;
+    // Grapple marks the wall at hook height; Blink marks the floor where you'll stand.
+    this.abilityMark.position.set(tx, me.hero === 'grapple' ? 0.8 : 0.06, ty);
+    this.abilityMark.rotation.set(me.hero === 'grapple' ? 0 : -Math.PI / 2, me.hero === 'grapple' ? Math.PI / 2 - this.aim : 0, 0);
+    this.abilityMark.scale.setScalar(good ? 1 + Math.sin(this.clock * 8) * 0.08 : 0.6);
+    this.cursorRing.visible = false;
+  }
+
   /** Dashed arc preview while G is held, using the same flight curve the server simulates. */
   private updateThrowPreview(me: PlayerSnap, aimDist: number): void {
-    const show = this.input.throwHeld && me.alive && me.utilCharges > 0 && !UTILS[me.utility].heal && !UTILS[me.utility].deploy && !this.hud.get().chatOpen;
+    const util = UTILS[me.utility];
+    // A deployable only shows the arc once the hold is long enough to mean "throw"; a tap just sets it down.
+    const aiming = util.deploy ? this.input.throwHoldMs >= DEPLOY_HOLD_MS : !util.heal;
+    const show = this.input.throwHeld && aiming && me.alive && me.utilCharges > 0 && !this.hud.get().chatOpen;
     this.arcLine.visible = show;
     this.arcRing.visible = show;
     this.cursorRing.visible = !show && !this.input.scopeHeld;
@@ -1099,40 +1184,68 @@ export class GameClient {
   /** Bounce Pads: pop out of the floor, squash when someone is launched, blink before folding up. */
   private renderPads(snap: Snapshot): void {
     const seen = new Set<number>();
+    const base = (PAD.radius * 2) / 0.42;
     for (const d of snap.pads) {
       seen.add(d.id);
       let v = this.padViews.get(d.id);
       if (!v) {
         const root = new THREE.Group();
-        const model = createUtilModel('pad');
-        model.name = 'model';
         // The hand-held model is 0.42 m across; set down it fills the trigger circle.
-        model.scale.setScalar((PAD.radius * 2) / 0.42);
+        const model = createUtilModel('pad');
+        model.scale.setScalar(base);
         root.add(model);
-        const ringMat = new THREE.MeshBasicMaterial({ color: PAD_COLOR, transparent: true, opacity: 0.55, depthWrite: false });
+        const ringMat = new THREE.MeshBasicMaterial({ color: '#8A8296', transparent: true, opacity: 0.45, depthWrite: false });
         ringMat.userData.outlineParameters = { visible: false };
         const ring = new THREE.Mesh(new THREE.RingGeometry(PAD.radius - 0.1, PAD.radius, 40), ringMat);
         ring.rotation.x = -Math.PI / 2;
         ring.position.y = 0.04;
         root.add(ring);
+        // Armed glow: a soft disc that breathes under the pad once it is live.
+        const glowMat = new THREE.MeshBasicMaterial({ color: PAD_COLOR, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending });
+        glowMat.userData.outlineParameters = { visible: false };
+        const glow = new THREE.Mesh(new THREE.CircleGeometry(PAD.radius * 0.95, 32), glowMat);
+        glow.rotation.x = -Math.PI / 2;
+        glow.position.y = 0.06;
+        root.add(glow);
         root.position.set(d.x, 0, d.y);
         root.scale.setScalar(0.01);
         this.s.world.add(root);
-        v = { root, ringMat, born: this.clock, bounceAt: -1 };
+        v = { root, model, ringMat, glowMat, born: this.clock, bounceAt: -1, armedAt: d.armed ? this.clock - 1 : -1, hp: d.hp, hitAt: -1 };
         this.padViews.set(d.id, v);
       }
+      if (d.armed && v.armedAt < 0) {
+        v.armedAt = this.clock;
+        this.rings.spawn(d.x, d.y, PAD.radius * 1.6, PAD_COLOR, 0.35);
+        if (this.nearness(d.x, d.y) > 0.3) this.sfx.padArm();
+      }
+      if (d.hp < v.hp) {
+        v.hp = d.hp;
+        v.hitAt = this.clock;
+      }
       const k = Math.min(1, (this.clock - v.born) / 0.3);
-      const pop = 1 + 2.4 * (k - 1) ** 3 + 1.4 * (k - 1) ** 2;
-      // Squash flat then spring tall when it launches someone.
+      v.root.scale.setScalar(1 + 2.4 * (k - 1) ** 3 + 1.4 * (k - 1) ** 2);
+      // The spring is held down until armed, then pops up with a little overshoot.
+      const sinceArm = v.armedAt < 0 ? -1 : this.clock - v.armedAt;
+      const u = Math.min(1, Math.max(0, sinceArm) / 0.3);
+      const armY = sinceArm < 0 ? 0.55 : 0.55 + 0.45 * u + Math.sin(u * Math.PI) * 0.2;
+      // Squash flat then spring tall when it launches someone; a jolt when it's shot.
       const b = this.clock - v.bounceAt;
       const sq = b < 0.35 ? Math.sin((b / 0.35) * Math.PI) * (b < 0.12 ? -0.45 : 0.35) : 0;
-      v.root.scale.set(pop * (1 - sq * 0.3), pop * (1 + sq), pop * (1 - sq * 0.3));
-      v.ringMat.opacity = d.endsIn < 2 && Math.floor(this.clock * 8) % 2 === 0 ? 0.15 : 0.55;
+      const hit = Math.max(0, 1 - (this.clock - v.hitAt) / 0.15);
+      v.model.scale.set(base * (1 - sq * 0.3 + hit * 0.12), base * armY * (1 + sq - hit * 0.15), base * (1 - sq * 0.3 + hit * 0.12));
+      v.model.rotation.z = hit * Math.sin(this.clock * 60) * 0.08;
+      const armed = sinceArm >= 0;
+      const blinkOut = d.endsIn < 2 && Math.floor(this.clock * 8) % 2 === 0;
+      // Damage shifts the ring from blue toward red.
+      v.ringMat.color.set(armed ? PAD_COLOR : '#8A8296').lerp(new THREE.Color('#FF3B5C'), armed ? 1 - d.hp : 0);
+      v.ringMat.opacity = blinkOut ? 0.15 : armed ? 0.6 + Math.sin(this.clock * 6) * 0.2 : 0.35;
+      v.glowMat.opacity = armed && !blinkOut ? 0.22 + Math.sin(this.clock * 6) * 0.1 : 0;
     }
     for (const [id, v] of this.padViews) {
       if (seen.has(id)) continue;
       v.root.removeFromParent();
       v.ringMat.dispose();
+      v.glowMat.dispose();
       this.padViews.delete(id);
     }
   }
@@ -1456,7 +1569,14 @@ export class GameClient {
         break;
       }
       case 'padEnd':
-        this.particles.burst({ x: ev.x, y: ev.y, z: 0.2, count: 10, color: [PAD_COLOR, '#FFFFFF'], speed: 2, up: 2, life: 0.4, size: 0.14, gravity: 2 });
+        if (ev.broken) {
+          // Shot apart: springs and plastic everywhere.
+          this.particles.burst({ x: ev.x, y: ev.y, z: 0.4, count: 30, color: [PAD_COLOR, PALETTE.lemon, '#6A2FA0', '#FFFFFF'], speed: 6, up: 6, life: 0.8, size: 0.2 });
+          this.rings.spawn(ev.x, ev.y, 1.8, '#FFFFFF', 0.3);
+          if (this.nearness(ev.x, ev.y) > 0.2) this.sfx.padBreak(this.nearness(ev.x, ev.y));
+        } else {
+          this.particles.burst({ x: ev.x, y: ev.y, z: 0.2, count: 10, color: [PAD_COLOR, '#FFFFFF'], speed: 2, up: 2, life: 0.4, size: 0.14, gravity: 2 });
+        }
         break;
       case 'bounce': {
         const v = this.padViews.get(ev.pad);

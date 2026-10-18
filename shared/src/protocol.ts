@@ -30,6 +30,8 @@ export interface InputFrame {
   slot: 0 | 1 | 2;
   /** Edge-triggered: throw the utility toward the cursor. */
   throw: boolean;
+  /** With `throw`: a tap of the grenade key, so deployables are set down in front instead of lobbed. */
+  place?: boolean;
   /** Dead players stay down until they ask to come back (Enter or the button). */
   respawn?: boolean;
 }
@@ -157,6 +159,10 @@ export interface PadSnap {
   x: number;
   y: number;
   endsIn: number;
+  /** Live and able to launch. */
+  armed: boolean;
+  /** Health left, 0..1. */
+  hp: number;
 }
 export interface HillSnap {
   x: number;
@@ -195,7 +201,7 @@ export type GameEvent =
   /** `hit`: the hook caught a wall at (x2, y2) and the player is zipping there. */
   | { t: 'grapple'; id: string; x1: number; y1: number; x2: number; y2: number; hit: boolean }
   | { t: 'padSet'; id: string; x: number; y: number }
-  | { t: 'padEnd'; x: number; y: number }
+  | { t: 'padEnd'; x: number; y: number; broken: boolean }
   | { t: 'bounce'; id: string; pad: number; x: number; y: number }
   | { t: 'ladder'; id: string; gun: GunId }
   | { t: 'refill'; id: string; util: UtilId }

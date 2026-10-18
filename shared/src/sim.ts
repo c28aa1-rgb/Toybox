@@ -44,6 +44,8 @@ export interface PlayerState {
   burstAt: number;
   wantSlot: 0 | 1 | 2;
   wantThrow: boolean;
+  /** The throw was a tap: deployables are set down in front instead of lobbed. */
+  wantPlace: boolean;
   x: number;
   y: number;
   aim: number;
@@ -146,6 +148,12 @@ export interface Pad {
   x: number;
   y: number;
   expiresAt: number;
+  armedAt: number;
+  hp: number;
+  /** Players standing on it when it armed. It won't launch them until they step off and back on. */
+  ignore: string[];
+  /** Whether the arming check (who is standing on it) has run yet. */
+  live: boolean;
 }
 
 export interface Hill {
@@ -378,6 +386,7 @@ export function addPlayer(
     burstAt: 0,
     wantSlot: 0,
     wantThrow: false,
+    wantPlace: false,
     x: 0,
     y: 0,
     aim: 0,
@@ -463,6 +472,7 @@ function spawn(state: GameState, p: PlayerState): void {
   p.streak = 0;
   p.wantSlot = 0;
   p.wantThrow = false;
+  p.wantPlace = false;
   p.hp = MAX_HP;
   p.alive = true;
   p.shieldUntil = state.time + SPAWN_SHIELD;
@@ -512,7 +522,10 @@ export function applyInput(state: GameState, p: PlayerState, frame: InputFrame):
   if (frame.pickup) p.wantPickup = true;
   if (frame.reload === true) p.wantReload = true;
   if (frame.slot === 1 || frame.slot === 2) p.wantSlot = frame.slot;
-  if (frame.throw) p.wantThrow = true;
+  if (frame.throw) {
+    p.wantThrow = true;
+    p.wantPlace = !!frame.place;
+  }
 }
 
 /** Line of sight between two points: blocked by walls and by smoke clouds. */
@@ -647,6 +660,11 @@ function explode(state: GameState, x: number, y: number, owner: string, gun: Wea
     // Your own rockets push you (rocket jumps) but don't hurt.
     if (p.id !== owner) damagePlayer(state, p, def.damage * falloff, owner, gun);
   }
+  for (const pad of [...state.pads]) {
+    if (pad.owner === owner || sameTeam(state, pad.owner, owner)) continue;
+    const d = Math.hypot(pad.x - x, pad.y - y);
+    if (d < radius + PAD.hitRadius) damagePad(state, pad, damage * (1 - 0.5 * Math.min(1, d / radius)));
+  }
 }
 
 // ---------- actions ----------
@@ -701,23 +719,45 @@ function shoot(state: GameState, p: PlayerState): void {
   }
 }
 
+/** Where Blink lands: up to its range toward the cursor, stopping before walls and the arena edge. Shared with the aim preview. */
+export function blinkTarget(map: MapDef, x0: number, y0: number, aim: number, aimDist: number): { x: number; y: number } {
+  const dx = Math.cos(aim);
+  const dy = Math.sin(aim);
+  const maxD = Math.min(ABILITY.blinkDistance, Math.max(aimDist, 1.5));
+  let lastX = x0;
+  let lastY = y0;
+  for (let d = 0.15; d <= maxD + 1e-6; d += 0.15) {
+    const x = x0 + dx * d;
+    const y = y0 + dy * d;
+    if (x < PLAYER_RADIUS || x > map.w - PLAYER_RADIUS || y < PLAYER_RADIUS || y > map.h - PLAYER_RADIUS) break;
+    if (map.walls.some((w) => circleOverlapsRect(x, y, PLAYER_RADIUS, w))) break;
+    lastX = x;
+    lastY = y;
+  }
+  return { x: lastX, y: lastY };
+}
+
+/** Grapple: walk the hook out along the aim. Distance to the first wall it touches, or -1 if none in range. */
+export function grappleHit(walls: Rect[], x: number, y: number, aim: number): number {
+  const dx = Math.cos(aim);
+  const dy = Math.sin(aim);
+  for (let d = 0.3; d <= ABILITY.grappleRange; d += 0.15) {
+    if (walls.some((w) => pointInRect(x + dx * d, y + dy * d, w))) return d;
+  }
+  return -1;
+}
+
+/** How far a grapple that caught at `hit` actually pulls you (it stops just short of the wall). 0 = nothing to zip. */
+export function grappleTravel(hit: number): number {
+  const travel = hit - PLAYER_RADIUS - 0.05;
+  return travel > 0.3 ? travel : 0;
+}
+
 function useAbility(state: GameState, p: PlayerState): boolean {
   const walls = state.map.walls;
   switch (p.hero) {
     case 'blink': {
-      const dx = Math.cos(p.aim);
-      const dy = Math.sin(p.aim);
-      const maxD = Math.min(ABILITY.blinkDistance, Math.max(p.aimDist, 1.5));
-      let lastX = p.x;
-      let lastY = p.y;
-      for (let d = 0.15; d <= maxD + 1e-6; d += 0.15) {
-        const x = p.x + dx * d;
-        const y = p.y + dy * d;
-        if (x < PLAYER_RADIUS || x > state.map.w - PLAYER_RADIUS || y < PLAYER_RADIUS || y > state.map.h - PLAYER_RADIUS) break;
-        if (walls.some((w) => circleOverlapsRect(x, y, PLAYER_RADIUS, w))) break;
-        lastX = x;
-        lastY = y;
-      }
+      const { x: lastX, y: lastY } = blinkTarget(state.map, p.x, p.y, p.aim, p.aimDist);
       state.events.push({ t: 'blink', id: p.id, x1: r2(p.x), y1: r2(p.y), x2: r2(lastX), y2: r2(lastY) });
       p.x = lastX;
       p.y = lastY;
@@ -730,24 +770,17 @@ function useAbility(state: GameState, p: PlayerState): boolean {
       return true;
     }
     case 'grapple': {
-      // Walk the hook out along the aim; the first wall it touches is where it catches.
       const dx = Math.cos(p.aim);
       const dy = Math.sin(p.aim);
-      let hit = -1;
-      for (let d = 0.3; d <= ABILITY.grappleRange; d += 0.15) {
-        if (walls.some((w) => pointInRect(p.x + dx * d, p.y + dy * d, w))) {
-          hit = d;
-          break;
-        }
-      }
+      const hit = grappleHit(walls, p.x, p.y, p.aim);
       if (hit < 0) {
         const far = ABILITY.grappleRange;
         state.events.push({ t: 'grapple', id: p.id, x1: r2(p.x), y1: r2(p.y), x2: r2(p.x + dx * far), y2: r2(p.y + dy * far), hit: false });
         return false;
       }
-      // Stop just short of the wall. Already touching it: nothing to zip, so it costs only the short retry wait.
-      const travel = hit - PLAYER_RADIUS - 0.05;
-      if (travel <= 0.3) return false;
+      // Already touching the wall: nothing to zip, so it costs only the short retry wait.
+      const travel = grappleTravel(hit);
+      if (travel <= 0) return false;
       const hx = p.x + dx * hit;
       const hy = p.y + dy * hit;
       state.events.push({ t: 'grapple', id: p.id, x1: r2(p.x), y1: r2(p.y), x2: r2(hx), y2: r2(hy), hit: true });
@@ -853,8 +886,20 @@ function throwUtil(state: GameState, p: PlayerState): void {
     state.events.push({ t: 'heal', id: p.id, x: r2(p.x), y: r2(p.y) });
     return;
   }
-  if (UTILS[p.utility].deploy) {
-    deployPad(state, p);
+  if (UTILS[p.utility].deploy && p.wantPlace) {
+    // Up to placeDistance ahead; closer if a wall is in the way, so it never lands under your feet unless it has to.
+    let x = p.x;
+    let y = p.y;
+    for (let d = PAD.placeDistance; d >= 0.8; d -= 0.2) {
+      const cx = p.x + Math.cos(p.aim) * d;
+      const cy = p.y + Math.sin(p.aim) * d;
+      if (padSpotClear(state, cx, cy)) {
+        x = cx;
+        y = cy;
+        break;
+      }
+    }
+    deployPad(state, p.id, x, y, p.x, p.y);
     reveal(state, p);
     p.utilCharges--;
     p.throwReadyAt = state.time + THROW.cooldown;
@@ -880,36 +925,59 @@ function throwUtil(state: GameState, p: PlayerState): void {
   state.events.push({ t: 'throw', id: p.id, util: p.utility });
 }
 
-/** Set a pad down just in front of the player, or at their feet if that spot is blocked. */
-function deployPad(state: GameState, p: PlayerState): void {
+/**
+ * Set a pad down at (x, y). If that spot is in a wall or off the floor it settles at (fallbackX, fallbackY),
+ * which is where the thrower stood or where a thrown pad came down.
+ */
+function padSpotClear(state: GameState, x: number, y: number): boolean {
+  const r = PAD.radius;
+  return x >= r && y >= r && x <= state.map.w - r && y <= state.map.h - r && !state.map.walls.some((w) => circleOverlapsRect(x, y, r * 0.6, w));
+}
+
+function deployPad(state: GameState, owner: string, x: number, y: number, fallbackX: number, fallbackY: number): void {
   const walls = state.map.walls;
   const r = PAD.radius;
-  let x = p.x + Math.cos(p.aim) * PAD.placeDistance;
-  let y = p.y + Math.sin(p.aim) * PAD.placeDistance;
-  const blocked = x < r || y < r || x > state.map.w - r || y > state.map.h - r || walls.some((w) => circleOverlapsRect(x, y, r * 0.6, w));
-  if (blocked) {
-    x = p.x;
-    y = p.y;
+  if (!padSpotClear(state, x, y)) {
+    const spot = { x: fallbackX, y: fallbackY };
+    moveCircle(spot, 0, 0, walls, r * 0.6);
+    x = spot.x;
+    y = spot.y;
   }
   // Too many down: the oldest one folds up.
-  const mine = state.pads.filter((d) => d.owner === p.id);
+  const mine = state.pads.filter((d) => d.owner === owner);
   if (mine.length >= PAD.maxPerPlayer) {
     const old = mine[0];
     state.pads = state.pads.filter((d) => d !== old);
-    state.events.push({ t: 'padEnd', x: r2(old.x), y: r2(old.y) });
+    state.events.push({ t: 'padEnd', x: r2(old.x), y: r2(old.y), broken: false });
   }
-  state.pads.push({ id: state.nextId++, owner: p.id, x, y, expiresAt: state.time + PAD.duration });
-  // The one who set it down shouldn't be launched by it straight away.
-  p.padReadyAt = Math.max(p.padReadyAt, state.time + 0.6);
-  state.events.push({ t: 'padSet', id: p.id, x: r2(x), y: r2(y) });
+  state.pads.push({ id: state.nextId++, owner, x, y, expiresAt: state.time + PAD.duration, armedAt: state.time + PAD.armTime, hp: PAD.hp, ignore: [], live: false });
+  state.events.push({ t: 'padSet', id: owner, x: r2(x), y: r2(y) });
+}
+
+function damagePad(state: GameState, pad: Pad, dmg: number): void {
+  pad.hp -= dmg;
+  if (pad.hp > 0) return;
+  state.pads = state.pads.filter((d) => d !== pad);
+  state.events.push({ t: 'padEnd', x: r2(pad.x), y: r2(pad.y), broken: true });
 }
 
 /** Anyone who steps on a pad, friend or foe, is thrown over walls the way they were walking. */
 function updatePads(state: GameState): void {
   for (const pad of state.pads) {
+    if (state.time < pad.armedAt) continue;
+    const onPad = (p: PlayerState) => p.alive && Math.hypot(p.x - pad.x, p.y - pad.y) <= PAD.radius;
+    if (!pad.live) {
+      // Whoever is already standing on it when it arms has to step off first.
+      pad.live = true;
+      pad.ignore = [...state.players.values()].filter(onPad).map((p) => p.id);
+    }
+    pad.ignore = pad.ignore.filter((id) => {
+      const p = state.players.get(id);
+      return !!p && onPad(p);
+    });
     for (const p of state.players.values()) {
-      if (!p.alive || p.dash || state.time < p.padReadyAt) continue;
-      if (Math.hypot(p.x - pad.x, p.y - pad.y) > PAD.radius) continue;
+      if (!p.alive || p.dash || state.time < p.padReadyAt || pad.ignore.includes(p.id)) continue;
+      if (!onPad(p)) continue;
       const speed = PAD.launchDistance / PAD.launchTime;
       p.dash = {
         kind: 'bounce', vx: p.moveX * speed, vy: p.moveY * speed, startAt: state.time, endsAt: state.time + PAD.launchTime,
@@ -997,6 +1065,10 @@ function updateThrowables(state: GameState, dt: number): void {
 
 function detonate(state: GameState, g: Throwable): void {
   const def = UTILS[g.util];
+  if (def.deploy) {
+    deployPad(state, g.owner, g.x, g.y, g.x, g.y);
+    return;
+  }
   if (g.util === 'frag') {
     explode(state, g.x, g.y, g.owner, 'frag', def.damage, def.radius, def.knockback);
   } else if (g.util === 'flash') {
@@ -1098,7 +1170,7 @@ export function tick(state: GameState, dt: number): void {
   const t = state.time;
   state.pickups = state.pickups.filter((k) => k.expiresAt > t);
   state.smokes = state.smokes.filter((sm) => sm.expiresAt > t);
-  for (const pad of state.pads) if (pad.expiresAt <= t) state.events.push({ t: 'padEnd', x: r2(pad.x), y: r2(pad.y) });
+  for (const pad of state.pads) if (pad.expiresAt <= t) state.events.push({ t: 'padEnd', x: r2(pad.x), y: r2(pad.y), broken: false });
   state.pads = state.pads.filter((pad) => pad.expiresAt > t);
 
 }
@@ -1211,6 +1283,15 @@ function updateBullets(state: GameState, dt: number): void {
           }
           continue outer;
         }
+      }
+      const pad = state.pads.find((d) => d.owner !== b.owner && !sameTeam(state, d.owner, b.owner)
+        && (d.x - b.x) ** 2 + (d.y - b.y) ** 2 < (PAD.hitRadius + BULLET_RADIUS) ** 2);
+      if (pad) {
+        if (!b.fake) {
+          if (def.splashRadius) explodeGun(state, b.x, b.y, b.owner, b.gun, mult);
+          else damagePad(state, pad, hitDamage());
+        }
+        continue outer;
       }
       if (b.travelled >= def.range) {
         if (def.splashRadius && !b.fake) explodeGun(state, b.x, b.y, b.owner, b.gun, mult);

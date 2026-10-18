@@ -64,11 +64,11 @@ function AbilityGauge({ me, portraits }: { me: PlayerSnap; portraits: Portraits 
   );
 }
 
-/** How the equipped utility is used: drunk or set down on a press, or aimed and thrown on release. */
+/** How the equipped utility is used: drunk on a press, set down on a tap or thrown on a hold, or aimed and thrown on release. */
 function useHint(util: UtilId): string {
   const def = UTILS[util];
   if (def.heal) return `Press ${bindingLabel('grenade')} to drink`;
-  if (def.deploy) return `Press ${bindingLabel('grenade')} to set it down`;
+  if (def.deploy) return `Tap ${bindingLabel('grenade')} to set it down in front, hold to aim and throw`;
   return `Hold ${bindingLabel('grenade')}, release to throw · ${bindingLabel('cancelGrenade')} cancels`;
 }
 

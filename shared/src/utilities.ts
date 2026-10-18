@@ -30,7 +30,7 @@ export const UTILS: Record<UtilId, UtilDef> = {
     fuseAfterLanding: 0.1, radius: 3.6, damage: 0, knockback: 0, charges: 2,
   },
   pad: {
-    id: 'pad', name: 'Bounce Pad', blurb: 'Press G to set it down. Anyone who steps on it gets launched over walls the way they are moving.',
+    id: 'pad', name: 'Bounce Pad', blurb: 'Tap G to set it down in front of you, or hold G to throw it. Anyone who steps on it is launched over walls.',
     fuseAfterLanding: 0, radius: 0, damage: 0, knockback: 0, charges: 2, deploy: true,
   },
   juice: {
@@ -66,7 +66,13 @@ export const PAD = {
   maxPerPlayer: 2,
   /** Step within this distance of the centre to trigger it. */
   radius: 0.85,
-  placeDistance: 1.4,
+  /** A tap of G sets it this far in front of you, so you can walk straight onto it. */
+  placeDistance: 2.0,
+  /** Seconds after landing before it can launch anyone. */
+  armTime: 0.6,
+  /** Bullets and blasts can break it. */
+  hp: 60,
+  hitRadius: 0.6,
   /** The launch: metres travelled, seconds in the air and peak height (high enough to clear walls). */
   launchDistance: 10,
   launchTime: 0.75,

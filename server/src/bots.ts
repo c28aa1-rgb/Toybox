@@ -147,6 +147,8 @@ export function botInput(state: GameState, p: PlayerState): InputFrame {
       frame.scope = p.gun === 'sniper' && d > 10;
       // Lob utility at mid range now and then.
       if (p.utilCharges > 0 && !UTILS[p.utility].heal && d > 4 && d < 12 && state.time >= p.throwReadyAt && rng() < 0.012) frame.throw = true;
+      // Bounce Pads get set down in front, not lobbed at people.
+      if (frame.throw && UTILS[p.utility].deploy) frame.place = true;
       // Close in with the sidearm when the primary is a long gun.
       frame.slot = p.primary === 'sniper' && d < 6 ? 2 : p.slot === 'secondary' && d > 8 ? 1 : 0;
       // The sim ignores the press until a cooldown is up or a charge is full; passives need none.

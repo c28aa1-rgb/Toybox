@@ -524,21 +524,28 @@ describe('new weapons', () => {
     expect(b.slowUntil).toBeGreaterThan(s.time);
   });
 
-  it('a bounce pad is set down in front and launches whoever steps on it over walls', () => {
+  it('a tap sets a bounce pad down in front; once armed it launches whoever steps on it over walls', () => {
     const { s, a } = setup();
     a.utility = 'pad';
     a.utilCharges = 2;
     a.x = 19.6; a.y = 18; a.aim = 0;
     a.wantThrow = true;
+    a.wantPlace = true;
     tick(s, TICK_DT);
     expect(a.utilCharges).toBe(1);
     expect(s.pads).toHaveLength(1);
     const pad = s.pads[0];
     expect(pad.x).toBeCloseTo(19.6 + PAD.placeDistance, 5);
-    // Walk onto it heading +x: the centre block (x 24-28 at this height) is in the way.
-    run(s, 0.7);
+    // Not armed yet: stepping on it does nothing.
     a.moveX = 1; a.moveY = 0;
     a.x = pad.x; a.y = pad.y;
+    tick(s, TICK_DT);
+    expect(a.dash).toBeNull();
+    // Off again while it arms, then walk back on: launched heading +x over the centre block (x 24-28 at this height).
+    a.x = pad.x - 2;
+    run(s, PAD.armTime);
+    expect(a.dash).toBeNull();
+    a.x = pad.x;
     tick(s, TICK_DT);
     expect(a.dash?.kind).toBe('bounce');
     run(s, PAD.launchTime / 2);
@@ -549,12 +556,54 @@ describe('new weapons', () => {
     expect(a.x).toBeGreaterThan(28 + PLAYER_RADIUS);
   });
 
+  it('holding G lobs the pad on an arc and it sets down where it lands', () => {
+    const { s, a } = setup();
+    a.utility = 'pad';
+    a.utilCharges = 2;
+    a.x = 10; a.y = 18; a.aim = 0; a.aimDist = 6;
+    a.wantThrow = true;
+    a.wantPlace = false;
+    tick(s, TICK_DT);
+    expect(s.throwables).toHaveLength(1);
+    expect(s.pads).toHaveLength(0);
+    run(s, 2);
+    expect(s.throwables).toHaveLength(0);
+    expect(s.pads).toHaveLength(1);
+    expect(s.pads[0].x).toBeGreaterThan(14);
+  });
+
+  it('enemies can shoot a pad apart; its owner cannot', () => {
+    const { s, a, b } = setup();
+    s.pads.push({ id: 77, owner: 'b', x: 22, y: 13.5, expiresAt: 99, armedAt: 0, hp: PAD.hp, ignore: [], live: true });
+    b.x = 40; b.y = 30;
+    a.fire = true;
+    run(s, 2);
+    expect(s.pads).toHaveLength(0);
+    s.pads.push({ id: 78, owner: 'a', x: 22, y: 13.5, expiresAt: 99, armedAt: 0, hp: PAD.hp, ignore: [], live: true });
+    run(s, 2);
+    expect(s.pads).toHaveLength(1);
+  });
+
+  it('a pad placed at your feet waits for you to step off and back on', () => {
+    const { s, a } = setup();
+    s.pads.push({ id: 90, owner: 'a', x: a.x, y: a.y, expiresAt: 99, armedAt: s.time + 0.1, hp: PAD.hp, ignore: [], live: false });
+    run(s, 0.5);
+    expect(a.dash).toBeNull();
+    a.x += 2;
+    tick(s, TICK_DT);
+    a.moveX = -1; a.moveY = 0;
+    a.x -= 2;
+    tick(s, TICK_DT);
+    expect(a.dash?.kind).toBe('bounce');
+  });
+
   it('only two pads per player, and they fold up after their time', () => {
     const { s, a } = setup();
     a.utility = 'pad';
     a.utilCharges = 3;
     for (let i = 0; i < 3; i++) {
       a.wantThrow = true;
+      a.wantPlace = true;
       tick(s, TICK_DT);
       run(s, THROW.cooldown + 0.1);
       a.y += 3;

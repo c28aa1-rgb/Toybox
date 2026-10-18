@@ -1,7 +1,7 @@
 import type { WebSocket } from 'ws';
 import {
   CHAT_MAX, MAX_PLAYERS, PUBLIC_MIN_PLAYERS, TICK_DT, TICK_RATE, abilityStatus, addPlayer, applyInput, createGame, isHidden, r2,
-  HAT_IDS, MAPS, MODES, POWER_IDS, PUBLIC_MAP_IDS, removePlayer, setLoadout, tick, type GameState, type GunId, type HeroId, type InputFrame, type MapId, type ModeId, type UtilId, type Loadout,
+  HAT_IDS, MAPS, PAD, MODES, POWER_IDS, PUBLIC_MAP_IDS, removePlayer, setLoadout, tick, type GameState, type GunId, type HeroId, type InputFrame, type MapId, type ModeId, type UtilId, type Loadout,
   type MapVote, type PowerId, type ServerMsg, type Snapshot, type WeaponId,
 } from '@gg/shared';
 import { botHero, botInput, botName, forgetBot } from './bots';
@@ -385,7 +385,10 @@ export class Room {
         ...(k.readyAt !== undefined && k.readyAt > t ? { readyIn: r2(k.readyAt - t) } : {}),
       })),
       throwables: s.throwables.map((g) => ({ id: g.id, util: g.util, x: r2(g.x), y: r2(g.y), z: r2(g.z), owner: g.owner })),
-      pads: s.pads.map((d) => ({ id: d.id, owner: d.owner, x: r2(d.x), y: r2(d.y), endsIn: r2(d.expiresAt - t) })),
+      pads: s.pads.map((d) => ({
+        id: d.id, owner: d.owner, x: r2(d.x), y: r2(d.y), endsIn: r2(d.expiresAt - t),
+        armed: t >= d.armedAt, hp: Math.round((d.hp / PAD.hp) * 100) / 100,
+      })),
       smokes: s.smokes.map((sm) => ({ id: sm.id, x: r2(sm.x), y: r2(sm.y), r: sm.r, endsIn: r2(sm.expiresAt - t) })),
       events: s.events,
     };

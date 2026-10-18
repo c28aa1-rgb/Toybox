@@ -113,6 +113,13 @@ export class Sfx {
     this.tone(320, 140, 0.12, 'triangle', 0.14 * near);
     this.noise(0.06, 0.12 * near, 1200, 1);
   }
+  /** Bounce Pad goes live: a short rising click. */
+  padArm(): void { this.tone(700, 1400, 0.08, 'square', 0.06); this.tone(1400, 1400, 0.05, 'triangle', 0.05, 0.08); }
+  /** Bounce Pad shot apart: a crunch and a sprung spring. */
+  padBreak(near: number): void {
+    this.noise(0.25, 0.35 * near, 900, 1);
+    this.tone(500, 90, 0.35, 'triangle', 0.14 * near);
+  }
   /** Bounce Pad launch: a big cartoon boing. */
   boing(near: number): void {
     this.tone(180, 720, 0.35, 'sine', 0.22 * near);
